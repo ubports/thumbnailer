@@ -31,4 +31,5 @@ target_link_libraries(thumbnailer
 )
 
 add_subdirectory(service)
+add_subdirectory(thumbnailer-admin)
 add_subdirectory(vs-thumb)

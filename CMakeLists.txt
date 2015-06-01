@@ -107,11 +107,8 @@ add_subdirectory(src)
 add_subdirectory(data)
 add_subdirectory(plugins/Ubuntu/Thumbnailer.0.1)
 add_subdirectory(tests)
-add_subdirectory(tools)
 add_subdirectory(include)
 
-# TODO: generate the list of test targets rather than enumerating them here.
-#       We'll do this when we sort out the test subtree.
 enable_coverage_report(
     TARGETS
         thumbnailer
@@ -125,16 +122,5 @@ enable_coverage_report(
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*
     TESTS
-        downloaderstest
-        downloadtest
-        file_io
-        gobj_ptr
-        image
-        safe_strerror_test
-        test_dbus
-        test_qml
-        test_settings
-        test_vsthumb
-        thumbnailer-admin_test
-        thumbnailer_test
+        ${UNIT_TEST_TARGETS}
 )

@@ -5,18 +5,28 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 configure_file(testsetup.h.in testsetup.h @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_subdirectory(dbus)
-add_subdirectory(download)
-add_subdirectory(file_io)
-add_subdirectory(gobj_ptr)
-add_subdirectory(image)
-add_subdirectory(qml)
-add_subdirectory(safe_strerror)
-add_subdirectory(settings)
-add_subdirectory(thumbnailer)
-add_subdirectory(tools)
 add_subdirectory(utils)
-add_subdirectory(vsthumb)
+
+set(unit_test_dirs
+    dbus
+    download
+    file_io
+    gobj_ptr
+    image
+    qml
+    safe_strerror
+    settings
+    thumbnailer
+    thumbnailer-admin
+    vsthumb
+)
+
+set(UNIT_TEST_TARGETS "")
+foreach(dir ${unit_test_dirs})
+    add_subdirectory(${dir})
+    list(APPEND UNIT_TEST_TARGETS "${dir}_test")
+endforeach()
+set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
 
 add_subdirectory(copyright)
 add_subdirectory(headers)
