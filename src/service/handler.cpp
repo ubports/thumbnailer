@@ -66,29 +66,37 @@ QDBusUnixFileDescriptor write_to_tmpfile(std::string const& image)
         // open /tmp.
         //
         // As a fallback, use mkstemp() and unlink the resulting file.
+        // LCOV_EXCL_START
         std::string tmpfile = dir + "/thumbnail.XXXXXX";
         fd.reset(mkostemp(const_cast<char*>(tmpfile.data()), O_CLOEXEC));
         if (fd.get() >= 0)
         {
             unlink(tmpfile.data());
         }
+        // LCOV_EXCL_STOP
     }
     if (fd.get() < 0)
     {
-        std::string err = "cannot create tmpfile in " + dir + ": " + safe_strerror(errno);
+        // LCOV_EXCL_START
+        std::string err = "Handler: cannot create tmpfile in " + dir + ": " + safe_strerror(errno);
         throw std::runtime_error(err);
+        // LCOV_EXCL_STOP
     }
     auto rc = write(fd.get(), &image[0], image.size());
     if (rc == -1)
     {
-        std::string err = "cannot write image data in " + dir + ": " + safe_strerror(errno);
+        // LCOV_EXCL_START
+        std::string err = "Handler: cannot write image data in " + dir + ": " + safe_strerror(errno);
         throw std::runtime_error(err);
+        // LCOV_EXCL_STOP
     }
     else if (std::string::size_type(rc) != image.size())
     {
-        std::string err = "short write for image data in " + dir + "(requested = " + std::to_string(image.size()) +
-                          ", actual = " + std::to_string(rc) + ")";
+        // LCOV_EXCL_START
+        std::string err = "Handler: short write for image data in " + dir + "(requested = " +
+                          std::to_string(image.size()) + ", actual = " + std::to_string(rc) + ")";
         throw std::runtime_error(err);
+        // LCOV_EXCL_STOP
     }
     lseek(fd.get(), SEEK_SET, 0);  // No error check needed, can't fail.
 
@@ -167,10 +175,12 @@ void Handler::begin()
         {
             return FdOrError{check(), nullptr};
         }
+        // LCOV_EXCL_START
         catch (std::exception const& e)
         {
             return FdOrError{QDBusUnixFileDescriptor(), e.what()};
         }
+        // LCOV_EXCL_STOP
     };
     p->checkWatcher.setFuture(QtConcurrent::run(p->check_pool.get(), do_check));
 }

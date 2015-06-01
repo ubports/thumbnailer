@@ -55,4 +55,7 @@ Fixture {
         */
     }
 
+    function test_no_such_photo() {
+        loadThumbnail("no_such_photo.jpg");
+    }
 }

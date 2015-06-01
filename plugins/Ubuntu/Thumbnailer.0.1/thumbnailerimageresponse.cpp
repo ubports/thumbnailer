@@ -81,7 +81,7 @@ void ThumbnailerImageResponse::dbus_call_finished(QDBusPendingCallWatcher* watch
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher;
     if (!reply.isValid())
     {
-        qWarning() << "D-Bus error: " << reply.error().message();
+        qWarning() << "ThumbnailerImageResponse::dbus_call_finished(): D-Bus error: " << reply.error().message();
         set_default_image();
         Q_EMIT finished();
         return;
@@ -95,17 +95,19 @@ void ThumbnailerImageResponse::dbus_call_finished(QDBusPendingCallWatcher* watch
         Q_EMIT finished();
         return;
     }
+    // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "Album art loader failed: " << e.what();
+        qWarning() << "ThumbnailerImageResponse::dbus_call_finished(): Album art loader failed: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "Unknown error when generating image.";
+        qWarning() << "ThumbnailerImageResponse::dbus_call_finished(): unknown exception";
     }
 
     set_default_image();
     Q_EMIT finished();
+    // LCOV_EXCL_STOP
 }
 
 }  // namespace qml

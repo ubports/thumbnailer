@@ -42,7 +42,7 @@ public:
         , thumbnailer_(thumbnailer)
     {
     }
-    ~AdminInterface() = default;
+    ~AdminInterface() = default;  // LCOV_EXCL_LINE  // False negative from gcovr.
 
     AdminInterface(AdminInterface const&) = delete;
     AdminInterface& operator=(AdminInterface&) = delete;

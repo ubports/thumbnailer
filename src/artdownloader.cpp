@@ -31,8 +31,10 @@ ArtDownloader::ArtDownloader(QObject* parent)
 
 void ArtDownloader::assert_valid_url(QUrl const& url) const
 {
+    // LCOV_EXCL_START
     if (!url.isValid())
     {
         throw std::logic_error("ArtDownloader::assert_valid_url(): The url provided is not valid");
     }
+    // LCOV_EXCL_STOP
 }

@@ -40,4 +40,12 @@ Fixture {
         comparePixel(0, 479, "#0000FE");
         comparePixel(639, 479, "#00FF01");
     }
+
+    function test_bad_artist_art_url() {
+        loadBadArtistUrl("load")
+    }
+
+    function test_bad_album_art_url() {
+        loadBadAlbumUrl("metallica")
+    }
 }
