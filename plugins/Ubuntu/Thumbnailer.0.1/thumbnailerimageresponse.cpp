@@ -19,15 +19,9 @@
 #include <thumbnailerimageresponse.h>
 #include <artgeneratorcommon.h>
 
-#include <internal/trace.h>
-
-#include <QCoreApplication>
-#include <QDBusPendingReply>
-#include <QDBusPendingCallWatcher>
-#include <QDBusUnixFileDescriptor>
 #include <QDBusReply>
-#include <QEvent>
-#include <QMimeDatabase>
+#include <QDBusUnixFileDescriptor>
+#include <QDebug>
 
 namespace unity
 {

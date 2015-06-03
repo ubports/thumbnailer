@@ -45,11 +45,12 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
 
     auto now = system_clock::now();
     auto sys_time = system_clock::to_time_t(now);
-    auto local_time = localtime(&sys_time);
-    int msecs = duration_cast<milliseconds>(now.time_since_epoch()).count() - sys_time * 1000;
+    struct tm local_time;
+    localtime_r(&sys_time, &local_time);
+    int msecs = duration_cast<milliseconds>(now.time_since_epoch()).count() % 1000;
 
     char buf[100];
-    strftime(buf, sizeof(buf), "%T", local_time);
+    strftime(buf, sizeof(buf), "%T", &local_time);
     fprintf(stderr, "thumbnailer-service: [%s.%03d]", buf, msecs);
     switch (type)
     {
@@ -60,9 +61,10 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
             fputs("Critical:", stderr);
             break;
         case QtFatalMsg:
-            fputs("Critical:", stderr);
+            fputs("Fatal:", stderr);
+            break;
         default:
-            ;  // Print nothing for QtDebugMsg.
+            ;  // No label for debug messages.
     }
     fprintf(stderr, " %s\n", msg.toLocal8Bit().constData());
     if (type == QtFatalMsg)
@@ -71,8 +73,8 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
     }
 }
 
-static int init_count = 0;
-static QtMessageHandler old_message_handler;
+int init_count = 0;
+QtMessageHandler old_message_handler;
 
 }  // namespace
 

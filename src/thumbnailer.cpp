@@ -345,7 +345,7 @@ string RequestBase::thumbnail()
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
         return jpeg;
     }
-    catch (...)
+    catch (std::exception const& e)
     {
         throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
     }
@@ -568,7 +568,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
     {
         return unique_ptr<ThumbnailRequest>(new LocalThumbnailRequest(this, filename, filename_fd, requested_size));
     }
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_thumbnail()");
     }
@@ -586,7 +586,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
         return unique_ptr<ThumbnailRequest>(new AlbumRequest(this, artist, album, requested_size));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_album_art()");  // LCOV_EXCL_LINE
     }
@@ -605,7 +605,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
         return unique_ptr<ThumbnailRequest>(new ArtistRequest(this, artist, album, requested_size));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_artist_art()");
     }

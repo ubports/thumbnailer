@@ -16,38 +16,31 @@
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
 */
 
-#include <internal/trace.h>
-
 #include "thumbnailgenerator.h"
+
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
-#include <stdexcept>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <QCoreApplication>
-#include <QMimeDatabase>
-#include <QUrl>
-#include <QDBusPendingCallWatcher>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
-
 namespace
 {
+
 const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
 const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
 
 const char BUS_NAME[] = "com.canonical.Thumbnailer";
 const char BUS_PATH[] = "/com/canonical/Thumbnailer";
-}
+
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -109,6 +102,8 @@ QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id
     return DEFAULT_ALBUM_ART;
 }
 
-}
-}
-}
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

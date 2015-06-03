@@ -17,30 +17,27 @@
  *          James Henstridge <james.henstridge@canonical.com>
 */
 
-#include <internal/trace.h>
-
 #include "albumartgenerator.h"
+
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
-#include <stdexcept>
-#include <QFile>
-#include <QUrlQuery>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
-
 namespace
 {
+
 const char DEFAULT_ALBUM_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
 
 const char BUS_NAME[] = "com.canonical.Thumbnailer";
 const char BUS_PATH[] = "/com/canonical/Thumbnailer";
-}
+
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -48,7 +45,6 @@ AlbumArtGenerator::AlbumArtGenerator()
     : QQuickAsyncImageProvider()
 {
 }
-
 
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
@@ -78,6 +74,9 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART, watcher);
     return response;
 }
-}
-}
-}
+
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

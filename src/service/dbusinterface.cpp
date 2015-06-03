@@ -19,8 +19,8 @@
 
 #include "dbusinterface.h"
 
-#include <internal/trace.h>
 #include <internal/safe_strerror.h>
+#include <internal/trace.h>
 
 #include <algorithm>
 #include <map>
