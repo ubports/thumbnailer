@@ -5,7 +5,6 @@ add_executable(thumbnailer_test
 qt5_use_modules(thumbnailer_test DBus Network Test)
 target_link_libraries(thumbnailer_test
     thumbnailer
-    ${QTDBUSTEST_DEPS_LDFLAGS}
     testutils
     gtest)
 add_dependencies(thumbnailer_test thumbnailer-service)
