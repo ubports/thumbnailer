@@ -7,9 +7,9 @@ add_executable(thumbnailer-service
   admininterface.cpp
   dbusinterface.cpp
   handler.cpp
-  ratelimiter.cpp
   inactivityhandler.cpp
   main.cpp
+  ratelimiter.cpp
   stats.cpp
   ${adaptor_files}
   )

@@ -20,8 +20,8 @@
 #include "handler.h"
 #include <internal/safe_strerror.h>
 #include <internal/raii.h>
+#include <internal/trace.h>
 
-#include <QDebug>
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QtConcurrent>
@@ -159,7 +159,6 @@ Handler::~Handler()
     // ensure that jobs occurring in the thread pool complete.
     p->checkWatcher.waitForFinished();
     p->createWatcher.waitForFinished();
-    qDebug() << "Handler" << this << "destroyed";
 }
 
 std::string const& Handler::key() const

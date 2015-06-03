@@ -16,6 +16,8 @@
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
 */
 
+#include <internal/trace.h>
+
 #include "thumbnailgenerator.h"
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
@@ -27,7 +29,6 @@
 #include <unistd.h>
 
 #include <QCoreApplication>
-#include <QDebug>
 #include <QMimeDatabase>
 #include <QUrl>
 #include <QDBusPendingCallWatcher>

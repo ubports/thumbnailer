@@ -18,12 +18,13 @@
  *          Pawel Stolowski <pawel.stolowski@canonical.com>
 */
 
+#include <internal/trace.h>
+
 #include "artistartgenerator.h"
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
 #include <stdexcept>
-#include <QDebug>
 #include <QFile>
 #include <QUrlQuery>
 #include <QDBusUnixFileDescriptor>

@@ -22,6 +22,7 @@
 #include "dbusinterface.h"
 #include "dbusinterfaceadaptor.h"
 #include "inactivityhandler.h"
+#include <internal/trace.h>
 
 #include <QCoreApplication>
 

@@ -17,12 +17,13 @@
  *          James Henstridge <james.henstridge@canonical.com>
 */
 
+#include <internal/trace.h>
+
 #include "albumartgenerator.h"
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
 #include <stdexcept>
-#include <QDebug>
 #include <QFile>
 #include <QUrlQuery>
 #include <QDBusUnixFileDescriptor>
