@@ -56,5 +56,22 @@
         The default is two hours.
      </description>
     </key>
+
+    <key type="i" name="max-downloads">
+      <default>2</default>
+      <summary>Maximum number of concurrent downloads</summary>
+      <description>
+        In order to control and tune concurrency you can use this parameter to control
+        the maximum number of concurrent downloads.
+     </description>
+
+    <key type="i" name="max-video-thumbnails">
+      <default>2</default>
+      <summary>Maximum number of concurrent video thumbnails</summary>
+      <description>
+        In order to control and tune concurrency you can use this parameter to control
+        the maximum number of video thumbnails.
+     </description>
+    </key>
   </schema>
 </schemalist>

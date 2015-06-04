@@ -40,6 +40,8 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
+    EXPECT_EQ(2, settings.max_downloads());
+    EXPECT_EQ(2, settings.max_video_thumbnails());
 }
 
 TEST(Settings, missing_schema)
@@ -57,6 +59,8 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(1920, settings.max_thumbnail_size());
     EXPECT_EQ(168, settings.retry_not_found_hours());
     EXPECT_EQ(2, settings.retry_error_hours());
+    EXPECT_EQ(2, settings.max_downloads());
+    EXPECT_EQ(2, settings.max_video_thumbnails());
 }
 
 TEST(Settings, changed_settings)
