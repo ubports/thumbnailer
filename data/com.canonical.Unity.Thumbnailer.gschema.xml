@@ -64,6 +64,7 @@
         In order to control and tune concurrency you can use this parameter to control
         the maximum number of concurrent downloads.
      </description>
+    </key>
 
     <key type="i" name="max-video-thumbnails">
       <default>2</default>
