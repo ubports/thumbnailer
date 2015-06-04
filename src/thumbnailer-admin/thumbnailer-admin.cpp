@@ -131,10 +131,7 @@ int main(int argc, char* argv[])
     {
         cerr << prog_name << ": " << msg << endl;
     }
-    catch (...)
-    {
-        cerr << prog_name << ": unknown exception" << endl;
-    }
     // LCOV_EXCL_STOP
+    // No catch for ... here. It's better to dump core.
     return rc;
 }

@@ -42,40 +42,46 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
     {
         engine->addImageProvider("albumart", new AlbumArtGenerator());
     }
+    // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "Failed to register albumart image provider:" << e.what();
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register albumart image provider:" << e.what();
     }
     catch (...)
     {
-        qWarning() << "Failed to register albumart image provider.";
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register albumart image provider.";
     }
+    // LCOV_EXCL_STOP
 
     try
     {
         engine->addImageProvider("artistart", new ArtistArtGenerator());
     }
+    // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "Failed to register artistart image provider:" << e.what();
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register artistart image provider:" << e.what();
     }
     catch (...)
     {
-        qWarning() << "Failed to register artistart image provider.";
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register artistart image provider.";
     }
+    // LCOV_EXCL_STOP
 
     try
     {
         engine->addImageProvider("thumbnailer", new ThumbnailGenerator());
     }
+    // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "Failed to register thumbnailer image provider:" << e.what();
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register thumbnailer image provider:" << e.what();
     }
     catch (...)
     {
-        qWarning() << "Failed to register thumbnailer image provider.";
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register thumbnailer image provider.";
     }
+    // LCOV_EXCL_STOP
 }
 }
 }

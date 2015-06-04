@@ -25,6 +25,7 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #include <glib-object.h>
 
+#include <iostream>
 namespace unity
 {
 
@@ -66,7 +67,9 @@ private:
     {
         if (t != nullptr && g_object_is_floating(G_OBJECT(t)))
         {
+            // LCOV_EXCL_START  // False negative from gcovr.
             throw std::invalid_argument("Tried to add a floating gobject into a gobj_ptr.");
+            // LCOV_EXCL_STOP
         }
     }
 

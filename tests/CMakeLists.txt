@@ -18,7 +18,7 @@ set(unit_test_dirs
     settings
     thumbnailer
     thumbnailer-admin
-    vsthumb
+    vs-thumb
 )
 
 set(UNIT_TEST_TARGETS "")

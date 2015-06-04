@@ -55,14 +55,14 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
         auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART);
-        qWarning() << "Invalid albumart uri:" << id;
+        qWarning() << "AlbumArtGenerator::requestImageResponse(): Invalid albumart uri:" << id;
         response->finish_later_with_default_image();
         return response;
     }
 
     if (!connection)
     {
-        // Create them here and not them on the constrcutor so they belong to the proper thread
+        // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
         iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));

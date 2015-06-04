@@ -32,7 +32,7 @@ namespace thumbnailer
 namespace qml
 {
 
-class ThumbnailerImageResponse : public QQuickImageResponse
+class ThumbnailerImageResponse : public QQuickImageResponse  // LCOV_EXCL_LINE  // False negative from gcovr
 {
     Q_OBJECT
 public:
