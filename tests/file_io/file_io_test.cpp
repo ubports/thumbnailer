@@ -31,6 +31,7 @@ TEST(file_io, read_write)
 {
     string in_file = TESTDATADIR "/testimage.jpg";
     struct stat st;
+    cerr << "in_file: " << in_file << endl;
     ASSERT_NE(-1, stat(in_file.c_str(), &st));
 
     string data = read_file(in_file);

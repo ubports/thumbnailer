@@ -29,4 +29,4 @@
 #define FAKE_ART_SERVER "@CMAKE_CURRENT_SOURCE_DIR@/server/server.py"
 #define THUMBNAILER_TEST_DEFAULT_IMAGE "@CMAKE_CURRENT_SOURCE_DIR@/media/orientation-8.jpg"
 
-#define THUMBNAILER_ADMIN "@CMAKE_BINARY_DIR@/tools/thumbnailer-admin"
+#define THUMBNAILER_ADMIN "@CMAKE_BINARY_DIR@/src/thumbnailer-admin/thumbnailer-admin"

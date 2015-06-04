@@ -1,7 +1,3 @@
-# TODO: Re-enable  once ported.
-#add_executable(imdump imdump.cpp)
-#target_link_libraries(imdump thumbnailer ${GST_DEPS_LDFLAGS})
-
 set(dbusinterface_xml "${CMAKE_SOURCE_DIR}/src/service/dbusinterface.xml")
 set_source_files_properties(${dbusinterface_xml} PROPERTIES
     CLASSNAME ThumbnailerInterface)
@@ -32,9 +28,3 @@ target_link_libraries(thumbnailer-admin core ${Boost_LIBRARIES})
 INSTALL(TARGETS thumbnailer-admin
         RUNTIME
         DESTINATION bin)
-
-add_executable(downloaderstest downloaderstest.cpp)
-target_link_libraries(downloaderstest thumbnailer)
-
-qt5_use_modules(downloaderstest Core Network)
-set_target_properties(downloaderstest PROPERTIES AUTOMOC TRUE)

@@ -1,15 +1,14 @@
+include_directories(${CMAKE_SOURCE_DIR}/tests)
+include_directories(${CMAKE_BINARY_DIR}/tests)
+
 add_executable(thumbnailer-admin_test
     thumbnailer-admin_test.cpp
 )
+qt5_use_modules(thumbnailer-admin_test Network)
 target_link_libraries(thumbnailer-admin_test
     gtest
     thumbnailer
     testutils
 )
-add_test(thumbnailer-admin_test thumbnailer-admin_test)
 add_dependencies(thumbnailer-admin_test thumbnailer-admin thumbnailer-service)
-
-qt5_use_modules(thumbnailer-admin_test Network)
-
-include_directories(${CMAKE_SOURCE_DIR}/tests)
-include_directories(${CMAKE_BINARY_DIR}/tests)
+add_test(thumbnailer-admin thumbnailer-admin_test)

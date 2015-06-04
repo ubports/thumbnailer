@@ -90,11 +90,13 @@ find_package(Qt5DBus REQUIRED)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_DEPS REQUIRED gstreamer-1.0 gstreamer-plugins-base-1.0 gstreamer-tag-1.0)
+pkg_check_modules(GOBJ_DEPS REQUIRED gobject-2.0)
 pkg_check_modules(GIO_DEPS REQUIRED gio-2.0 gio-unix-2.0)
 pkg_check_modules(IMG_DEPS REQUIRED gdk-pixbuf-2.0 libexif)
 pkg_check_modules(UNITY_API_DEPS REQUIRED libunity-api)
 
 include_directories(${GST_DEPS_INCLUDE_DIRS})
+include_directories(${GOBJ_DEPS_INCLUDE_DIRS})
 include_directories(${GIO_DEPS_INCLUDE_DIRS})
 include_directories(${IMG_DEPS_INCLUDE_DIRS})
 include_directories(${UNITY_API_DEPS_INCLUDE_DIRS})
@@ -105,11 +107,8 @@ add_subdirectory(src)
 add_subdirectory(data)
 add_subdirectory(plugins/Ubuntu/Thumbnailer.0.1)
 add_subdirectory(tests)
-add_subdirectory(tools)
 add_subdirectory(include)
 
-# TODO: generate the list of test targets rather than enumerating them here.
-#       We'll do this when we sort out the test subtree.
 enable_coverage_report(
     TARGETS
         thumbnailer
@@ -123,16 +122,5 @@ enable_coverage_report(
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*
     TESTS
-        downloaderstest
-        downloadtest
-        file_io
-        gobj_ptr
-        image
-        safe_strerror_test
-        test_dbus
-        test_qml
-        test_settings
-        test_vsthumb
-        thumbnailer-admin_test
-        thumbnailer_test
+        ${UNIT_TEST_TARGETS}
 )
