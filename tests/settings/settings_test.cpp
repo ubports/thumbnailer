@@ -54,6 +54,9 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
+    EXPECT_EQ(1920, settings.max_thumbnail_size());
+    EXPECT_EQ(168, settings.retry_not_found_hours());
+    EXPECT_EQ(2, settings.retry_error_hours());
 }
 
 TEST(Settings, changed_settings)
@@ -65,6 +68,42 @@ TEST(Settings, changed_settings)
     Settings settings;
     EXPECT_EQ("foo", settings.art_api_key());
     EXPECT_EQ(42, settings.thumbnail_cache_size());
+
+    g_settings_reset(gsettings.get(), "dash-ubuntu-com-key");
+    g_settings_reset(gsettings.get(), "thumbnail-cache-size");
+}
+
+TEST(Settings, non_positive_int)
+{
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_string(gsettings.get(), "dash-ubuntu-com-key", "foo");
+    g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 0);
+
+    Settings settings;
+    try
+    {
+        settings.thumbnail_cache_size();
+        FAIL();
+    }
+    catch (std::domain_error const& e)
+    {
+        EXPECT_STREQ("Settings::get_positive_int(): invalid zero or negative value for thumbnail-cache-size: 0 "
+                     "in schema com.canonical.Unity.Thumbnailer",
+                     e.what());
+    }
+
+    g_settings_set_int(gsettings.get(), "thumbnail-cache-size", -1);
+    try
+    {
+        settings.thumbnail_cache_size();
+        FAIL();
+    }
+    catch (std::domain_error const& e)
+    {
+        EXPECT_STREQ("Settings::get_positive_int(): invalid zero or negative value for thumbnail-cache-size: -1 "
+                     "in schema com.canonical.Unity.Thumbnailer",
+                     e.what());
+    }
 
     g_settings_reset(gsettings.get(), "dash-ubuntu-com-key");
     g_settings_reset(gsettings.get(), "thumbnail-cache-size");

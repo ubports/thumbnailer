@@ -239,8 +239,9 @@ string RequestBase::thumbnail()
 {
     try
     {
-        int MAX_SIZE = 1920;  // TODO: Make limit configurable?
-        QSize target_size = requested_size_.isValid() ? requested_size_ : QSize(MAX_SIZE, MAX_SIZE);
+        QSize target_size = requested_size_.isValid()
+                                ? requested_size_
+                                : QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
 
         // desired_size is (0,0) if the caller wants original size.
         string sized_key = key_;
@@ -288,11 +289,10 @@ string RequestBase::thumbnail()
                     // For local files, we don't set an expiry time because, if the file is
                     // changed (say, such that artwork is added), the file's key will change too.
                     // For remote files, we try again after one week.
-                    // TODO: Make interval configurable.
                     chrono::time_point<std::chrono::system_clock> later;  // Infinite expiry time
                     if (image_data.location == Location::remote)
                     {
-                        later = chrono::system_clock::now() + chrono::hours(24 * 7);  // One week
+                        later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_not_found_hours_);
                     }
                     thumbnailer_->failure_cache_->put(key_, "", later);
                     return "";
@@ -304,11 +304,10 @@ string RequestBase::thumbnail()
                     // For local files, we don't set an expiry time because, if the file is
                     // changed, (say, its permissions change), the file's key will change too.
                     // For remote files, we try again after two hours.
-                    // TODO: Make interval configurable.
                     chrono::time_point<std::chrono::system_clock> later;  // Infinite expiry time
                     if (image_data.location == Location::remote)
                     {
-                        later = chrono::system_clock::now() + chrono::hours(2);  // Two hours before we try again.
+                        later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_error_hours_);
                     }
                     thumbnailer_->failure_cache_->put(key_, "", later);
                     // TODO: That's really poor. Should store the error data so we can produce
@@ -329,10 +328,11 @@ string RequestBase::thumbnail()
                 Image full_size_image = image_data.image;
                 auto w = full_size_image.width();
                 auto h = full_size_image.height();
-                if (max(w, h) > MAX_SIZE)
+                auto max_size = thumbnailer_->max_size_;
+                if (max(w, h) > max_size)
                 {
                     // Don't put ridiculously large images into the full-size cache.
-                    full_size_image = full_size_image.scale(QSize(MAX_SIZE, MAX_SIZE));
+                    full_size_image = full_size_image.scale(QSize(max_size, max_size));
                 }
                 thumbnailer_->full_size_cache_->put(key_, full_size_image.to_jpeg());
             }
@@ -525,6 +525,28 @@ void ArtistRequest::download(chrono::milliseconds timeout)
     connect(artreply_.get(), &ArtReply::finished, this, &ThumbnailRequest::downloadFinished, Qt::DirectConnection);
 }
 
+namespace
+{
+
+core::PersistentStringCache::UPtr init_cache(string const& path,
+                                             int64_t size,
+                                             core::CacheDiscardPolicy policy)
+{
+    try
+    {
+        return core::PersistentStringCache::open(path, size, policy);
+    }
+    catch (logic_error const&)
+    {
+        // Cache size has changed.
+        auto cache = core::PersistentStringCache::open(path);
+        cache->resize(size);
+        return cache;
+    }
+}
+
+}
+
 Thumbnailer::Thumbnailer()
     : downloader_(new UbuntuServerDownloader())
 {
@@ -543,12 +565,18 @@ Thumbnailer::Thumbnailer()
     try
     {
         Settings settings;
-        full_size_cache_ = core::PersistentStringCache::open(cache_dir + "/images", settings.full_size_cache_size() * 1024 * 1024,
-                                                             core::CacheDiscardPolicy::lru_only);
-        thumbnail_cache_ = core::PersistentStringCache::open(cache_dir + "/thumbnails", settings.thumbnail_cache_size() * 1024 * 1024,
-                                                             core::CacheDiscardPolicy::lru_only);
-        failure_cache_ = core::PersistentStringCache::open(cache_dir + "/failures", settings.failure_cache_size() * 1024 * 1024,
-                                                           core::CacheDiscardPolicy::lru_ttl);
+        full_size_cache_ = init_cache(cache_dir + "/images",
+                                      settings.full_size_cache_size() * 1024 * 1024,
+                                      core::CacheDiscardPolicy::lru_only);
+        thumbnail_cache_ = init_cache(cache_dir + "/thumbnails",
+                                      settings.thumbnail_cache_size() * 1024 * 1024,
+                                      core::CacheDiscardPolicy::lru_only);
+        failure_cache_ = init_cache(cache_dir + "/failures",
+                                    settings.failure_cache_size() * 1024 * 1024,
+                                    core::CacheDiscardPolicy::lru_ttl);
+        max_size_ = settings.max_thumbnail_size();
+        retry_not_found_hours_ = settings.retry_not_found_hours();
+        retry_error_hours_ = settings.retry_error_hours();
     }
     catch (std::exception const& e)
     {
@@ -578,8 +606,10 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
                                                         string const& album,
                                                         QSize const& requested_size)
 {
-    assert(artist.empty() || !album.empty());
-    assert(album.empty() || !artist.empty());
+    if (artist.empty() && album.empty())
+    {
+        throw unity::InvalidArgumentException("Thumbnailer::get_album_art(): both artist and album are empty");
+    }
 
     try
     {
@@ -597,8 +627,10 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
                                                          string const& album,
                                                          QSize const& requested_size)
 {
-    assert(artist.empty() || !album.empty());
-    assert(album.empty() || !artist.empty());
+    if (artist.empty() && album.empty())
+    {
+        throw unity::InvalidArgumentException("Thumbnailer::get_artist_art(): both artist and album are empty");
+    }
 
     try
     {

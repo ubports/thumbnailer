@@ -26,6 +26,11 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#include <gio/gio.h>
+#pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 #include <QCoreApplication>
 #include <QDebug>
@@ -153,6 +158,21 @@ TEST_F(ThumbnailerTest, basic)
     img = Image(thumb);
     EXPECT_EQ(2731, img.width());
     EXPECT_EQ(2048, img.height());
+}
+
+TEST_F(ThumbnailerTest, changed_size)
+{
+    {
+        Thumbnailer tn;
+        EXPECT_EQ(100 * 1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
+    }
+
+    {
+        gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+        g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 1);
+        Thumbnailer tn;
+        EXPECT_EQ(1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
+    }
 }
 
 TEST_F(ThumbnailerTest, bad_fd)
@@ -466,6 +486,38 @@ TEST_F(RemoteServer, no_such_local_image)
         EXPECT_TRUE(boost::starts_with(msg,
                                        "unity::ResourceException: Thumbnailer::get_thumbnail():\n"
                                        "    boost::filesystem::canonical: No such file or directory: ")) << msg;
+    }
+}
+
+TEST_F(RemoteServer, get_artist_empty_strings)
+{
+    Thumbnailer tn;
+
+    try
+    {
+        tn.get_artist_art("", "", QSize());
+        FAIL();
+    }
+    catch (unity::InvalidArgumentException const& e)
+    {
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_artist_art(): both artist and album are empty",
+                     e.what()) << e.what();
+    }
+}
+
+TEST_F(RemoteServer, get_album_empty_strings)
+{
+    Thumbnailer tn;
+
+    try
+    {
+        tn.get_album_art("", "", QSize());
+        FAIL();
+    }
+    catch (unity::InvalidArgumentException const& e)
+    {
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_album_art(): both artist and album are empty",
+                     e.what()) << e.what();
     }
 }
 
