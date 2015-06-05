@@ -224,6 +224,11 @@ void PersistentStringCache::trim_to(int64_t used_size_in_bytes)
     p_->trim_to(used_size_in_bytes);
 }
 
+void PersistentStringCache::compact()
+{
+    p_->compact();
+}
+
 void PersistentStringCache::set_handler(CacheEvent events, EventCallback cb)
 {
     p_->set_handler(events, cb);

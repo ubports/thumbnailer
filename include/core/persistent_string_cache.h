@@ -42,6 +42,11 @@ such as might be needed by a web browser cache. The cache scales to large
 numbers (hundreds of thousands) of entries and is very fast. (Typically,
 the performance limiting factor is the I/O bandwidth to disk.)
 
+The cache is robust in the face of crashes or power loss. After a
+re-start, it is guaranteed to be in a consistent state and not to
+return corrupt data. However, some number of updates that were made
+just prior to a crash may be lost.
+
 A cache has a maximum size (which can be changed at any time). Once
 the cache reaches its maximum size, when adding an entry,
 the cache automatically discards enough entries to make room for the new entry.
@@ -181,9 +186,6 @@ public:
 
     /**
     Destroys the instance.
-
-    The destructor compacts the database. This ensures that, while a cache is
-    not in use, it comsumes as little disk space as possible.
     */
     ~PersistentStringCache();
 
@@ -586,7 +588,6 @@ public:
 
     /**
     \brief Deletes all entries from the cache.
-    \note This operation compacts the database to use the smallest possible amount of disk space.
     */
     void invalidate();
 
@@ -622,7 +623,8 @@ public:
 
     \throws invalid_argument `size_in_bytes` is &lt; 1
 
-    \note This operation compacts the database to use the smallest possible amount of disk space.
+    \note If the new size is less than the current size, this operation compacts the database
+    to use the smallest possible amount of disk space.
     */
     void resize(int64_t size_in_bytes);
 
@@ -635,11 +637,17 @@ public:
 
     \throws invalid_argument `used_size_in_bytes` is &lt; 0
     \throws logic_error `used_size_in_bytes` is &gt; max_size_in_bytes().
-
-    \note If trimming actually took place, this operation compacts the database to use the
-    smallest possible amount of disk space.
     */
     void trim_to(int64_t used_size_in_bytes);
+
+    /**
+    \brief Compacts the database.
+
+    This operation compacts the database to consume as little disk space as possible.
+    Note that this operation can be slow. (Compacting a 100 MB cache can take around
+    ten seconds on a machine with a spinning-platter disk.)
+    */
+    void compact();
 
     //@}
 
