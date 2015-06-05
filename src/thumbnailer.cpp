@@ -649,57 +649,46 @@ Thumbnailer::AllStats Thumbnailer::stats() const
     return AllStats{full_size_cache_->stats(), thumbnail_cache_->stats(), failure_cache_->stats()};
 }
 
-void Thumbnailer::clear_stats(CacheSelector selector)
+Thumbnailer::CacheVec Thumbnailer::select_caches(CacheSelector selector) const
 {
+    CacheVec v;
     switch (selector)
     {
-        case Thumbnailer::CacheSelector::all:
-        {
-            static mutex m;
-            lock_guard<mutex> lock(m);
-            full_size_cache_->clear_stats();
-            thumbnail_cache_->clear_stats();
-            failure_cache_->clear_stats();
-            break;
-        }
         case Thumbnailer::CacheSelector::full_size_cache:
-            full_size_cache_->clear_stats();
+            v.push_back(full_size_cache_.get());
             break;
         case Thumbnailer::CacheSelector::thumbnail_cache:
-            thumbnail_cache_->clear_stats();
+            v.push_back(thumbnail_cache_.get());
             break;
         case Thumbnailer::CacheSelector::failure_cache:
-            failure_cache_->clear_stats();
+            v.push_back(failure_cache_.get());
             break;
         default:
-            abort();  // LCOV_EXCL_LINE  // Impossible
+            v.push_back(full_size_cache_.get());
+            v.push_back(thumbnail_cache_.get());
+            v.push_back(failure_cache_.get());
+            break;
+    }
+    return v;
+}
+
+void Thumbnailer::clear_stats(CacheSelector selector)
+{
+    static mutex m;
+    lock_guard<mutex> lock(m);
+    for (auto c : select_caches(selector))
+    {
+        c->clear_stats();
     }
 }
 
 void Thumbnailer::clear(CacheSelector selector)
 {
-    switch (selector)
+    static mutex m;
+    lock_guard<mutex> lock(m);
+    for (auto c : select_caches(selector))
     {
-        case Thumbnailer::CacheSelector::all:
-        {
-            static mutex m;
-            lock_guard<mutex> lock(m);
-            full_size_cache_->invalidate();
-            thumbnail_cache_->invalidate();
-            failure_cache_->invalidate();
-            break;
-        }
-        case Thumbnailer::CacheSelector::full_size_cache:
-            full_size_cache_->invalidate();
-            break;
-        case Thumbnailer::CacheSelector::thumbnail_cache:
-            thumbnail_cache_->invalidate();
-            break;
-        case Thumbnailer::CacheSelector::failure_cache:
-            failure_cache_->invalidate();
-            break;
-        default:
-            abort();  // LCOV_EXCL_LINE  // Impossible
+        c->invalidate();
     }
 }
 

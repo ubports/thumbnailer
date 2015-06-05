@@ -23,6 +23,7 @@
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
 
+#include <sys/stat.h>
 #include <unistd.h>
 
 using namespace std;
@@ -35,6 +36,25 @@ VideoScreenshotter::VideoScreenshotter(int fd, chrono::milliseconds timeout)
     if (fd_.get() < 0)
     {
         throw runtime_error("VideoScreenshotter(): could not duplicate fd: " + safe_strerror(errno));
+    }
+
+    // We don't allow thumbnailing from anything but a regular file,
+    // so the caller can't sneak us a pipe or socket.
+    struct stat st;
+    if (fstat(fd_.get(), &st) == -1)
+    {
+        throw runtime_error("VideoScreenshotter(): fstat(): " + safe_strerror(errno));
+    }
+    if (!(st.st_mode & S_IFREG))
+    {
+        throw runtime_error("VideoScreenshotter(): fd does not refer to regular file");
+    }
+    // TODO: Work-around for bug in gstreamer:
+    //       http://cgit.freedesktop.org/gstreamer/gstreamer/commit/?id=91f537edf2946cbb5085782693b6c5111333db5f
+    //       Pipeline hangs for empty input file. Remove this once the gstreamer fix makes into the archives.
+    if (st.st_size == 0)
+    {
+        throw runtime_error("VideoScreenshotter(): fd refers to empty file");
     }
 
     process_.setStandardInputFile(QProcess::nullDevice());

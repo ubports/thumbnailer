@@ -295,7 +295,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
     output = ar.stdout();
-    EXPECT_TRUE(output.find("Hits:                  3") != string::npos) << output;
+    EXPECT_TRUE(output.find("Hits:                  1") != string::npos) << output;
 
     // Clear thumbnail stats only and check that only thumbnail stats were cleared.
 
@@ -311,7 +311,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
     output = ar.stdout();
-    EXPECT_TRUE(output.find("Hits:                  3") != string::npos) << output;
+    EXPECT_TRUE(output.find("Hits:                  1") != string::npos) << output;
 
     // Clear all stats and check that all stats were cleared.
 

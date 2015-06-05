@@ -126,6 +126,9 @@ private:
         return downloader_.get();
     }
 
+    typedef std::vector<core::PersistentStringCache*> CacheVec;
+    CacheVec select_caches(CacheSelector selector) const;
+
     core::PersistentStringCache::UPtr full_size_cache_;  // Small cache of full (original) size images.
     core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.
     core::PersistentStringCache::UPtr failure_cache_;    // Cache for failed attempts (value is always empty).
