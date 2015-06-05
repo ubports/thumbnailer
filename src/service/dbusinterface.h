@@ -72,7 +72,7 @@ private:
     std::map<std::string, std::vector<Handler*>> request_keys_;
     unity::thumbnailer::internal::Settings settings_;
     RateLimiter download_limiter_;
-    RateLimiter video_thumbnail_limiter_;
+    RateLimiter extraction_limiter_;
 };
 
 }  // namespace service

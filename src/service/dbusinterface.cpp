@@ -51,7 +51,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
     , download_limiter_(settings_.max_downloads())
-    , video_thumbnail_limiter_(settings_.max_video_thumbnails())
+    , extraction_limiter_(settings_.max_extractions())
 {
 }
 
@@ -95,7 +95,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         sendErrorReply(ART_ERROR, e.what());
         return QDBusUnixFileDescriptor();
     }
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, video_thumbnail_limiter_, std::move(request)));
+    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, extraction_limiter_, std::move(request)));
     return QDBusUnixFileDescriptor();
 }
 

@@ -102,9 +102,9 @@ int Settings::max_downloads() const
     return get_positive_int("max-downloads", 2);
 }
 
-int Settings::max_video_thumbnails() const
+int Settings::max_extractions() const
 {
-    return get_positive_int("max-video-thumbnails", 2);
+    return get_positive_int("max-extractions", 2);
 }
 
 string Settings::get_string(char const* key, string const& default_value) const
