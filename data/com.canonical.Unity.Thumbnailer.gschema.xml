@@ -56,5 +56,21 @@
         The default is two hours.
      </description>
     </key>
+
+    <key type="i" name="max-downloads">
+      <default>2</default>
+      <summary>Maximum number of concurrent downloads</summary>
+      <description>
+        This parameter sets the maximum number of concurrent downloads for remote artwork.
+     </description>
+    </key>
+
+    <key type="i" name="max-extractions">
+      <default>2</default>
+      <summary>Maximum number of concurrent image extractions</summary>
+      <description>
+        This parameter sets the maximum number of concurrent image extractions from local media files.
+     </description>
+    </key>
   </schema>
 </schemalist>

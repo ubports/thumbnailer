@@ -50,6 +50,8 @@ public:
     int max_thumbnail_size() const;
     int retry_not_found_hours() const;
     int retry_error_hours() const;
+    int max_downloads() const;
+    int max_extractions() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;
