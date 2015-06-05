@@ -43,9 +43,9 @@ numbers (hundreds of thousands) of entries and is very fast. (Typically,
 the performance limiting factor is the I/O bandwidth to disk.)
 
 The cache is robust in the face of crashes or power loss. After a
-re-start, it is guaranteed to be in a consistent state and not to
-return corrupt data. However, some number of updates that were made
-just prior to a crash may be lost.
+re-start, it is guaranteed to be in a consistent state with correct
+data. However, some number of updates that were made
+just prior to a crash might be lost.
 
 A cache has a maximum size (which can be changed at any time). Once
 the cache reaches its maximum size, when adding an entry,
