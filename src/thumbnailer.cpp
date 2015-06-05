@@ -649,6 +649,60 @@ Thumbnailer::AllStats Thumbnailer::stats() const
     return AllStats{full_size_cache_->stats(), thumbnail_cache_->stats(), failure_cache_->stats()};
 }
 
+void Thumbnailer::clear_stats(CacheSelector selector)
+{
+    switch (selector)
+    {
+        case Thumbnailer::CacheSelector::all:
+        {
+            static mutex m;
+            lock_guard<mutex> lock(m);
+            full_size_cache_->clear_stats();
+            thumbnail_cache_->clear_stats();
+            failure_cache_->clear_stats();
+            break;
+        }
+        case Thumbnailer::CacheSelector::full_size_cache:
+            full_size_cache_->clear_stats();
+            break;
+        case Thumbnailer::CacheSelector::thumbnail_cache:
+            thumbnail_cache_->clear_stats();
+            break;
+        case Thumbnailer::CacheSelector::failure_cache:
+            failure_cache_->clear_stats();
+            break;
+        default:
+            abort();  // LCOV_EXCL_LINE  // Impossible
+    }
+}
+
+void Thumbnailer::clear(CacheSelector selector)
+{
+    switch (selector)
+    {
+        case Thumbnailer::CacheSelector::all:
+        {
+            static mutex m;
+            lock_guard<mutex> lock(m);
+            full_size_cache_->invalidate();
+            thumbnail_cache_->invalidate();
+            failure_cache_->invalidate();
+            break;
+        }
+        case Thumbnailer::CacheSelector::full_size_cache:
+            full_size_cache_->invalidate();
+            break;
+        case Thumbnailer::CacheSelector::thumbnail_cache:
+            thumbnail_cache_->invalidate();
+            break;
+        case Thumbnailer::CacheSelector::failure_cache:
+            failure_cache_->invalidate();
+            break;
+        default:
+            abort();  // LCOV_EXCL_LINE  // Impossible
+    }
+}
+
 }  // namespace internal
 
 }  // namespace thumbnailer

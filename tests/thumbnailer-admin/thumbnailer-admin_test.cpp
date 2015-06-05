@@ -178,13 +178,22 @@ TEST_F(AdminTest, histogram)
     EXPECT_TRUE(output.find("10000-19999: 1") != string::npos) << output;
 }
 
-TEST_F(AdminTest, stats_parsing)
+TEST_F(AdminTest, cmd_parsing)
 {
     AdminRunner ar;
 
     // Too few args
     EXPECT_EQ(1, ar.run(QStringList{}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
+
+    // Bad command
+    EXPECT_EQ(1, ar.run(QStringList{"no_such_command"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: no_such_command: invalid command")) << ar.stderr();
+}
+
+TEST_F(AdminTest, stats_parsing)
+{
+    AdminRunner ar;
 
     // Too many args
     EXPECT_EQ(1, ar.run(QStringList{"stats", "i", "t"}));
@@ -201,10 +210,171 @@ TEST_F(AdminTest, stats_parsing)
     // Help option
     EXPECT_EQ(1, ar.run(QStringList{"stats", "-h"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
+}
 
-    // Bad command
-    EXPECT_EQ(1, ar.run(QStringList{"no_such_command"}));
-    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: no_such_command: invalid command")) << ar.stderr();
+TEST_F(AdminTest, clear_stats_parsing)
+{
+    AdminRunner ar;
+
+    // Too many args
+    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "i", "t"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: too many arguments")) << ar.stderr();
+
+    // Second arg wrong
+    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "foo"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: invalid cache_id: foo")) << ar.stderr();
+
+    // Bad option
+    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "foo", "-x"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'x'.")) << ar.stderr();
+
+    // Help option
+    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "-h"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
+}
+
+TEST_F(AdminTest, clear_parsing)
+{
+    AdminRunner ar;
+
+    // Too many args
+    EXPECT_EQ(1, ar.run(QStringList{"clear", "i", "t"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: too many arguments")) << ar.stderr();
+
+    // Second arg wrong
+    EXPECT_EQ(1, ar.run(QStringList{"clear", "foo"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: invalid cache_id: foo")) << ar.stderr();
+
+    // Bad option
+    EXPECT_EQ(1, ar.run(QStringList{"clear", "foo", "-x"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'x'.")) << ar.stderr();
+
+    // Help option
+    EXPECT_EQ(1, ar.run(QStringList{"clear", "-h"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
+}
+
+TEST_F(AdminTest, clear_and_clear_stats)
+{
+    AdminRunner ar;
+
+    // Put something in the cache.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testsong.ogg"}));
+    // Again, so we get a hit on thumbnail cache.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testsong.ogg"}));
+    // Again, with different size, so we get a hit on full-size cache.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testsong.ogg", "--size=20x20"}));
+    // Put something in the failure cache.
+    EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/empty"}));
+    // Again, so we get a hit on the failure cache.
+    EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/empty"}));
+
+    // Check that each of the three caches is non-empty.
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    auto output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  2") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
+
+    // Check that the stats of the three caches show hits.
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  1") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  1") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  3") != string::npos) << output;
+
+    // Clear thumbnail stats only and check that only thumbnail stats were cleared.
+
+    EXPECT_EQ(0, ar.run(QStringList{"clear-stats", "t"}));
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  1") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  0") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  3") != string::npos) << output;
+
+    // Clear all stats and check that all stats were cleared.
+
+    EXPECT_EQ(0, ar.run(QStringList{"clear-stats"}));
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  0") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  0") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Hits:                  0") != string::npos) << output;
+
+    // Check that each of the three caches is still non-empty. (We've only cleared
+    // the stats so far, not the actual caches.)
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  2") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
+
+    // Clear the failure cache only and check that it was cleared.
+
+    EXPECT_EQ(0, ar.run(QStringList{"clear", "f"}));
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  2") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
+
+    // Clear all caches and check that they were cleared.
+
+    EXPECT_EQ(0, ar.run(QStringList{"clear"}));
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
+
+    EXPECT_EQ(0, ar.run(QStringList{"stats", "f"}));
+    output = ar.stdout();
+    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
 }
 
 TEST_F(AdminTest, get_fullsize)

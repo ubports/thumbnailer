@@ -115,6 +115,11 @@ public:
 
     AllStats stats() const;
 
+    enum class CacheSelector { all, full_size_cache, thumbnail_cache, failure_cache, LAST__ };
+
+    void clear_stats(CacheSelector selector);
+    void clear(CacheSelector selector);
+
 private:
     ArtDownloader* downloader() const
     {

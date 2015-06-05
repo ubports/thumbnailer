@@ -38,6 +38,8 @@ namespace service
 namespace
 {
 
+char const ADMIN_ERROR[] = "com.canonical.ThumbnailerAdmin.Error.Failed";
+
 // Conversion to QDateTime is somewhat awkward because system_clock
 // is not guaranteed to use the same epoch as QDateTime.
 // (The C++ standard leaves the epoch time point undefined.)
@@ -92,6 +94,28 @@ unity::thumbnailer::service::AllStats AdminInterface::Stats()
     all.thumbnail_stats = to_cache_stats(st.thumbnail_stats);
     all.failure_stats = to_cache_stats(st.failure_stats);
     return all;
+}
+
+void AdminInterface::ClearStats(int cache_id)
+{
+    if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
+    {
+        sendErrorReply(ADMIN_ERROR, QString("ClearStats(): invalid cache selector: ") + QString::number(cache_id));
+        return;
+    }
+    auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
+    thumbnailer_->clear_stats(selector);
+}
+
+void AdminInterface::Clear(int cache_id)
+{
+    if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
+    {
+        sendErrorReply(ADMIN_ERROR, QString("Clear(): invalid cache selector: ") + QString::number(cache_id));
+        return;
+    }
+    auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
+    thumbnailer_->clear(selector);
 }
 
 void AdminInterface::Shutdown()
