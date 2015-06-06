@@ -15,9 +15,11 @@
  *
  * Authored by: Jussi Pakkanen <jussi.pakkanen@canonical.com>
  *              James Henstridge <james.henstridge@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
-#include <internal/videoscreenshotter.h>
+#include <internal/imageextractor.h>
+
 #include <internal/config.h>
 #include <internal/file_io.h>
 #include <internal/raii.h>
@@ -28,27 +30,34 @@
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
-VideoScreenshotter::VideoScreenshotter(int fd, chrono::milliseconds timeout)
+ImageExtractor::ImageExtractor(int fd, chrono::milliseconds timeout)
     : fd_(dup(fd), do_close)
     , timeout_ms_(timeout.count())
 {
     if (fd_.get() < 0)
     {
-        throw runtime_error("VideoScreenshotter(): could not duplicate fd: " + safe_strerror(errno));
+        throw runtime_error("ImageExtractor(): could not duplicate fd: " + safe_strerror(errno));
     }
 
     process_.setStandardInputFile(QProcess::nullDevice());
     process_.setProcessChannelMode(QProcess::ForwardedChannels);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this,
-            &VideoScreenshotter::processFinished);
+            &ImageExtractor::processFinished);
     connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error), this,
-            &VideoScreenshotter::error);
-    connect(&timer_, &QTimer::timeout, this, &VideoScreenshotter::timeout);
+            &ImageExtractor::error);
+    connect(&timer_, &QTimer::timeout, this, &ImageExtractor::timeout);
 }
 
-VideoScreenshotter::~VideoScreenshotter() = default;
+ImageExtractor::~ImageExtractor()
+{
+    auto error = process_.error();
+    if (error != QProcess::FailedToStart)
+    {
+        process_.waitForFinished(timeout_ms_);
+    }
+}
 
-void VideoScreenshotter::extract()
+void ImageExtractor::extract()
 {
     // Gstreamer video pipelines are unstable so we need to run an
     // external helper library.
@@ -58,29 +67,24 @@ void VideoScreenshotter::extract()
 
     if (!tmpfile_.open())
     {
-        throw runtime_error("VideoScreenshotter::extract: unable to open temporary file");
+        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileName().toStdString());
     }
     /* Our duplicated file descriptor does not have the FD_CLOEXEC flag set */
     process_.start(exe_path_, {QString("fd://%1").arg(fd_.get()), tmpfile_.fileName()});
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
-    timer_.start(15000);
+    timer_.start(timeout_ms_);
 }
 
-string VideoScreenshotter::error_string()
-{
-    return error_;
-}
-
-string VideoScreenshotter::data()
+string ImageExtractor::data()
 {
     if (!error_.empty())
     {
-        throw runtime_error(string("VideoScreenshotter::data(): ") + error_);
+        throw runtime_error(string("ImageExtractor::data(): ") + error_);
     }
     return read_file(tmpfile_.fileName().toStdString());
 }
 
-void VideoScreenshotter::processFinished()
+void ImageExtractor::processFinished()
 {
     timer_.stop();
     switch (process_.exitStatus())
@@ -92,43 +96,42 @@ void VideoScreenshotter::processFinished()
                     error_ = "";
                     break;
                 case 1:
-                    error_ = "Could not extract screenshot";
+                    error_ = "could not extract screenshot";
                     break;
                 case 2:
-                    error_ = "Video extractor pipeline failed";
+                    error_ = "extractor pipeline failed";
                     break;
                 default:
-                    error_ = string("Unknown error when trying to extract video screenshot, return value was ") +
-                             to_string(process_.exitCode());
+                    error_ = string("unknown exit status ") + to_string(process_.exitCode()) +
+                             " from " + exe_path_.toStdString();
                     break;
             }
             break;
         case QProcess::CrashExit:
-            error_ = "vs-thumb subprocess crashed";
+            error_ = exe_path_.toStdString() + " crashed";
             break;
         default:
-            abort();  // Impossible
+            abort();  // LCOV_EXCL_LINE  // Impossible
     }
     Q_EMIT finished();
 }
 
-void VideoScreenshotter::timeout()
+void ImageExtractor::timeout()
 {
     if (process_.state() != QProcess::NotRunning)
     {
         process_.kill();
     }
-    error_ = "vs-thumb did not return after 15 seconds";
+    error_ = exe_path_.toStdString() + " did not return after " + to_string(timeout_ms_) + " milliseconds";
     Q_EMIT finished();
 }
 
-void VideoScreenshotter::error()
+void ImageExtractor::error()
 {
     if (process_.error() == QProcess::ProcessError::FailedToStart)
     {
         timer_.stop();
-        error_ = string("Error starting vs-thumb. QProcess::ProcessError code = ") + to_string(process_.error())
-                 + ", path = " + exe_path_.toStdString();
+        error_ = string("failed to start ") + exe_path_.toStdString();
         Q_EMIT finished();
     }
 }

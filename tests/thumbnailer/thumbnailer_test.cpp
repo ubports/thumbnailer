@@ -360,7 +360,7 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
         catch (unity::ResourceException const& e)
         {
             string msg = e.to_string();
-            string exp = "VideoScreenshotter::data(): Error starting vs-thumb. QProcess::ProcessError";
+            string exp = "ImageExtractor::data(): failed to start no_such_directory/vs-thumb";
             EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
         }
         setenv("TN_UTILDIR", old_env.c_str(), true);
