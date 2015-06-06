@@ -21,8 +21,6 @@
 #include <internal/thumbnailer.h>
 
 #include <internal/artreply.h>
-#include <internal/file_io.h>
-#include <internal/gobj_memory.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
 #include <internal/make_directories.h>
@@ -32,7 +30,6 @@
 #include <internal/ubuntuserverdownloader.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <core/persistent_string_cache.h>
 
 #pragma GCC diagnostic push
@@ -41,10 +38,7 @@
 #include <gio/gio.h>
 #pragma GCC diagnostic pop
 
-#include <QTimer>
 #include <unity/UnityExceptions.h>
-
-#include <iostream>
 
 #include <fcntl.h>
 #include <sys/stat.h>
