@@ -40,12 +40,13 @@ PersistentStringCache provides a cache of key-value pairs with a backing store.
 It is intended for caching arbitrary (possibly large) amounts of data,
 such as might be needed by a web browser cache. The cache scales to large
 numbers (hundreds of thousands) of entries and is very fast. (Typically,
-the performance limiting factor is the I/O bandwidth to disk.)
+the performance-limiting factor is the I/O bandwidth to disk.)
 
-The cache is robust in the face of crashes or power loss. After a
+The cache is robust in the face of crashes and power loss. After a
 re-start, it is guaranteed to be in a consistent state with correct
-data. However, some number of updates that were made
-just prior to a crash might be lost.
+data. Some number of updates that were made just prior to a power loss
+or kernel crash can be lost; however, if just the calling process
+crashes, no updates are lost.
 
 A cache has a maximum size (which can be changed at any time). Once
 the cache reaches its maximum size, when adding an entry,
