@@ -674,8 +674,6 @@ Thumbnailer::CacheVec Thumbnailer::select_caches(CacheSelector selector) const
 
 void Thumbnailer::clear_stats(CacheSelector selector)
 {
-    static mutex m;
-    lock_guard<mutex> lock(m);
     for (auto c : select_caches(selector))
     {
         c->clear_stats();
@@ -684,8 +682,6 @@ void Thumbnailer::clear_stats(CacheSelector selector)
 
 void Thumbnailer::clear(CacheSelector selector)
 {
-    static mutex m;
-    lock_guard<mutex> lock(m);
     for (auto c : select_caches(selector))
     {
         c->invalidate();
