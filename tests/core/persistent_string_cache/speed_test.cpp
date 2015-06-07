@@ -64,7 +64,7 @@ int random_int(int min, int max)
     return uniform_dist(engine);
 }
 
-int random_size(double mean, double stddev, int min, int max)
+int random_size(double mean, double stddev, int64_t min, int64_t max)
 {
     static auto seed = random_device()();
     static mt19937 engine(seed);
@@ -106,18 +106,18 @@ TEST(PersistentStringCache, basic)
 
     // Adjustable parameters
 
-    int const max_cache_size = 100 * MB;
+    int64_t const max_cache_size = 100 * MB;
     int const record_size = 20 * kB;
     double const hit_rate = 0.8;
-    int const iterations = 10000;
+    int const iterations = 100000;
     int keylen = 60;
     double const stddev = record_size / 3.0;
     auto const cost_of_miss = chrono::microseconds(0);
 
     // End adjustable parameters
 
-    int const num_records = max_cache_size / record_size;
-    int const max_key = ((1 - hit_rate) + 1) * num_records;
+    int64_t const num_records = max_cache_size / record_size;
+    int const max_key = ((1 - hit_rate) + 1) * num_records - 1;
 
     unlink_db(test_db);
     auto c = PersistentStringCache::open(test_db, max_cache_size, CacheDiscardPolicy::lru_only);
@@ -141,7 +141,7 @@ TEST(PersistentStringCache, basic)
     static Optional<string> val;
 
     auto start = chrono::system_clock::now();
-    for (int i = 0; i <= num_records; ++i)
+    for (int i = 0; i < num_records; ++i)
     {
         static ostringstream s;
         s << setfill('0') << setw(keylen) << i;
