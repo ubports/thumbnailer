@@ -109,7 +109,7 @@ TEST(PersistentStringCache, basic)
     int64_t const max_cache_size = 100 * MB;
     int const record_size = 20 * kB;
     double const hit_rate = 0.8;
-    int const iterations = 100000;
+    int const iterations = 10000;
     int keylen = 60;
     double const stddev = record_size / 3.0;
     auto const cost_of_miss = chrono::microseconds(0);
