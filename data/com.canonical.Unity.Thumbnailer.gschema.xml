@@ -72,5 +72,14 @@
         This parameter sets the maximum number of concurrent image extractions from local media files.
      </description>
     </key>
+
+    <key type="i" name="extraction-timeout">
+      <default>10</default>
+      <summary>Maximum amount of time to wait for an image extraction or download (in seconds)</summary>
+      <description>
+        This parameter sets the amount of time (in seconds) to wait for a remote image download or
+        a thumbnail extraction before giving up.
+     </description>
+    </key>
   </schema>
 </schemalist>

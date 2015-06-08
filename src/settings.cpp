@@ -107,6 +107,11 @@ int Settings::max_extractions() const
     return get_positive_int("max-extractions", 2);
 }
 
+int Settings::extraction_timeout() const
+{
+    return get_positive_int("extraction-timeout", 10);
+}
+
 string Settings::get_string(char const* key, string const& default_value) const
 {
     if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))

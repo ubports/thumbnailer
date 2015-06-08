@@ -577,6 +577,7 @@ Thumbnailer::Thumbnailer()
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
         retry_error_hours_ = settings.retry_error_hours();
+        extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout());
     }
     catch (std::exception const& e)
     {
@@ -594,7 +595,8 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
 
     try
     {
-        return unique_ptr<ThumbnailRequest>(new LocalThumbnailRequest(this, filename, filename_fd, requested_size));
+        return unique_ptr<ThumbnailRequest>(
+                new LocalThumbnailRequest(this, filename, filename_fd, requested_size, extraction_timeout_));
     }
     catch (...)
     {
@@ -613,7 +615,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
 
     try
     {
-        return unique_ptr<ThumbnailRequest>(new AlbumRequest(this, artist, album, requested_size));
+        return unique_ptr<ThumbnailRequest>(new AlbumRequest(this, artist, album, requested_size, extraction_timeout_));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
     catch (...)
@@ -634,7 +636,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
 
     try
     {
-        return unique_ptr<ThumbnailRequest>(new ArtistRequest(this, artist, album, requested_size));
+        return unique_ptr<ThumbnailRequest>(new ArtistRequest(this, artist, album, requested_size, extraction_timeout_));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
     catch (...)

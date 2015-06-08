@@ -106,8 +106,10 @@ QDBusUnixFileDescriptor write_to_tmpfile(std::string const& image)
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace service
 {
 
@@ -325,6 +327,9 @@ void Handler::sendError(QString const& error)
     p->bus.send(p->message.createErrorReply(ART_ERROR, error));
     Q_EMIT finished();
 }
-}
-}
-}
+
+}  // namespace service
+
+}  // namespace thumbnailer
+
+}  // namespace unity
