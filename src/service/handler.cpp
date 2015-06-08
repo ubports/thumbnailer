@@ -212,8 +212,6 @@ QDBusUnixFileDescriptor Handler::check()
 
     if (art_image.empty())
     {
-        // TODO: Error info from thumbnailer should be made available here.
-        // TODO: That's a cache miss. Emit trace and init downlaod time. How to deal with phase 3 vs phase 1?
         return QDBusUnixFileDescriptor();
     }
     return write_to_tmpfile(art_image);
@@ -292,10 +290,9 @@ QDBusUnixFileDescriptor Handler::create()
 {
     string art_image = p->request->thumbnail();
 
-    // TODO: error info should be made available here.
     if (art_image.empty())
     {
-        throw runtime_error("Handler::create(): Could not get thumbnail for " + details().toStdString());
+        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
     }
     return write_to_tmpfile(art_image);
 }

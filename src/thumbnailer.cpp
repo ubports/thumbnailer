@@ -348,6 +348,7 @@ string RequestBase::thumbnail()
     }
     catch (std::exception const& e)
     {
+        status_ = FetchStatus::error;
         throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
     }
 }
