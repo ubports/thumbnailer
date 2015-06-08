@@ -256,7 +256,7 @@ TEST_F(DBusTest, rate_limit_requests)
         replies[i].waitForFinished();
         EXPECT_FALSE(replies[i].isValid());
         string message = replies[i].error().message().toStdString();
-        EXPECT_TRUE(boost::contains(message, "Could not get thumbnail")) << message;
+        EXPECT_TRUE(boost::contains(message, "Handler::create_finished(): could not get thumbnail for ")) << message;
     }
 }
 
