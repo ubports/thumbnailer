@@ -16,9 +16,10 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
+#include "clear.h"
+#include "dbus_connection.h"
 #include "get_local_thumbnail.h"
 #include "get_remote_thumbnail.h"
-#include "dbus_connection.h"
 #include "show_stats.h"
 
 #include <boost/filesystem.hpp>
@@ -52,10 +53,12 @@ typedef map<char const*, pair<Action::UPtr(*)(QCommandLineParser&), char const*>
 
 ActionMap const valid_actions =
 {
-    { "stats",      { &create_action<ShowStats>,          "Show statistics" } },
-    { "get",        { &create_action<GetLocalThumbnail>,  "Get thumbnail from local file" } },
-    { "get_artist", { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
-    { "get_album",  { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } }
+    { "stats",       { &create_action<ShowStats>,          "Show statistics" } },
+    { "clear-stats", { &create_action<Clear>,              "Clear statistics" } },
+    { "get",         { &create_action<GetLocalThumbnail>,  "Get thumbnail from local file" } },
+    { "get_artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
+    { "get_album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },
+    { "clear",       { &create_action<Clear>,              "Clear caches" } }
 };
 
 QString command_summary()

@@ -10,9 +10,10 @@ set_source_files_properties(${admininterface_xml} PROPERTIES
 qt5_add_dbus_interface(interface_files ${admininterface_xml} admininterface)
 
 add_executable(thumbnailer-admin
+    clear.cpp
+    dbus_connection.cpp
     get_local_thumbnail.cpp
     get_remote_thumbnail.cpp
-    dbus_connection.cpp
     parse_size.cpp
     show_stats.cpp
     thumbnailer-admin.cpp
@@ -24,6 +25,7 @@ add_executable(thumbnailer-admin
 )
 qt5_use_modules(thumbnailer-admin DBus)
 target_link_libraries(thumbnailer-admin core ${Boost_LIBRARIES})
+add_dependencies(thumbnailer-admin thumbnailer-service)
 
 INSTALL(TARGETS thumbnailer-admin
         RUNTIME

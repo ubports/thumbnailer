@@ -649,6 +649,45 @@ Thumbnailer::AllStats Thumbnailer::stats() const
     return AllStats{full_size_cache_->stats(), thumbnail_cache_->stats(), failure_cache_->stats()};
 }
 
+Thumbnailer::CacheVec Thumbnailer::select_caches(CacheSelector selector) const
+{
+    CacheVec v;
+    switch (selector)
+    {
+        case Thumbnailer::CacheSelector::full_size_cache:
+            v.push_back(full_size_cache_.get());
+            break;
+        case Thumbnailer::CacheSelector::thumbnail_cache:
+            v.push_back(thumbnail_cache_.get());
+            break;
+        case Thumbnailer::CacheSelector::failure_cache:
+            v.push_back(failure_cache_.get());
+            break;
+        default:
+            v.push_back(full_size_cache_.get());
+            v.push_back(thumbnail_cache_.get());
+            v.push_back(failure_cache_.get());
+            break;
+    }
+    return v;
+}
+
+void Thumbnailer::clear_stats(CacheSelector selector)
+{
+    for (auto c : select_caches(selector))
+    {
+        c->clear_stats();
+    }
+}
+
+void Thumbnailer::clear(CacheSelector selector)
+{
+    for (auto c : select_caches(selector))
+    {
+        c->invalidate();
+    }
+}
+
 }  // namespace internal
 
 }  // namespace thumbnailer
