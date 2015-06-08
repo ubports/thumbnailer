@@ -350,6 +350,29 @@ bool near_current_time(chrono::system_clock::time_point& t)
     return true;
 }
 
+TEST_F(DBusTest, bad_clear_params)
+{
+    QDBusReply<void> reply = dbus_->admin_->ClearStats(-1);
+    ASSERT_FALSE(reply.isValid());
+    string msg = reply.error().message().toStdString();
+    EXPECT_EQ("ClearStats(): invalid cache selector: -1", msg) << msg;
+
+    reply = dbus_->admin_->ClearStats(4);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("ClearStats(): invalid cache selector: 4", msg) << msg;
+
+    reply = dbus_->admin_->Clear(-1);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("Clear(): invalid cache selector: -1", msg) << msg;
+
+    reply = dbus_->admin_->Clear(4);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("Clear(): invalid cache selector: 4", msg) << msg;
+}
+
 TEST_F(DBusTest, stats)
 {
     using namespace std::chrono;

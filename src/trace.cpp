@@ -60,16 +60,18 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
         case QtCriticalMsg:
             fputs(" Critical:", stderr);
             break;
+        // LCOV_EXCL_START
         case QtFatalMsg:
             fputs(" Fatal:", stderr);
             break;
+        // LCOV_EXCL_STOP
         default:
             ;  // No label for debug messages.
     }
     fprintf(stderr, " %s\n", msg.toLocal8Bit().constData());
     if (type == QtFatalMsg)
     {
-        abort();
+        abort();  // LCOV_EXCL_LINE
     }
 }
 
