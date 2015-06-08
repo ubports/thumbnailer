@@ -28,6 +28,11 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#include <gio/gio.h>
+#pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 #include <QCoreApplication>
 #include <QSignalSpy>
@@ -154,6 +159,158 @@ TEST_F(ThumbnailerTest, basic)
     img = Image(thumb);
     EXPECT_EQ(2731, img.width());
     EXPECT_EQ(2048, img.height());
+}
+
+TEST_F(ThumbnailerTest, changed_size)
+{
+    {
+        Thumbnailer tn;
+        EXPECT_EQ(100 * 1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
+    }
+
+    {
+        gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+        g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 1);
+        Thumbnailer tn;
+        EXPECT_EQ(1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
+    }
+}
+
+TEST_F(ThumbnailerTest, clear)
+{
+    Thumbnailer tn;
+
+    auto fill_cache = [&tn]
+    {
+        {
+            // Load a song so we have something in the full-size and thumbnail caches.
+            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
+            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize());
+            ASSERT_NE(nullptr, request.get());
+            // Audio thumbnails cannot be produced immediately
+            ASSERT_EQ("", request->thumbnail());
+
+            QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+            request->download(chrono::milliseconds(15000));
+            ASSERT_TRUE(spy.wait(20000));
+            string thumb = request->thumbnail();
+            ASSERT_NE("", thumb);
+            Image img(thumb);
+            EXPECT_EQ(200, img.width());
+            EXPECT_EQ(200, img.height());
+        }
+
+        {
+            // Load same song again at different size, so we get a hit on full-size cache.
+            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
+            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize(20, 20));
+            ASSERT_NE(nullptr, request.get());
+            ASSERT_NE("", request->thumbnail());
+        }
+
+        {
+            // Load same song again at same size, so we get a hit on thumbnail cache.
+            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
+            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize(20, 20));
+            ASSERT_NE(nullptr, request.get());
+            ASSERT_NE("", request->thumbnail());
+        }
+
+        {
+            // Load an empty image, so we have something in the failure cache.
+            FdPtr fd(open(EMPTY_IMAGE, O_RDONLY), do_close);
+            string thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
+            EXPECT_EQ("", thumb);
+        }
+
+        {
+            // Load empty image again, so we get a hit on failure cache.
+            FdPtr fd(open(EMPTY_IMAGE, O_RDONLY), do_close);
+            string thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
+            EXPECT_EQ("", thumb);
+        }
+    };
+
+    fill_cache();
+
+    // Just to show that fill_cache() does put things into the cache and the stats are as expected.
+    auto stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.failure_stats.size());
+    EXPECT_EQ(1, stats.full_size_stats.hits());
+    EXPECT_EQ(1, stats.thumbnail_stats.hits());
+    EXPECT_EQ(1, stats.failure_stats.hits());
+
+    // Clear all caches and check that they are empty.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.size());
+    EXPECT_EQ(0, stats.thumbnail_stats.size());
+    EXPECT_EQ(0, stats.failure_stats.size());
+
+    // Clear full-size cache only.
+    fill_cache();
+    tn.clear(Thumbnailer::CacheSelector::full_size_cache);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.size());
+    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.failure_stats.size());
+
+    // Clear thumbnail cache only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear(Thumbnailer::CacheSelector::thumbnail_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(0, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.failure_stats.size());
+
+    // Clear failure cache only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear(Thumbnailer::CacheSelector::failure_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(0, stats.failure_stats.size());
+
+    // Clear all stats.
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.hits());
+    EXPECT_EQ(0, stats.thumbnail_stats.hits());
+    EXPECT_EQ(0, stats.failure_stats.hits());
+
+    // Re-fill the cache and clear full-size stats only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear_stats(Thumbnailer::CacheSelector::full_size_cache);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.hits());
+    EXPECT_EQ(1, stats.thumbnail_stats.hits());
+    EXPECT_EQ(1, stats.failure_stats.hits());
+
+    // Re-fill the cache and clear thumbnail stats only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear_stats(Thumbnailer::CacheSelector::thumbnail_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.hits());
+    EXPECT_EQ(0, stats.thumbnail_stats.hits());
+    EXPECT_EQ(1, stats.failure_stats.hits());
+
+    // Re-fill the cache and clear failure stats only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear_stats(Thumbnailer::CacheSelector::failure_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.hits());
+    EXPECT_EQ(1, stats.thumbnail_stats.hits());
+    EXPECT_EQ(0, stats.failure_stats.hits());
 }
 
 TEST_F(ThumbnailerTest, bad_fd)
@@ -467,6 +624,38 @@ TEST_F(RemoteServer, no_such_local_image)
         EXPECT_TRUE(boost::starts_with(msg,
                                        "unity::ResourceException: Thumbnailer::get_thumbnail():\n"
                                        "    boost::filesystem::canonical: No such file or directory: ")) << msg;
+    }
+}
+
+TEST_F(RemoteServer, get_artist_empty_strings)
+{
+    Thumbnailer tn;
+
+    try
+    {
+        tn.get_artist_art("", "", QSize());
+        FAIL();
+    }
+    catch (unity::InvalidArgumentException const& e)
+    {
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_artist_art(): both artist and album are empty",
+                     e.what()) << e.what();
+    }
+}
+
+TEST_F(RemoteServer, get_album_empty_strings)
+{
+    Thumbnailer tn;
+
+    try
+    {
+        tn.get_album_art("", "", QSize());
+        FAIL();
+    }
+    catch (unity::InvalidArgumentException const& e)
+    {
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_album_art(): both artist and album are empty",
+                     e.what()) << e.what();
     }
 }
 

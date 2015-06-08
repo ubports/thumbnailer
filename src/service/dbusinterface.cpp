@@ -27,9 +27,6 @@ using namespace unity::thumbnailer::internal;
 namespace
 {
 char const ART_ERROR[] = "com.canonical.Thumbnailer.Error.Failed";
-
-int const MAX_DOWNLOADS = 2;
-int const MAX_VIDEO_THUMBNAILS = 2;
 }
 
 namespace unity
@@ -46,8 +43,8 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
     , thumbnailer_(thumbnailer)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
-    , download_limiter_(MAX_DOWNLOADS)
-    , video_thumbnail_limiter_(MAX_VIDEO_THUMBNAILS)
+    , download_limiter_(settings_.max_downloads())
+    , extraction_limiter_(settings_.max_extractions())
 {
 }
 
@@ -59,13 +56,22 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
                                                    QString const& album,
                                                    QSize const& requestedSize)
 {
-    QString details;
-    QTextStream s(&details);
-    s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-    auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
-    queueRequest(new Handler(connection(), message(),
-                             check_thread_pool_, create_thread_pool_,
-                             download_limiter_, std::move(request), details));
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, std::move(request), details));
+    }
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, e.what());
+    }
     return QDBusUnixFileDescriptor();
 }
 
@@ -73,13 +79,22 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
                                                     QString const& album,
                                                     QSize const& requestedSize)
 {
-    QString details;
-    QTextStream s(&details);
-    s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-    auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
-    queueRequest(new Handler(connection(), message(),
-                             check_thread_pool_, create_thread_pool_,
-                             download_limiter_, std::move(request), details));
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, std::move(request), details));
+    }
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, msg);
+    }
     return QDBusUnixFileDescriptor();
 }
 
@@ -90,21 +105,20 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
     std::unique_ptr<ThumbnailRequest> request;
     try
     {
-        request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        QString details;
+        QTextStream s(&details);
+        s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 extraction_limiter_, std::move(request), details));
     }
     catch (exception const& e)
     {
         QString msg = "DBusInterface::GetThumbnail(): " + filename + ": " + e.what();
         qWarning() << msg;
         sendErrorReply(ART_ERROR, msg);
-        return QDBusUnixFileDescriptor();
     }
-    QString details;
-    QTextStream s(&details);
-    s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-    queueRequest(new Handler(connection(), message(),
-                             check_thread_pool_, create_thread_pool_,
-                             video_thumbnail_limiter_, std::move(request), details));
     return QDBusUnixFileDescriptor();
 }
 

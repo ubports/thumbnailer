@@ -24,5 +24,53 @@
       <summary>Size of the failure cache in megabytes</summary>
       <description>The failure cache records information about failed downloads or failed thumbnail extractions.</description>
     </key>
+
+    <key type="i" name="max-thumbnail-size">
+      <default>1920</default>
+      <summary>Maximum size in pixels for a thumbnail</summary>
+      <description>
+        Requests for thumbnails larger than this will automatically reduce the thumbnail
+        to max-thumbnail-size in the larger dimension. An exception are requests for local thumbnails
+        with size 0x0, which are returned in their original size.
+     </description>
+    </key>
+
+    <key type="i" name="retry-not-found-hours">
+      <default>168</default>
+      <summary>Time to wait before re-trying for remote artwork that did not exist</summary>
+      <description>
+        If artwork cannot be retrieved because the remote server
+        authoritavely confirmed that no artwork exists for an artist and album,
+        this parameter defines how long the thumbnailer waits before trying
+        to download the same image again. The default is 168 hours (one week).
+     </description>
+    </key>
+
+    <key type="i" name="retry-error-hours">
+      <default>2</default>
+      <summary>Time to wait before re-trying remote artwork that failed to download</summary>
+      <description>
+        If artwork cannot be retrieved from the remote server due to an unexpected
+        error (such as the server not responding), this parameter defines how long
+        the thumbnailer waits before trying to download the same image again.
+        The default is two hours.
+     </description>
+    </key>
+
+    <key type="i" name="max-downloads">
+      <default>2</default>
+      <summary>Maximum number of concurrent downloads</summary>
+      <description>
+        This parameter sets the maximum number of concurrent downloads for remote artwork.
+     </description>
+    </key>
+
+    <key type="i" name="max-extractions">
+      <default>2</default>
+      <summary>Maximum number of concurrent image extractions</summary>
+      <description>
+        This parameter sets the maximum number of concurrent image extractions from local media files.
+     </description>
+    </key>
   </schema>
 </schemalist>

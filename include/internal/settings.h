@@ -47,12 +47,19 @@ public:
     int full_size_cache_size() const;
     int thumbnail_cache_size() const;
     int failure_cache_size() const;
+    int max_thumbnail_size() const;
+    int retry_not_found_hours() const;
+    int retry_error_hours() const;
+    int max_downloads() const;
+    int max_extractions() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;
+    int get_positive_int(char const* key, int default_value) const;
     int get_int(char const* key, int default_value) const;
 
     std::unique_ptr<GSettingsSchema, void(*)(GSettingsSchema*)> schema_;
+    std::string schema_name_;
     gobj_ptr<GSettings> settings_;
 };
 

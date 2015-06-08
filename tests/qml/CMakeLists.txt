@@ -1,5 +1,5 @@
 add_executable(qml_test qml_test.cpp)
 qt5_use_modules(qml_test Qml DBus QuickTest)
-target_link_libraries(qml_test ${QTDBUSTEST_DEPS_LDFLAGS} testutils)
-add_dependencies(qml_test thumbnailer-service thumbnailer-qml)
+target_link_libraries(qml_test testutils)
+add_dependencies(qml_test thumbnailer-service)
 add_test(qml xvfb-run -a -s "-screen 0 800x600x24" ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)

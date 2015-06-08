@@ -90,7 +90,6 @@ ShowStats::ShowStats(QCommandLineParser& parser)
         else
         {
             throw QString("invalid cache_id: ") + arg + "\n" + parser.helpText();
-            ;
         }
     }
 }
@@ -159,7 +158,8 @@ void show_histogram(QList<quint32> const& h)
         print_entry(label_width, labels[i], value_width, h[i]);
     }
 }
-}
+
+}  // namespace
 
 void ShowStats::show_stats(service::CacheStats const& st)
 {

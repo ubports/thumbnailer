@@ -90,13 +90,17 @@ void GetLocalThumbnail::run(DBusConnection& conn)
 {
     try
     {
-        int fd = open(input_path_.toUtf8().data(), O_RDONLY);
-        if (fd == -1)
+        QDBusUnixFileDescriptor ufd;
         {
-            throw QString("GetLocalThumbnail::run(): cannot open ") + input_path_ + ": " +
-                QString::fromStdString(safe_strerror(errno));
+            FdPtr fd(do_close);
+            fd.reset(open(input_path_.toUtf8().data(), O_RDONLY));
+            if (fd.get() == -1)
+            {
+                throw QString("GetLocalThumbnail::run(): cannot open ") + input_path_ + ": " +
+                    QString::fromStdString(safe_strerror(errno));
+            }
+            ufd.setFileDescriptor(fd.get());
         }
-        QDBusUnixFileDescriptor ufd(fd);
         auto reply = conn.thumbnailer().GetThumbnail(input_path_, ufd, size_);
         reply.waitForFinished();
         if (!reply.isValid())

@@ -70,9 +70,6 @@ public:
     std::string to_jpeg() const;
 
 private:
-    //typedef struct ::_GdkPixbuf GdkPixbuf;
-    //typedef gobj_ptr<GdkPixbuf> PixbufPtr;
-
     void load(Reader& reader, QSize requested_size);
 
     gobj_ptr<struct _GdkPixbuf> pixbuf_;

@@ -28,6 +28,7 @@
 
 #include <cstdio>
 
+using namespace std;
 using namespace unity::thumbnailer::internal;
 using namespace unity::thumbnailer::service;
 
@@ -38,46 +39,39 @@ static const char BUS_ADMIN_PATH[] = "/com/canonical/ThumbnailerAdmin";
 
 int main(int argc, char** argv)
 {
-    QCoreApplication app(argc, argv);
-
-    std::shared_ptr<Thumbnailer> thumbnailer;
+    int rc = 1;
     try
     {
-        thumbnailer = std::make_shared<Thumbnailer>();
+        QCoreApplication app(argc, argv);
+
+        shared_ptr<Thumbnailer> thumbnailer;
+        thumbnailer = make_shared<Thumbnailer>();
+
+        unity::thumbnailer::service::DBusInterface server(thumbnailer);
+        new ThumbnailerAdaptor(&server);
+
+        unity::thumbnailer::service::AdminInterface admin_server(thumbnailer);
+        new ThumbnailerAdminAdaptor(&admin_server);
+
+        auto bus = QDBusConnection::sessionBus();
+        bus.registerObject(BUS_THUMBNAILER_PATH, &server);
+        bus.registerObject(BUS_ADMIN_PATH, &admin_server);
+
+        qDBusRegisterMetaType<unity::thumbnailer::service::AllStats>();
+
+        if (!bus.registerService(BUS_NAME))
+        {
+            throw runtime_error(string("thumbnailer-service: could not aqcquire DBus name ") + BUS_NAME);
+        }
+
+        new InactivityHandler(server);
+
+        rc = app.exec();
     }
     catch (std::exception const& e)
     {
-        fprintf(stderr, "%s\n", e.what());
-        return 1;
+        qDebug() << QString(e.what());
     }
 
-    unity::thumbnailer::service::DBusInterface server(thumbnailer);
-    new ThumbnailerAdaptor(&server);
-
-    unity::thumbnailer::service::AdminInterface admin_server(thumbnailer);
-    new ThumbnailerAdminAdaptor(&admin_server);
-
-    auto bus = QDBusConnection::sessionBus();
-    bus.registerObject(BUS_THUMBNAILER_PATH, &server);
-    bus.registerObject(BUS_ADMIN_PATH, &admin_server);
-
-    qDBusRegisterMetaType<unity::thumbnailer::service::AllStats>();
-
-    if (!bus.registerService(BUS_NAME))
-    {
-        fprintf(stderr, "Could not acquire D-Bus name %s.\n", BUS_NAME);
-        return 1;
-    }
-
-    try
-    {
-        new InactivityHandler(server);
-    }
-    catch (std::invalid_argument& e)
-    {
-        fprintf(stderr, "%s\n", e.what());
-        return 1;
-    }
-
-    return app.exec();
+    return rc;
 }

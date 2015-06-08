@@ -46,6 +46,7 @@ Settings::Settings()
 
 Settings::Settings(string const& schema_name)
     : schema_(nullptr, &g_settings_schema_unref)
+    , schema_name_(schema_name)
 {
     GSettingsSchemaSource* src = g_settings_schema_source_get_default();
     schema_.reset(g_settings_schema_source_lookup(src, schema_name.c_str(), true));
@@ -68,17 +69,42 @@ string Settings::art_api_key() const
 
 int Settings::full_size_cache_size() const
 {
-    return get_int("full-size-cache-size", 50);
+    return get_positive_int("full-size-cache-size", 50);
 }
 
 int Settings::thumbnail_cache_size() const
 {
-    return get_int("thumbnail-cache-size", 100);
+    return get_positive_int("thumbnail-cache-size", 100);
 }
 
 int Settings::failure_cache_size() const
 {
-    return get_int("failure-cache-size", 2);
+    return get_positive_int("failure-cache-size", 2);
+}
+
+int Settings::max_thumbnail_size() const
+{
+    return get_positive_int("max-thumbnail-size", 1920);
+}
+
+int Settings::retry_not_found_hours() const
+{
+    return get_positive_int("retry-not-found-hours", 24 * 7);
+}
+
+int Settings::retry_error_hours() const
+{
+    return get_positive_int("retry-error-hours", 2);
+}
+
+int Settings::max_downloads() const
+{
+    return get_positive_int("max-downloads", 2);
+}
+
+int Settings::max_extractions() const
+{
+    return get_positive_int("max-extractions", 2);
 }
 
 string Settings::get_string(char const* key, string const& default_value) const
@@ -96,6 +122,17 @@ string Settings::get_string(char const* key, string const& default_value) const
         return result;
     }
     return default_value; // LCOV_EXCL_LINE
+}
+
+int Settings::get_positive_int(char const* key, int default_value) const
+{
+    int i = get_int(key, default_value);
+    if (i <= 0)
+    {
+        throw domain_error(string("Settings::get_positive_int(): invalid zero or negative value for ")
+                           + key + ": " + to_string(i) + " in schema " + schema_name_);
+    }
+    return i;
 }
 
 int Settings::get_int(char const* key, int default_value) const

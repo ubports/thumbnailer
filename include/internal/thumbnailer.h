@@ -131,15 +131,26 @@ public:
 
     AllStats stats() const;
 
+    enum class CacheSelector { all, full_size_cache, thumbnail_cache, failure_cache, LAST__ };
+
+    void clear_stats(CacheSelector selector);
+    void clear(CacheSelector selector);
+
 private:
     ArtDownloader* downloader() const
     {
         return downloader_.get();
     }
 
+    typedef std::vector<core::PersistentStringCache*> CacheVec;
+    CacheVec select_caches(CacheSelector selector) const;
+
     core::PersistentStringCache::UPtr full_size_cache_;  // Small cache of full (original) size images.
     core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.
     core::PersistentStringCache::UPtr failure_cache_;    // Cache for failed attempts (value is always empty).
+    int max_size_;                                       // Max thumbnail size in pixels.
+    int retry_not_found_hours_;                          // Retry wait time for authoritative "no artwork" answer
+    int retry_error_hours_;                              // Retry wait time for unexpected server errors
     std::unique_ptr<ArtDownloader> downloader_;
 
     friend class RequestBase;
