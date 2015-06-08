@@ -62,6 +62,7 @@ public:
     std::chrono::microseconds completion_time() const;  // End-to-end time taken.
     std::chrono::microseconds download_time() const;    // Time of that for download/extract, incl. queueing time.
     QString details() const;
+    QString status() const;
 
 public Q_SLOTS:
     void begin();

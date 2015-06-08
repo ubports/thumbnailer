@@ -128,6 +128,7 @@ struct HandlerPrivate
     chrono::system_clock::time_point download_start_time;   // Time at which download/extract is scheduled.
     chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
     QString details;
+    QString status;
 
     bool cancelled = false;
     QFutureWatcher<FdOrError> checkWatcher;
@@ -342,7 +343,10 @@ void Handler::sendThumbnail(QDBusUnixFileDescriptor const& unix_fd)
 
 void Handler::sendError(QString const& error)
 {
-    qWarning() << error;
+    if (p->request->status() == ThumbnailRequest::FetchStatus::error)
+    {
+        qWarning() << error;
+    }
     p->bus.send(p->message.createErrorReply(ART_ERROR, error));
     Q_EMIT finished();
 }
@@ -364,6 +368,31 @@ chrono::microseconds Handler::download_time() const
 QString Handler::details() const
 {
     return p->details;
+}
+
+QString Handler::status() const
+{
+    switch (p->request->status())
+    {
+    case ThumbnailRequest::FetchStatus::cache_hit:
+        return "HIT";
+    case ThumbnailRequest::FetchStatus::scaled_from_fullsize:
+        return "FULL-SIZE HIT";
+    case ThumbnailRequest::FetchStatus::cached_failure:
+        return "FAILED PREVIOUSLY";
+    case ThumbnailRequest::FetchStatus::needs_download:
+        return "NEEDS DOWNLOAD";
+    case ThumbnailRequest::FetchStatus::downloaded:
+        return "MISS";
+    case ThumbnailRequest::FetchStatus::not_found:
+        return "NO ARTWORK";
+    case ThumbnailRequest::FetchStatus::no_network:
+        return "NETWORK DOWN";
+    case ThumbnailRequest::FetchStatus::error:
+        return "ERROR";
+    default:
+        abort();  // LCOV_EXCL_LINE  // Impossible.
+    }
 }
 
 }  // namespace service

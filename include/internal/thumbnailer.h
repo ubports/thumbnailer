@@ -51,6 +51,9 @@ public:
 
     enum class FetchStatus
     {
+        cache_hit,
+        scaled_from_fullsize,
+        cached_failure,
         needs_download,
         downloaded,
         not_found,
@@ -63,8 +66,12 @@ public:
     // download() and wait for downloadFinished signal to fire, then
     // call thumbnail() again.
     virtual std::string thumbnail() = 0;
+
     // TODO: Timeout should be configurable?
     virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(10000)) = 0;
+
+    // Returns status of thumbnail() set by thumbnail();
+    virtual FetchStatus status() const = 0;
 
     virtual std::string const& key() const = 0;
 Q_SIGNALS:

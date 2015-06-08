@@ -174,8 +174,9 @@ void DBusInterface::requestFinished()
     auto download_time = double(handler->download_time().count()) / 1000000;
     if (download_time > 0)
     {
-        s << " (" << download_time << " sec)";
+        s << " [" << download_time << " sec]";
     }
+    s << " (" << handler->status() << ")";
     qDebug() << msg;
 }
 

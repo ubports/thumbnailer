@@ -77,18 +77,11 @@ class RequestBase : public ThumbnailRequest
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
+    FetchStatus status() const;
     string const& key() const override
     {
         return key_;
     }
-    enum class FetchStatus
-    {
-        needs_download,
-        downloaded,
-        not_found,
-        no_network,
-        error
-    };
     enum class CachePolicy
     {
         cache_fullsize,
@@ -147,6 +140,9 @@ protected:
     Thumbnailer const* thumbnailer_;
     string key_;
     QSize const requested_size_;
+
+private:
+    FetchStatus status_;
 };
 
 namespace
@@ -209,6 +205,7 @@ RequestBase::RequestBase(Thumbnailer* thumbnailer, string const& key, QSize cons
     : thumbnailer_(thumbnailer)
     , key_(key)
     , requested_size_(requested_size)
+    , status_(FetchStatus::needs_download)
 {
 }
 
@@ -253,6 +250,7 @@ string RequestBase::thumbnail()
         auto thumbnail = thumbnailer_->thumbnail_cache_->get(sized_key);
         if (thumbnail)
         {
+            status_ = FetchStatus::cache_hit;
             return *thumbnail;
         }
 
@@ -261,6 +259,7 @@ string RequestBase::thumbnail()
         Image scaled_image;
         if (full_size)
         {
+            status_ = ThumbnailRequest::FetchStatus::scaled_from_fullsize;
             scaled_image = Image(*full_size, target_size);
         }
         else
@@ -271,10 +270,12 @@ string RequestBase::thumbnail()
             // failure cache are updated.
             if (thumbnailer_->failure_cache_->get(key_))
             {
+                status_ = ThumbnailRequest::FetchStatus::cached_failure;
                 return "";
             }
             auto image_data = fetch(target_size);
-            switch (image_data.status)
+            status_ = image_data.status;
+            switch (status_)
             {
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
                     break;
@@ -349,6 +350,11 @@ string RequestBase::thumbnail()
     {
         throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
     }
+}
+
+ThumbnailRequest::FetchStatus RequestBase::status() const
+{
+    return status_;
 }
 
 LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
