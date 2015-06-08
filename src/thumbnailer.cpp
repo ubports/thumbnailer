@@ -77,18 +77,11 @@ class RequestBase : public ThumbnailRequest
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
+    FetchStatus status() const;
     string const& key() const override
     {
         return key_;
     }
-    enum class FetchStatus
-    {
-        needs_download,
-        downloaded,
-        not_found,
-        no_network,
-        error
-    };
     enum class CachePolicy
     {
         cache_fullsize,
@@ -117,7 +110,10 @@ public:
     };
 
 protected:
-    RequestBase(Thumbnailer* thumbnailer, string const& key, QSize const& requested_size);
+    RequestBase(Thumbnailer* thumbnailer,
+                string const& key,
+                QSize const& requested_size,
+                chrono::milliseconds timeout);
     virtual ImageData fetch(QSize const& size_hint) = 0;
 
     ArtDownloader* downloader() const
@@ -127,7 +123,7 @@ protected:
 
     string printable_key() const
     {
-        // Substitute "\\0" for all occurences of '\0' in key_.
+        // Substitute "\\0" for all occurrences of '\0' in key_.
         string new_key;
         string::size_type start_pos = 0;
         string::size_type end_pos;
@@ -147,6 +143,10 @@ protected:
     Thumbnailer const* thumbnailer_;
     string key_;
     QSize const requested_size_;
+    chrono::milliseconds timeout_;
+
+private:
+    FetchStatus status_;
 };
 
 namespace
@@ -159,7 +159,8 @@ public:
     LocalThumbnailRequest(Thumbnailer* thumbnailer,
                           string const& filename,
                           int filename_fd,
-                          QSize const& requested_size);
+                          QSize const& requested_size,
+                          chrono::milliseconds timeout);
 
 protected:
     ImageData fetch(QSize const& size_hint) override;
@@ -175,7 +176,11 @@ class AlbumRequest : public RequestBase
 {
     Q_OBJECT
 public:
-    AlbumRequest(Thumbnailer* thumbnailer, string const& artist, string const& album, QSize const& requested_size);
+    AlbumRequest(Thumbnailer* thumbnailer,
+                 string const& artist,
+                 string const& album,
+                 QSize const& requested_size,
+                 chrono::milliseconds timeout);
 
 protected:
     ImageData fetch(QSize const& size_hint) override;
@@ -191,7 +196,11 @@ class ArtistRequest : public RequestBase
 {
     Q_OBJECT
 public:
-    ArtistRequest(Thumbnailer* thumbnailer, string const& artist, string const& album, QSize const& requested_size);
+    ArtistRequest(Thumbnailer* thumbnailer,
+                  string const& artist,
+                  string const& album,
+                  QSize const& requested_size,
+                  chrono::milliseconds timeout);
 
 protected:
     ImageData fetch(QSize const& size_hint) override;
@@ -205,10 +214,15 @@ private:
 
 }  // namespace
 
-RequestBase::RequestBase(Thumbnailer* thumbnailer, string const& key, QSize const& requested_size)
+RequestBase::RequestBase(Thumbnailer* thumbnailer,
+                         string const& key,
+                         QSize const& requested_size,
+                         chrono::milliseconds timeout)
     : thumbnailer_(thumbnailer)
     , key_(key)
     , requested_size_(requested_size)
+    , timeout_(timeout)
+    , status_(FetchStatus::needs_download)
 {
 }
 
@@ -254,6 +268,7 @@ string RequestBase::thumbnail()
         auto thumbnail = thumbnailer_->thumbnail_cache_->get(sized_key);
         if (thumbnail)
         {
+            status_ = FetchStatus::cache_hit;
             return *thumbnail;
         }
 
@@ -262,6 +277,7 @@ string RequestBase::thumbnail()
         Image scaled_image;
         if (full_size)
         {
+            status_ = ThumbnailRequest::FetchStatus::scaled_from_fullsize;
             scaled_image = Image(*full_size, target_size);
         }
         else
@@ -272,10 +288,12 @@ string RequestBase::thumbnail()
             // failure cache are updated.
             if (thumbnailer_->failure_cache_->get(key_))
             {
+                status_ = ThumbnailRequest::FetchStatus::cached_failure;
                 return "";
             }
             auto image_data = fetch(target_size);
-            switch (image_data.status)
+            status_ = image_data.status;
+            switch (status_)
             {
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
                     break;
@@ -345,17 +363,24 @@ string RequestBase::thumbnail()
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
         return jpeg;
     }
-    catch (...)
+    catch (std::exception const& e)
     {
+        status_ = FetchStatus::error;
         throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
     }
+}
+
+ThumbnailRequest::FetchStatus RequestBase::status() const
+{
+    return status_;
 }
 
 LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
                                              string const& filename,
                                              int filename_fd,
-                                             QSize const& requested_size)
-    : RequestBase(thumbnailer, "", requested_size)
+                                             QSize const& requested_size,
+                                             chrono::milliseconds timeout)
+    : RequestBase(thumbnailer, "", requested_size, timeout)
     , filename_(filename)
     , fd_(-1, do_close)
 {
@@ -444,8 +469,12 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     return ImageData(FetchStatus::not_found, Location::local);
 }
 
-void LocalThumbnailRequest::download(std::chrono::milliseconds timeout)
+void LocalThumbnailRequest::download(chrono::milliseconds timeout)
 {
+    if (timeout.count() == 0)
+    {
+        timeout = timeout_;
+    }
     screenshotter_.reset(new VideoScreenshotter(fd_.get(), timeout));
     connect(screenshotter_.get(), &VideoScreenshotter::finished, this, &LocalThumbnailRequest::downloadFinished,
             Qt::DirectConnection);
@@ -455,8 +484,9 @@ void LocalThumbnailRequest::download(std::chrono::milliseconds timeout)
 AlbumRequest::AlbumRequest(Thumbnailer* thumbnailer,
                            string const& artist,
                            string const& album,
-                           QSize const& requested_size)
-    : RequestBase(thumbnailer, artist + '\0' + album + '\0' + "album", requested_size)
+                           QSize const& requested_size,
+                           chrono::milliseconds timeout)
+    : RequestBase(thumbnailer, artist + '\0' + album + '\0' + "album", requested_size, timeout)
     , artist_(artist)
     , album_(album)
 {
@@ -500,6 +530,10 @@ RequestBase::ImageData AlbumRequest::fetch(QSize const& /*size_hint*/)
 
 void AlbumRequest::download(chrono::milliseconds timeout)
 {
+    if (timeout.count() == 0)
+    {
+        timeout = timeout_;
+    }
     artreply_ = downloader()->download_album(QString::fromStdString(artist_), QString::fromStdString(album_), timeout);
     connect(artreply_.get(), &ArtReply::finished, this, &AlbumRequest::downloadFinished, Qt::DirectConnection);
 }
@@ -507,8 +541,9 @@ void AlbumRequest::download(chrono::milliseconds timeout)
 ArtistRequest::ArtistRequest(Thumbnailer* thumbnailer,
                              string const& artist,
                              string const& album,
-                             QSize const& requested_size)
-    : RequestBase(thumbnailer, artist + '\0' + album + '\0' + "artist", requested_size)
+                             QSize const& requested_size,
+                             chrono::milliseconds timeout)
+    : RequestBase(thumbnailer, artist + '\0' + album + '\0' + "artist", requested_size, timeout)
     , artist_(artist)
     , album_(album)
 {
@@ -521,6 +556,10 @@ RequestBase::ImageData ArtistRequest::fetch(QSize const& /*size_hint*/)
 
 void ArtistRequest::download(chrono::milliseconds timeout)
 {
+    if (timeout.count() == 0)
+    {
+        timeout = timeout_;
+    }
     artreply_ = downloader()->download_artist(QString::fromStdString(artist_), QString::fromStdString(album_), timeout);
     connect(artreply_.get(), &ArtReply::finished, this, &ThumbnailRequest::downloadFinished, Qt::DirectConnection);
 }
@@ -577,7 +616,7 @@ Thumbnailer::Thumbnailer()
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
         retry_error_hours_ = settings.retry_error_hours();
-        extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout());
+        extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout() * 1000);
     }
     catch (std::exception const& e)
     {
@@ -598,7 +637,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
         return unique_ptr<ThumbnailRequest>(
                 new LocalThumbnailRequest(this, filename, filename_fd, requested_size, extraction_timeout_));
     }
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_thumbnail()");
     }
@@ -618,7 +657,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
         return unique_ptr<ThumbnailRequest>(new AlbumRequest(this, artist, album, requested_size, extraction_timeout_));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_album_art()");  // LCOV_EXCL_LINE
     }
@@ -639,7 +678,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
         return unique_ptr<ThumbnailRequest>(new ArtistRequest(this, artist, album, requested_size, extraction_timeout_));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_artist_art()");
     }

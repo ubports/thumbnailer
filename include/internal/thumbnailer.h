@@ -49,12 +49,27 @@ public:
     ThumbnailRequest() = default;
     virtual ~ThumbnailRequest() = default;
 
+    enum class FetchStatus
+    {
+        cache_hit,
+        scaled_from_fullsize,
+        cached_failure,
+        needs_download,
+        downloaded,
+        not_found,
+        no_network,
+        error
+    };
+
     // Returns the empty string if the thumbnail data needs to be
     // downloaded to complete the request. If this happens, call
     // download() and wait for downloadFinished signal to fire, then
     // call thumbnail() again.
     virtual std::string thumbnail() = 0;
-    virtual void download(std::chrono::milliseconds timeout) = 0;
+    virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) = 0;
+
+    // Returns status of thumbnail() set by thumbnail();
+    virtual FetchStatus status() const = 0;
 
     virtual std::string const& key() const = 0;
 Q_SIGNALS:
@@ -128,13 +143,13 @@ private:
     typedef std::vector<core::PersistentStringCache*> CacheVec;
     CacheVec select_caches(CacheSelector selector) const;
 
-    core::PersistentStringCache::UPtr full_size_cache_;       // Small cache of full (original) size images.
-    core::PersistentStringCache::UPtr thumbnail_cache_;       // Large cache of scaled images.
-    core::PersistentStringCache::UPtr failure_cache_;         // Cache for failed attempts (value is always empty).
-    int max_size_;                                            // Max thumbnail size in pixels.
-    int retry_not_found_hours_;                               // Retry wait time for authoritative "no artwork" answer.
-    int retry_error_hours_;                                   // Retry wait time for unexpected server errors.
-    std::chrono::system_clock::duration extraction_timeout_;  // How long to wait before giving up during extraction.
+    core::PersistentStringCache::UPtr full_size_cache_;  // Small cache of full (original) size images.
+    core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.
+    core::PersistentStringCache::UPtr failure_cache_;    // Cache for failed attempts (value is always empty).
+    int max_size_;                                       // Max thumbnail size in pixels.
+    int retry_not_found_hours_;                          // Retry wait time for authoritative "no artwork" answer.
+    int retry_error_hours_;                              // Retry wait time for unexpected server errors.
+    std::chrono::milliseconds extraction_timeout_;       // How long to wait before giving up during extraction.
     std::unique_ptr<ArtDownloader> downloader_;
 
     friend class RequestBase;

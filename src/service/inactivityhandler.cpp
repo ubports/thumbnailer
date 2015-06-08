@@ -18,8 +18,9 @@
 
 #include "inactivityhandler.h"
 
+#include <internal/trace.h>
+
 #include <QCoreApplication>
-#include <QDebug>
 
 #include <sstream>
 #include <string>
