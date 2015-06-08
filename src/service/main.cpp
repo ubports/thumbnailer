@@ -22,6 +22,7 @@
 #include "dbusinterface.h"
 #include "dbusinterfaceadaptor.h"
 #include "inactivityhandler.h"
+#include <service/dbus_names.h>
 
 #include <QCoreApplication>
 
@@ -29,11 +30,6 @@
 
 using namespace unity::thumbnailer::internal;
 using namespace unity::thumbnailer::service;
-
-static const char BUS_NAME[] = "com.canonical.Thumbnailer";
-
-static const char BUS_THUMBNAILER_PATH[] = "/com/canonical/Thumbnailer";
-static const char BUS_ADMIN_PATH[] = "/com/canonical/ThumbnailerAdmin";
 
 int main(int argc, char** argv)
 {

@@ -17,21 +17,16 @@
  */
 
 #include "dbusserver.h"
+#include <service/dbus_names.h>
 #include <testsetup.h>
 
 #include <libqtdbustest/DBusTestRunner.h>
 #include <libqtdbustest/QProcessDBusService.h>
 
-namespace
-{
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-
-const char THUMBNAILER_BUS_PATH[] = "/com/canonical/Thumbnailer";
-const char ADMIN_BUS_PATH[] = "/com/canonical/ThumbnailerAdmin";
-}
-
 DBusServer::DBusServer()
 {
+    using namespace unity::thumbnailer::service;
+
     runner_.reset(new QtDBusTest::DBusTestRunner());
     service_.reset(new QtDBusTest::QProcessDBusService(
         BUS_NAME, QDBusConnection::SessionBus,
@@ -40,10 +35,10 @@ DBusServer::DBusServer()
     runner_->startServices();
 
     thumbnailer_.reset(
-        new ThumbnailerInterface(BUS_NAME, THUMBNAILER_BUS_PATH,
+        new ThumbnailerInterface(BUS_NAME, BUS_THUMBNAILER_PATH,
                                  runner_->sessionConnection()));
     admin_.reset(
-        new AdminInterface(BUS_NAME, ADMIN_BUS_PATH,
+        new AdminInterface(BUS_NAME, BUS_ADMIN_PATH,
                            runner_->sessionConnection()));
 }
 

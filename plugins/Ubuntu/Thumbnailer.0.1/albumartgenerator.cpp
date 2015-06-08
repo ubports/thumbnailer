@@ -19,27 +19,22 @@
 
 #include "albumartgenerator.h"
 #include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
-
-#include <stdexcept>
-#include <QDebug>
-#include <QFile>
-#include <QUrlQuery>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
 
 namespace
 {
+
 const char DEFAULT_ALBUM_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
 
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
-}
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -47,7 +42,6 @@ AlbumArtGenerator::AlbumArtGenerator()
     : QQuickAsyncImageProvider()
 {
 }
-
 
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
@@ -65,7 +59,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
         // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::BUS_THUMBNAILER_PATH, *connection));
     }
 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
@@ -77,6 +71,9 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART, watcher);
     return response;
 }
-}
-}
-}
+
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

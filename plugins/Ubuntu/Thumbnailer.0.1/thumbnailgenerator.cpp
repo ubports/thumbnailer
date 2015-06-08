@@ -18,35 +18,26 @@
 
 #include "thumbnailgenerator.h"
 #include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
 
-#include <stdexcept>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <QCoreApplication>
-#include <QDebug>
-#include <QMimeDatabase>
-#include <QUrl>
-#include <QDBusPendingCallWatcher>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
-
 namespace
 {
+
 const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
 const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
 
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
-}
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -83,7 +74,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
         // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::BUS_THUMBNAILER_PATH, *connection));
     }
 
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
@@ -108,6 +99,8 @@ QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id
     return DEFAULT_ALBUM_ART;
 }
 
-}
-}
-}
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity
