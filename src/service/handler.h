@@ -51,14 +51,17 @@ public:
             std::shared_ptr<QThreadPool> check_pool,
             std::shared_ptr<QThreadPool> create_pool,
             RateLimiter& limiter,
-            std::unique_ptr<internal::ThumbnailRequest>&& request);
+            std::unique_ptr<internal::ThumbnailRequest>&& request,
+            QString const& details);
     ~Handler();
 
     Handler(Handler const&) = delete;
     Handler& operator=(Handler&) = delete;
 
-
     std::string const& key() const;
+    std::chrono::microseconds completion_time() const;  // End-to-end time taken.
+    std::chrono::microseconds download_time() const;    // Time of that for download/extract, incl. queueing time.
+    QString details() const;
 
 public Q_SLOTS:
     void begin();

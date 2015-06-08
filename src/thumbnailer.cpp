@@ -127,7 +127,7 @@ protected:
 
     string printable_key() const
     {
-        // Substitute "\\0" for all occurences of '\0' in key_.
+        // Substitute "\\0" for all occurrences of '\0' in key_.
         string new_key;
         string::size_type start_pos = 0;
         string::size_type end_pos;
@@ -543,11 +543,14 @@ Thumbnailer::Thumbnailer()
     try
     {
         Settings settings;
-        full_size_cache_ = core::PersistentStringCache::open(cache_dir + "/images", settings.full_size_cache_size() * 1024 * 1024,
+        full_size_cache_ = core::PersistentStringCache::open(cache_dir + "/images",
+                                                             settings.full_size_cache_size() * 1024 * 1024,
                                                              core::CacheDiscardPolicy::lru_only);
-        thumbnail_cache_ = core::PersistentStringCache::open(cache_dir + "/thumbnails", settings.thumbnail_cache_size() * 1024 * 1024,
+        thumbnail_cache_ = core::PersistentStringCache::open(cache_dir + "/thumbnails",
+                                                             settings.thumbnail_cache_size() * 1024 * 1024,
                                                              core::CacheDiscardPolicy::lru_only);
-        failure_cache_ = core::PersistentStringCache::open(cache_dir + "/failures", settings.failure_cache_size() * 1024 * 1024,
+        failure_cache_ = core::PersistentStringCache::open(cache_dir + "/failures",
+                                                           settings.failure_cache_size() * 1024 * 1024,
                                                            core::CacheDiscardPolicy::lru_ttl);
     }
     catch (std::exception const& e)

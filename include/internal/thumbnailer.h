@@ -49,6 +49,15 @@ public:
     ThumbnailRequest() = default;
     virtual ~ThumbnailRequest() = default;
 
+    enum class FetchStatus
+    {
+        needs_download,
+        downloaded,
+        not_found,
+        no_network,
+        error
+    };
+
     // Returns the empty string if the thumbnail data needs to be
     // downloaded to complete the request. If this happens, call
     // download() and wait for downloadFinished signal to fire, then

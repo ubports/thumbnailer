@@ -21,6 +21,8 @@
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
+#include <internal/safe_strerror.h>
+
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -65,7 +67,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     if (fd < 0)
     {
         auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id));
-        qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " << strerror(errno);
+        qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " +
+                    QString::fromStdString(internal::safe_strerror(errno));
         response->finish_later_with_default_image();
         return response;
     }

@@ -55,13 +55,13 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
     switch (type)
     {
         case QtWarningMsg:
-            fputs("Warning:", stderr);
+            fputs(" Warning:", stderr);
             break;
         case QtCriticalMsg:
-            fputs("Critical:", stderr);
+            fputs(" Critical:", stderr);
             break;
         case QtFatalMsg:
-            fputs("Fatal:", stderr);
+            fputs(" Fatal:", stderr);
             break;
         default:
             ;  // No label for debug messages.
