@@ -52,7 +52,7 @@ TEST(Settings, missing_schema)
     // installed.
     Settings settings("no.such.schema");
 
-    EXPECT_EQ("", settings.art_api_key());
+    EXPECT_EQ("0f450aa882a6125ebcbfb3d7f7aa25bc", settings.art_api_key());
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());

@@ -1,5 +1,16 @@
 add_subdirectory(core)
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
+COMMAND ${CMAKE_SOURCE_DIR}/tools/parse-settings.py
+-i ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml -o ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
+DEPENDS ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml)
+
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
+PROPERTIES HEADER_FILE_ONLY TRUE)
+
+set_source_files_properties(settings.cpp PROPERTIES
+OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
+
 add_library(thumbnailer STATIC
     file_io.cpp
     image.cpp
