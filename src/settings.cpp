@@ -17,6 +17,7 @@
  */
 
 #include <internal/settings.h>
+#include "settings-defaults.h"
 
 #include <internal/trace.h>
 
@@ -64,52 +65,52 @@ Settings::~Settings() = default;
 
 string Settings::art_api_key() const
 {
-    return get_string("dash-ubuntu-com-key", "");
+    return get_string("dash-ubuntu-com-key", DASH_UBUNTU_COM_KEY_DEFAULT);
 }
 
 int Settings::full_size_cache_size() const
 {
-    return get_positive_int("full-size-cache-size", 50);
+    return get_positive_int("full-size-cache-size", FULL_SIZE_CACHE_SIZE_DEFAULT);
 }
 
 int Settings::thumbnail_cache_size() const
 {
-    return get_positive_int("thumbnail-cache-size", 100);
+    return get_positive_int("thumbnail-cache-size", THUMBNAIL_CACHE_SIZE_DEFAULT);
 }
 
 int Settings::failure_cache_size() const
 {
-    return get_positive_int("failure-cache-size", 2);
+    return get_positive_int("failure-cache-size", FAILURE_CACHE_SIZE_DEFAULT);
 }
 
 int Settings::max_thumbnail_size() const
 {
-    return get_positive_int("max-thumbnail-size", 1920);
+    return get_positive_int("max-thumbnail-size", MAX_THUMBNAIL_SIZE_DEFAULT);
 }
 
 int Settings::retry_not_found_hours() const
 {
-    return get_positive_int("retry-not-found-hours", 24 * 7);
+    return get_positive_int("retry-not-found-hours", RETRY_NOT_FOUND_HOURS_DEFAULT);
 }
 
 int Settings::retry_error_hours() const
 {
-    return get_positive_int("retry-error-hours", 2);
+    return get_positive_int("retry-error-hours", RETRY_ERROR_HOURS_DEFAULT);
 }
 
 int Settings::max_downloads() const
 {
-    return get_positive_int("max-downloads", 2);
+    return get_positive_int("max-downloads", MAX_DOWNLOADS_DEFAULT);
 }
 
 int Settings::max_extractions() const
 {
-    return get_positive_int("max-extractions", 2);
+    return get_positive_int("max-extractions", MAX_EXTRACTIONS_DEFAULT);
 }
 
 int Settings::extraction_timeout() const
 {
-    return get_positive_int("extraction-timeout", 10);
+    return get_positive_int("extraction-timeout", EXTRACTION_TIMEOUT_DEFAULT);
 }
 
 string Settings::get_string(char const* key, string const& default_value) const
