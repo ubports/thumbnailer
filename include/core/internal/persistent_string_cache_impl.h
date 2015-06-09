@@ -172,7 +172,8 @@ private:
     void throw_invalid_argument(std::string const& msg) const;
     void throw_corrupt_error(std::string const& msg) const;
 
-    PersistentStringCache* pimpl_;  // Back-pointer to owning pimpl.
+    PersistentStringCache* pimpl_;                 // Back-pointer to owning pimpl.
+    std::unique_ptr<leveldb::Cache> block_cache_;  // Must be defined *before* db_!
     std::unique_ptr<leveldb::DB> db_;
     std::shared_ptr<PersistentStringCacheStats> stats_;
 
