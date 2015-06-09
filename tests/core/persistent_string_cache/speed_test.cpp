@@ -196,7 +196,7 @@ TEST(PersistentStringCache, basic)
     cout << endl
          << "Compacting cache... " << flush;
     start = chrono::system_clock::now();
-    c.reset();
+    c.compact();
     now = chrono::system_clock::now();
     secs = chrono::duration_cast<chrono::milliseconds>(now - start).count() / 1000;
     cout << "done" << endl;
