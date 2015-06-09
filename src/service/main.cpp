@@ -42,6 +42,8 @@ int main(int argc, char** argv)
     int rc = 1;
     try
     {
+        qDebug() << "Initializing";
+
         QCoreApplication app(argc, argv);
 
         shared_ptr<Thumbnailer> thumbnailer;
@@ -66,7 +68,9 @@ int main(int argc, char** argv)
 
         new InactivityHandler(server);
 
+        qDebug() << "Ready";
         rc = app.exec();
+        qDebug() << "Exiting";
     }
     catch (std::exception const& e)
     {
