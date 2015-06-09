@@ -353,6 +353,11 @@ public:
     */
     void trim_to(int64_t used_size_in_bytes);
 
+    /**
+    \brief Compacts the database.
+    */
+    void compact();
+
     //@}
 
     /** @name Monitoring cache activity
@@ -613,6 +618,12 @@ void PersistentCache<K, V, M>::trim_to(int64_t used_size_in_bytes)
 }
 
 template <typename K, typename V, typename M>
+void PersistentCache<K, V, M>::compact()
+{
+    p_->compact();
+}
+
+template <typename K, typename V, typename M>
 void PersistentCache<K, V, M>::set_handler(CacheEvent events, EventCallback cb)
 {
     auto scb = [cb](std::string const& key, CacheEvent ev, PersistentCacheStats const& c)
@@ -701,6 +712,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(std::string const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -945,6 +957,12 @@ void PersistentCache<std::string, V, M>::trim_to(int64_t used_size_in_bytes)
 }
 
 template <typename V, typename M>
+void PersistentCache<std::string, V, M>::compact()
+{
+    p_->compact();
+}
+
+template <typename V, typename M>
 void PersistentCache<std::string, V, M>::set_handler(CacheEvent events, EventCallback cb)
 {
     p_->set_handler(events, cb);
@@ -1028,6 +1046,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(K const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -1292,6 +1311,12 @@ void PersistentCache<K, std::string, M>::trim_to(int64_t used_size_in_bytes)
 }
 
 template <typename K, typename M>
+void PersistentCache<K, std::string, M>::compact()
+{
+    p_->compact();
+}
+
+template <typename K, typename M>
 void PersistentCache<K, std::string, M>::set_handler(CacheEvent events, EventCallback cb)
 {
     auto scb = [cb](std::string const& key, CacheEvent ev, PersistentCacheStats const& c)
@@ -1376,6 +1401,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(K const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -1638,6 +1664,12 @@ void PersistentCache<K, V, std::string>::trim_to(int64_t used_size_in_bytes)
 }
 
 template <typename K, typename V>
+void PersistentCache<K, V, std::string>::compact()
+{
+    p_->compact();
+}
+
+template <typename K, typename V>
 void PersistentCache<K, V, std::string>::set_handler(CacheEvent events, EventCallback cb)
 {
     auto scb = [cb](std::string const& key, CacheEvent ev, PersistentCacheStats const& c)
@@ -1725,6 +1757,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(std::string const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -1992,6 +2025,12 @@ void PersistentCache<std::string, std::string, M>::trim_to(int64_t used_size_in_
 }
 
 template <typename M>
+void PersistentCache<std::string, std::string, M>::compact()
+{
+    p_->compact();
+}
+
+template <typename M>
 void PersistentCache<std::string, std::string, M>::set_handler(CacheEvent events, EventCallback cb)
 {
     p_->set_handler(events, cb);
@@ -2072,6 +2111,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(std::string const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -2339,6 +2379,12 @@ void PersistentCache<std::string, V, std::string>::trim_to(int64_t used_size_in_
 }
 
 template <typename V>
+void PersistentCache<std::string, V, std::string>::compact()
+{
+    p_->compact();
+}
+
+template <typename V>
 void PersistentCache<std::string, V, std::string>::set_handler(CacheEvent events, EventCallback cb)
 {
     p_->set_handler(events, cb);
@@ -2424,6 +2470,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(K const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -2699,6 +2746,12 @@ void PersistentCache<K, std::string, std::string>::trim_to(int64_t used_size_in_
 }
 
 template <typename K>
+void PersistentCache<K, std::string, std::string>::compact()
+{
+    p_->compact();
+}
+
+template <typename K>
 void PersistentCache<K, std::string, std::string>::set_handler(CacheEvent events, EventCallback cb)
 {
     auto scb = [cb](std::string const& key, CacheEvent ev, PersistentCacheStats const& c)
@@ -2789,6 +2842,7 @@ public:
     void clear_stats();
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
 
     typedef std::function<void(std::string const& key, CacheEvent ev, PersistentCacheStats const& stats)> EventCallback;
 
@@ -3033,6 +3087,11 @@ void PersistentCache<std::string, std::string, std::string>::resize(int64_t size
 void PersistentCache<std::string, std::string, std::string>::trim_to(int64_t used_size_in_bytes)
 {
     p_->trim_to(used_size_in_bytes);
+}
+
+void PersistentCache<std::string, std::string, std::string>::compact()
+{
+    p_->compact();
 }
 
 void PersistentCache<std::string, std::string, std::string>::set_handler(CacheEvent events, EventCallback cb)

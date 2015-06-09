@@ -217,6 +217,7 @@ TEST(PersistentCache, IDCCache)
         EXPECT_FALSE(c->invalidate(42));
         EXPECT_FALSE(c->touch(42));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put(1, 0));
         EXPECT_TRUE(c->put(2, 0));
@@ -382,6 +383,7 @@ TEST(PersistentCache, SDCCache)
         EXPECT_FALSE(c->invalidate("42"));
         EXPECT_FALSE(c->touch("42"));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put("1", 0));
         EXPECT_TRUE(c->put("2", 0));
@@ -443,7 +445,6 @@ TEST(PersistentCache, SDCCache)
 }
 
 // V = string
-
 
 TEST(PersistentCache, ISCCache)
 {
@@ -527,6 +528,7 @@ TEST(PersistentCache, ISCCache)
         EXPECT_FALSE(c->invalidate(42));
         EXPECT_FALSE(c->touch(42));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put(1, string("0")));
         EXPECT_TRUE(c->put(2, string("0")));
@@ -745,6 +747,7 @@ TEST(PersistentCache, IDSCache)
 
         // Extra put() overload
         c->invalidate();
+        c->compact();
         string mbuf(20, 'm');
 
         EXPECT_TRUE(c->put(1, 2.0, mbuf.data(), mbuf.size()));
@@ -843,6 +846,7 @@ TEST(PersistentCache, SSCCache)
         EXPECT_FALSE(c->invalidate("42"));
         EXPECT_FALSE(c->touch("42"));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put("1", "0"));
         EXPECT_TRUE(c->put("2", "0"));
@@ -1001,6 +1005,7 @@ TEST(PersistentCache, SDSCache)
         EXPECT_FALSE(c->invalidate("42"));
         EXPECT_FALSE(c->touch("42"));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put("1", 0));
         EXPECT_TRUE(c->put("2", 0));
@@ -1159,6 +1164,7 @@ TEST(PersistentCache, ISSCache)
         EXPECT_FALSE(c->invalidate(42));
         EXPECT_FALSE(c->touch(42));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put(1, string("0")));
         EXPECT_TRUE(c->put(2, string("0")));
@@ -1324,6 +1330,7 @@ TEST(PersistentCache, SSSCache)
         EXPECT_FALSE(c->invalidate("42"));
         EXPECT_FALSE(c->touch("42"));
         c->invalidate();
+        c->compact();
 
         EXPECT_TRUE(c->put("1", "0"));
         EXPECT_TRUE(c->put("2", "0"));

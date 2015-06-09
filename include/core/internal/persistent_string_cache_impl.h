@@ -101,6 +101,7 @@ public:
     void clear_stats() noexcept;
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
     void set_headroom(int64_t headroom);
     void set_handler(CacheEvent events, PersistentStringCache::EventCallback cb);
 
