@@ -41,7 +41,7 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
     EXPECT_EQ(2, settings.max_downloads());
-    EXPECT_EQ(2, settings.max_extractions());
+    EXPECT_EQ(0, settings.max_extractions());
 }
 
 TEST(Settings, missing_schema)
@@ -60,7 +60,7 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(168, settings.retry_not_found_hours());
     EXPECT_EQ(2, settings.retry_error_hours());
     EXPECT_EQ(2, settings.max_downloads());
-    EXPECT_EQ(2, settings.max_extractions());
+    EXPECT_EQ(0, settings.max_extractions());
 }
 
 TEST(Settings, changed_settings)
@@ -111,6 +111,27 @@ TEST(Settings, non_positive_int)
 
     g_settings_reset(gsettings.get(), "dash-ubuntu-com-key");
     g_settings_reset(gsettings.get(), "thumbnail-cache-size");
+}
+
+TEST(Settings, negative_int)
+{
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_int(gsettings.get(), "max-extractions", -1);
+
+    Settings settings;
+    try
+    {
+        settings.max_extractions();
+        FAIL();
+    }
+    catch (std::domain_error const& e)
+    {
+        EXPECT_STREQ("Settings::get_positive_or_zero_int(): invalid negative value for max-extractions: -1 "
+                     "in schema com.canonical.Unity.Thumbnailer",
+                     e.what());
+    }
+
+    g_settings_reset(gsettings.get(), "max-extractions");
 }
 
 int main(int argc, char** argv)

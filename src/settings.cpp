@@ -105,7 +105,7 @@ int Settings::max_downloads() const
 
 int Settings::max_extractions() const
 {
-    return get_positive_int("max-extractions", MAX_EXTRACTIONS_DEFAULT);
+    return get_positive_or_zero_int("max-extractions", MAX_EXTRACTIONS_DEFAULT);
 }
 
 string Settings::get_string(char const* key, string const& default_value) const
@@ -131,6 +131,17 @@ int Settings::get_positive_int(char const* key, int default_value) const
     if (i <= 0)
     {
         throw domain_error(string("Settings::get_positive_int(): invalid zero or negative value for ")
+                           + key + ": " + to_string(i) + " in schema " + schema_name_);
+    }
+    return i;
+}
+
+int Settings::get_positive_or_zero_int(char const* key, int default_value) const
+{
+    int i = get_int(key, default_value);
+    if (i < 0)
+    {
+        throw domain_error(string("Settings::get_positive_or_zero_int(): invalid negative value for ")
                            + key + ": " + to_string(i) + " in schema " + schema_name_);
     }
     return i;
