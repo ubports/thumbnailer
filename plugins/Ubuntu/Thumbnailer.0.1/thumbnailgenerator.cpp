@@ -87,7 +87,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id), std::move(watcher));
+    return new ThumbnailerImageResponse(requestedSize, return_default_image_based_on_mime(id), std::move(watcher));
 }
 
 QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id)

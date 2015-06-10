@@ -37,16 +37,14 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& id,
-                                                   QSize const& requested_size,
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image,
                                                    std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
-    : id_(id)
-    , requested_size_(requested_size)
+    : requested_size_(requested_size)
     , default_image_(default_image)
     , watcher_(std::move(watcher))
 {
-    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
+    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::callFinished);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
@@ -54,15 +52,24 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     : requested_size_(requested_size)
     , default_image_(default_image)
 {
-    finish_later_with_default_image();
+    loadDefaultImage();
+    QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
+
+ThumbnailerImageResponse::~ThumbnailerImageResponse() = default;
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
     return texture_;
 }
 
-void ThumbnailerImageResponse::set_default_image()
+void ThumbnailerImageResponse::cancel()
+{
+    qDebug() << "Image response cancelled";
+    watcher_.reset();
+}
+
+void ThumbnailerImageResponse::loadDefaultImage()
 {
     char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
     QImage result;
@@ -70,19 +77,13 @@ void ThumbnailerImageResponse::set_default_image()
     texture_ = QQuickTextureFactory::textureFactoryForImage(result);
 }
 
-void ThumbnailerImageResponse::finish_later_with_default_image()
+void ThumbnailerImageResponse::callFinished()
 {
-    set_default_image();
-    QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
-}
-
-void ThumbnailerImageResponse::dbus_call_finished(QDBusPendingCallWatcher* watcher)
-{
-    QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher;
+    QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        qWarning() << "ThumbnailerImageResponse::dbus_call_finished(): D-Bus error: " << reply.error().message();
-        set_default_image();
+        qWarning() << "ThumbnailerImageResponse::callFinished(): D-Bus error: " << reply.error().message();
+        loadDefaultImage();
         Q_EMIT finished();
         return;
     }
@@ -98,14 +99,14 @@ void ThumbnailerImageResponse::dbus_call_finished(QDBusPendingCallWatcher* watch
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "ThumbnailerImageResponse::dbus_call_finished(): Album art loader failed: " << e.what();
+        qWarning() << "ThumbnailerImageResponse::callFinished(): Album art loader failed: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "ThumbnailerImageResponse::dbus_call_finished(): unknown exception";
+        qWarning() << "ThumbnailerImageResponse::callFinished(): unknown exception";
     }
 
-    set_default_image();
+    loadDefaultImage();
     Q_EMIT finished();
     // LCOV_EXCL_STOP
 }
