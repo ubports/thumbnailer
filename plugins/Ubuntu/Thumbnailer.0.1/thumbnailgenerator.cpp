@@ -41,6 +41,23 @@ const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png"
 
 const char BUS_NAME[] = "com.canonical.Thumbnailer";
 const char BUS_PATH[] = "/com/canonical/Thumbnailer";
+
+QString default_image_based_on_mime(QString const &id)
+{
+    QMimeDatabase db;
+    QMimeType mime = db.mimeTypeForFile(id);
+
+    if (mime.name().contains("audio"))
+    {
+        return DEFAULT_ALBUM_ART;
+    }
+    else if (mime.name().contains("video"))
+    {
+        return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
+    }
+    return DEFAULT_ALBUM_ART;
+}
+
 }
 
 namespace unity
@@ -71,7 +88,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     if (fd < 0)
     {
         qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " << strerror(errno);
-        return new ThumbnailerImageResponse(requestedSize, return_default_image_based_on_mime(id));
+        return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id));
     }
     QDBusUnixFileDescriptor unix_fd(fd);
     close(fd);
@@ -87,23 +104,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(requestedSize, return_default_image_based_on_mime(id), std::move(watcher));
-}
-
-QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id)
-{
-    QMimeDatabase db;
-    QMimeType mime = db.mimeTypeForFile(id);
-
-    if (mime.name().contains("audio"))
-    {
-        return DEFAULT_ALBUM_ART;
-    }
-    else if (mime.name().contains("video"))
-    {
-        return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
-    }
-    return DEFAULT_ALBUM_ART;
+    return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));
 }
 
 }
