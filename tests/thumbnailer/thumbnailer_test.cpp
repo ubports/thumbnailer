@@ -21,8 +21,10 @@
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <internal/raii.h>
+#include <internal/trace.h>
 #include <testsetup.h>
 #include "utils/artserver.h"
+
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -33,7 +35,6 @@
 #pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 #include <QCoreApplication>
-#include <QDebug>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <unity/UnityExceptions.h>

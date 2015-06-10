@@ -49,13 +49,29 @@ public:
     ThumbnailRequest() = default;
     virtual ~ThumbnailRequest() = default;
 
+    enum class FetchStatus
+    {
+        cache_hit,
+        scaled_from_fullsize,
+        cached_failure,
+        needs_download,
+        downloaded,
+        not_found,
+        no_network,
+        error
+    };
+
     // Returns the empty string if the thumbnail data needs to be
     // downloaded to complete the request. If this happens, call
     // download() and wait for downloadFinished signal to fire, then
     // call thumbnail() again.
     virtual std::string thumbnail() = 0;
+
     // TODO: Timeout should be configurable?
     virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(10000)) = 0;
+
+    // Returns status of thumbnail() set by thumbnail();
+    virtual FetchStatus status() const = 0;
 
     virtual std::string const& key() const = 0;
 Q_SIGNALS:

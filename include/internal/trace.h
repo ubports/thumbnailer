@@ -18,11 +18,7 @@
 
 #pragma once
 
-#include <unity/util/ResourcePtr.h>
-
-#include <string>
-
-#include <unistd.h>
+#include <QDebug>
 
 namespace unity
 {
@@ -33,20 +29,14 @@ namespace thumbnailer
 namespace internal
 {
 
-auto do_close = [](int fd)
+class TraceMessageHandlerInitializer final
 {
-    if (fd >= 0)
-    {
-        ::close(fd);
-    }
+public:
+    TraceMessageHandlerInitializer();
+    ~TraceMessageHandlerInitializer();
 };
-typedef unity::util::ResourcePtr<int, decltype(do_close)> FdPtr;
 
-auto do_unlink = [](std::string const& filename)
-{
-    ::unlink(filename.c_str());
-};
-typedef unity::util::ResourcePtr<std::string, decltype(do_unlink)> UnlinkPtr;
+static TraceMessageHandlerInitializer trace_message_handler_initializer_;  // Schwartz counter
 
 }  // namespace internal
 

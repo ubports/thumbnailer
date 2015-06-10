@@ -19,6 +19,7 @@ add_library(thumbnailer STATIC
     make_directories.cpp
     safe_strerror.cpp
     settings.cpp
+    trace.cpp
     thumbnailer.cpp
     ubuntuserverdownloader.cpp
     ${CMAKE_SOURCE_DIR}/include/internal/artdownloader.h
