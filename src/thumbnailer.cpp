@@ -77,18 +77,11 @@ class RequestBase : public ThumbnailRequest
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
+    FetchStatus status() const;
     string const& key() const override
     {
         return key_;
     }
-    enum class FetchStatus
-    {
-        needs_download,
-        downloaded,
-        not_found,
-        no_network,
-        error
-    };
     enum class CachePolicy
     {
         cache_fullsize,
@@ -127,7 +120,7 @@ protected:
 
     string printable_key() const
     {
-        // Substitute "\\0" for all occurences of '\0' in key_.
+        // Substitute "\\0" for all occurrences of '\0' in key_.
         string new_key;
         string::size_type start_pos = 0;
         string::size_type end_pos;
@@ -147,6 +140,9 @@ protected:
     Thumbnailer const* thumbnailer_;
     string key_;
     QSize const requested_size_;
+
+private:
+    FetchStatus status_;
 };
 
 namespace
@@ -209,6 +205,7 @@ RequestBase::RequestBase(Thumbnailer* thumbnailer, string const& key, QSize cons
     : thumbnailer_(thumbnailer)
     , key_(key)
     , requested_size_(requested_size)
+    , status_(FetchStatus::needs_download)
 {
 }
 
@@ -254,6 +251,7 @@ string RequestBase::thumbnail()
         auto thumbnail = thumbnailer_->thumbnail_cache_->get(sized_key);
         if (thumbnail)
         {
+            status_ = FetchStatus::cache_hit;
             return *thumbnail;
         }
 
@@ -262,6 +260,7 @@ string RequestBase::thumbnail()
         Image scaled_image;
         if (full_size)
         {
+            status_ = ThumbnailRequest::FetchStatus::scaled_from_fullsize;
             scaled_image = Image(*full_size, target_size);
         }
         else
@@ -272,10 +271,12 @@ string RequestBase::thumbnail()
             // failure cache are updated.
             if (thumbnailer_->failure_cache_->get(key_))
             {
+                status_ = ThumbnailRequest::FetchStatus::cached_failure;
                 return "";
             }
             auto image_data = fetch(target_size);
-            switch (image_data.status)
+            status_ = image_data.status;
+            switch (status_)
             {
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
                     break;
@@ -345,10 +346,16 @@ string RequestBase::thumbnail()
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
         return jpeg;
     }
-    catch (...)
+    catch (std::exception const& e)
     {
+        status_ = FetchStatus::error;
         throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
     }
+}
+
+ThumbnailRequest::FetchStatus RequestBase::status() const
+{
+    return status_;
 }
 
 LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
@@ -596,7 +603,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
     {
         return unique_ptr<ThumbnailRequest>(new LocalThumbnailRequest(this, filename, filename_fd, requested_size));
     }
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_thumbnail()");
     }
@@ -616,7 +623,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
         return unique_ptr<ThumbnailRequest>(new AlbumRequest(this, artist, album, requested_size));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_album_art()");  // LCOV_EXCL_LINE
     }
@@ -637,7 +644,7 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
         return unique_ptr<ThumbnailRequest>(new ArtistRequest(this, artist, album, requested_size));
     }
     // LCOV_EXCL_START  // Currently won't throw, we are defensive here.
-    catch (...)
+    catch (std::exception const&)
     {
         throw unity::ResourceException("Thumbnailer::get_artist_art()");
     }
