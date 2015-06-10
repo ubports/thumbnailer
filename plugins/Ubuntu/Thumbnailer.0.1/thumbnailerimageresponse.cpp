@@ -53,6 +53,7 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     , default_image_(default_image)
 {
     loadDefaultImage();
+    // Queue the signal emission so there is time for the caller to connect.
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
 
