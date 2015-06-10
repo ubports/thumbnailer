@@ -37,21 +37,16 @@ class ThumbnailerImageResponse : public QQuickImageResponse  // LCOV_EXCL_LINE  
     Q_OBJECT
 public:
     Q_DISABLE_COPY(ThumbnailerImageResponse)
-    enum ResponseType
-    {
-        Download,
-        Thumbnail
-    };
 
     ThumbnailerImageResponse(QString const& id,
                              QSize const& requested_size,
                              QString const& default_image,
-                             QDBusPendingCallWatcher *watcher=nullptr);
+                             std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
+    ThumbnailerImageResponse(QSize const& requested_size,
+                             QString const& default_image);
     ~ThumbnailerImageResponse() = default;
 
-
-
-    QQuickTextureFactory* textureFactory() const;
+    QQuickTextureFactory* textureFactory() const override;
     void set_default_image();
     void finish_later_with_default_image();
 
@@ -62,7 +57,7 @@ private:
     QString return_default_image_based_on_mime();
     QString id_;
     QSize requested_size_;
-    QQuickTextureFactory * texture_;
+    QQuickTextureFactory * texture_ = nullptr;
     QString default_image_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
 };

@@ -40,22 +40,34 @@ namespace qml
 ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& id,
                                                    QSize const& requested_size,
                                                    QString const& default_image,
-                                                   QDBusPendingCallWatcher *watcher)
+                                                   std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
     : id_(id)
     , requested_size_(requested_size)
-    , texture_(nullptr)
     , default_image_(default_image)
-    , watcher_(watcher)
+    , watcher_(std::move(watcher))
 {
     if (watcher_)
     {
-        connect(watcher, &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
+        connect(watcher.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
     }
     char const* c_default_image = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
     if (c_default_image)
     {
         default_image_ = QString(c_default_image);
     }
+}
+
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
+                                                   QString const& default_image)
+    : requested_size_(requested_size)
+    , default_image_(default_image)
+{
+    char const* c_default_image = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
+    if (c_default_image)
+    {
+        default_image_ = QString(c_default_image);
+    }
+    finish_later_with_default_image();
 }
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const

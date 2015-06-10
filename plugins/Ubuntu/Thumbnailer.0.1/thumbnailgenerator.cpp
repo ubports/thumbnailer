@@ -70,10 +70,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     int fd = open(src_path.toUtf8().constData(), O_RDONLY | O_CLOEXEC);
     if (fd < 0)
     {
-        auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id));
         qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " << strerror(errno);
-        response->finish_later_with_default_image();
-        return response;
+        return new ThumbnailerImageResponse(requestedSize, return_default_image_based_on_mime(id));
     }
     QDBusUnixFileDescriptor unix_fd(fd);
     close(fd);
@@ -87,9 +85,9 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     }
 
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
-    auto watcher = new QDBusPendingCallWatcher(reply);
-    auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id), watcher);
-    return response;
+    std::unique_ptr<QDBusPendingCallWatcher> watcher(
+        new QDBusPendingCallWatcher(reply));
+    return new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id), std::move(watcher));
 }
 
 QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id)

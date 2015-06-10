@@ -54,10 +54,8 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     QUrlQuery query(id);
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
-        auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART);
         qWarning() << "AlbumArtGenerator::requestImageResponse(): Invalid albumart uri:" << id;
-        response->finish_later_with_default_image();
-        return response;
+        return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART);
     }
 
     if (!connection)
@@ -73,10 +71,11 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
 
     // perform dbus call
     auto reply = iface->GetAlbumArt(artist, album, requestedSize);
-    auto watcher = new QDBusPendingCallWatcher(reply);
-    auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART, watcher);
-    return response;
+    std::unique_ptr<QDBusPendingCallWatcher> watcher(
+        new QDBusPendingCallWatcher(reply));
+    return new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART, std::move(watcher));
 }
+
 }
 }
 }
