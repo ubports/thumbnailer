@@ -66,7 +66,6 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
-    qDebug() << "Image response cancelled";
     watcher_.reset();
 }
 
