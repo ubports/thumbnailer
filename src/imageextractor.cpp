@@ -87,7 +87,7 @@ void ImageExtractor::extract()
 
     if (!tmpfile_.open())
     {
-        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileName().toStdString());
+        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileTemplate().toStdString());
     }
     /* Our duplicated file descriptor does not have the FD_CLOEXEC flag set */
     process_.start(exe_path_, {QString("fd://%1").arg(fd_.get()), tmpfile_.fileName()});
