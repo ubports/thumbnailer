@@ -35,10 +35,10 @@ DBusServer::DBusServer()
     runner_->startServices();
 
     thumbnailer_.reset(
-        new ThumbnailerInterface(BUS_NAME, BUS_THUMBNAILER_PATH,
+        new ThumbnailerInterface(BUS_NAME, THUMBNAILER_BUS_PATH,
                                  runner_->sessionConnection()));
     admin_.reset(
-        new AdminInterface(BUS_NAME, BUS_ADMIN_PATH,
+        new AdminInterface(BUS_NAME, ADMIN_BUS_PATH,
                            runner_->sessionConnection()));
 }
 

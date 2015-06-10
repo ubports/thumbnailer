@@ -74,7 +74,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
         // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::BUS_THUMBNAILER_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);

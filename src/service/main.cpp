@@ -53,8 +53,8 @@ int main(int argc, char** argv)
     new ThumbnailerAdminAdaptor(&admin_server);
 
     auto bus = QDBusConnection::sessionBus();
-    bus.registerObject(BUS_THUMBNAILER_PATH, &server);
-    bus.registerObject(BUS_ADMIN_PATH, &admin_server);
+    bus.registerObject(THUMBNAILER_BUS_PATH, &server);
+    bus.registerObject(ADMIN_BUS_PATH, &admin_server);
 
     qDBusRegisterMetaType<unity::thumbnailer::service::AllStats>();
 

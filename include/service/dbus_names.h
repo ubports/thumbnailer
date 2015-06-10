@@ -30,8 +30,8 @@ namespace service
 {
 
 static const char BUS_NAME[] = "com.canonical.Thumbnailer";
-static const char BUS_THUMBNAILER_PATH[] = "/com/canonical/Thumbnailer";
-static const char BUS_ADMIN_PATH[] = "/com/canonical/ThumbnailerAdmin";
+static const char THUMBNAILER_BUS_PATH[] = "/com/canonical/Thumbnailer";
+static const char ADMIN_BUS_PATH[] = "/com/canonical/ThumbnailerAdmin";
 
 }  // namespace service
 

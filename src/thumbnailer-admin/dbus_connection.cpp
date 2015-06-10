@@ -34,8 +34,8 @@ namespace tools
 
 DBusConnection::DBusConnection()
     : conn_(QDBusConnection::sessionBus())
-    , thumbnailer_(BUS_NAME, BUS_THUMBNAILER_PATH, conn_)
-    , admin_(BUS_NAME, BUS_ADMIN_PATH, conn_)
+    , thumbnailer_(BUS_NAME, THUMBNAILER_BUS_PATH, conn_)
+    , admin_(BUS_NAME, ADMIN_BUS_PATH, conn_)
 {
 }
 
