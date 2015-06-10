@@ -232,8 +232,15 @@ void Handler::checkFinished()
     }
     else
     {
-        // otherwise move on to the download phase.
-        p->limiter.schedule([&]{ p->request->download(); });
+        try
+        {
+            // otherwise move on to the download phase.
+            p->limiter.schedule([&]{ p->request->download(); });
+        }
+        catch (std::exception const& e)
+        {
+            sendError(e.what());
+        }
     }
 }
 

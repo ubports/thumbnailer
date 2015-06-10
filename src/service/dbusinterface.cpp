@@ -63,9 +63,18 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
                                                    QString const& album,
                                                    QSize const& requestedSize)
 {
-    qDebug() << "Look up cover art for" << artist << "/" << album << "at size" << requestedSize;
-    auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, download_limiter_, std::move(request)));
+    try
+    {
+        qDebug() << "Look up cover art for" << artist << "/" << album << "at size" << requestedSize;
+        auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, std::move(request)));
+    }
+    catch (exception const& e)
+    {
+        sendErrorReply(ART_ERROR, e.what());
+    }
     return QDBusUnixFileDescriptor();
 }
 
@@ -73,9 +82,18 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
                                                     QString const& album,
                                                     QSize const& requestedSize)
 {
-    qDebug() << "Look up artist art for" << artist << "/" << album << "at size" << requestedSize;
-    auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, download_limiter_, std::move(request)));
+    try
+    {
+        qDebug() << "Look up artist art for" << artist << "/" << album << "at size" << requestedSize;
+        auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, std::move(request)));
+    }
+    catch (exception const& e)
+    {
+        sendErrorReply(ART_ERROR, e.what());
+    }
     return QDBusUnixFileDescriptor();
 }
 
@@ -89,13 +107,14 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
     try
     {
         request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 extraction_limiter_, std::move(request)));
     }
     catch (exception const& e)
     {
         sendErrorReply(ART_ERROR, e.what());
-        return QDBusUnixFileDescriptor();
     }
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, extraction_limiter_, std::move(request)));
     return QDBusUnixFileDescriptor();
 }
 
