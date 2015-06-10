@@ -66,6 +66,10 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
+    // Deleting the pending call watcher (which should hold the only
+    // reference to the pending call at this point) tells Qt that we
+    // are no longer interested in the reply.  The destruction will
+    // also clear up the signal connections.
     watcher_.reset();
 }
 
