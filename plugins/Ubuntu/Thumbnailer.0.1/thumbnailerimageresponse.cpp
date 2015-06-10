@@ -46,15 +46,7 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& id,
     , default_image_(default_image)
     , watcher_(std::move(watcher))
 {
-    if (watcher_)
-    {
-        connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
-    }
-    char const* c_default_image = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
-    if (c_default_image)
-    {
-        default_image_ = QString(c_default_image);
-    }
+    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
@@ -62,11 +54,6 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     : requested_size_(requested_size)
     , default_image_(default_image)
 {
-    char const* c_default_image = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
-    if (c_default_image)
-    {
-        default_image_ = QString(c_default_image);
-    }
     finish_later_with_default_image();
 }
 
@@ -77,8 +64,9 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::set_default_image()
 {
+    char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
     QImage result;
-    result.load(default_image_);
+    result.load(env_default ? QString(env_default) : default_image_);
     texture_ = QQuickTextureFactory::textureFactoryForImage(result);
 }
 
