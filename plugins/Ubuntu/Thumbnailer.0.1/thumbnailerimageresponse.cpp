@@ -48,7 +48,7 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& id,
 {
     if (watcher_)
     {
-        connect(watcher.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
+        connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
     }
     char const* c_default_image = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
     if (c_default_image)
