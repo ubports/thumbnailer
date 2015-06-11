@@ -152,7 +152,7 @@ static leveldb::ReadOptions read_options;
 // with a different schema version, the cache is simply thrown away, so
 // it will automatically be re-created using the latest schema.
 
-static int const SCHEMA_VERSION = 1;  // Increment whenever schema changes!
+static int const SCHEMA_VERSION = 2;  // Increment whenever schema changes!
 
 // Prefixes to divide the key space into logical tables/indexes.
 // All prefixes must have length 1. The end prefix must be
@@ -183,10 +183,21 @@ static string const ETIME_END = "F";
 // The schema version is there so we can change the way things are written into leveldb
 // and detect when an old cache is opened with a newer version.
 
-static string const SETTINGS_BEGIN = "Y";
-static string const SETTINGS_END = "Z";
+static string const SETTINGS_BEGIN = "X";
+static string const SETTINGS_END = "Y";
 
-// These span the entire range of keys in all tables.
+// We store the stats so they are not lost across process re-starts.
+
+static string const STATS_BEGIN = "Y";
+static string const STATS_END = "Z";
+
+// This key stores a dirty flag that we set after successful open
+// and clear in the destructor. This allows to detect, on start-up
+// if we shut down cleanly.
+
+static string const DIRTY_FLAG = "!DIRTY";
+
+// These span the entire range of keys in all tables (except settings and stats).
 
 static string const ALL_BEGIN = VALUES_BEGIN;  // Must be lowest prefix for all tables and indexes.
 static string const ALL_END = SETTINGS_BEGIN;  // Must be highest prefix for all tables and indexes.
@@ -194,6 +205,8 @@ static string const ALL_END = SETTINGS_BEGIN;  // Must be highest prefix for all
 static string const SETTINGS_MAX_SIZE = SETTINGS_BEGIN + "MAX_SIZE";
 static string const SETTINGS_POLICY = SETTINGS_BEGIN + "POLICY";
 static string const SETTINGS_SCHEMA_VERSION = SETTINGS_BEGIN + "SCHEMA_VERSION";
+
+static string const STATS_VALUES = STATS_BEGIN + "VALUES";
 
 // Simple struct to serialize/deserialize a time-key tuple.
 // For the stringified representation, time and key are
@@ -310,6 +323,14 @@ void PersistentStringCacheImpl::init_stats()
 {
     int64_t num = 0;
     int64_t size = 0;
+
+    // If we shut down cleanly last time, read the ephemeral stats values.
+    bool is_dirty = read_dirty_flag();
+    if (!is_dirty)
+    {
+        read_stats();
+    }
+
     IteratorUPtr it(db_->NewIterator(read_options));
     leveldb::Slice const atime_prefix(ATIME_BEGIN);
     it->Seek(atime_prefix);
@@ -352,6 +373,7 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path,
     {
         write_version();
         write_settings();
+        write_stats();
     }
     else
     {
@@ -378,6 +400,7 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path,
     }
 
     init_stats();
+    write_dirty_flag(true);
 }
 
 // Open existing database.
@@ -398,10 +421,18 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path, P
 
 PersistentStringCacheImpl::~PersistentStringCacheImpl()
 {
-    // When not in use, consume as little disk space as possible.
-    if (db_)
+    try
     {
-        db_->CompactRange(nullptr, nullptr);
+        write_stats();
+        write_dirty_flag(false);
+    }
+    catch (std::exception const& e)
+    {
+        cerr << make_message(string("~PersistentCache(): ") + e.what()) << endl;
+    }
+    catch (...)
+    {
+        cerr << make_message("~PersistentCache(): unknown exception") << endl;
     }
 }
 
@@ -1099,6 +1130,7 @@ void PersistentStringCacheImpl::clear_stats() noexcept
     lock_guard<decltype(mutex_)> lock(mutex_);
 
     stats_->clear();
+    write_stats();
 }
 
 void PersistentStringCacheImpl::resize(int64_t size_in_bytes)
@@ -1180,7 +1212,7 @@ void PersistentStringCacheImpl::init_db(leveldb::Options options)
     db_.reset(db);
 }
 
-bool PersistentStringCacheImpl::cache_is_new()
+bool PersistentStringCacheImpl::cache_is_new() const
 {
     string val;
     auto s = db_->Get(read_options, SETTINGS_SCHEMA_VERSION, &val);
@@ -1221,7 +1253,7 @@ void PersistentStringCacheImpl::check_version()
     }
     if (old_version != SCHEMA_VERSION)
     {
-        // Wipe all tables (but not settings).
+        // Wipe all tables and stats (but not settings). // TODO
         leveldb::WriteBatch batch;
         IteratorUPtr it(db_->NewIterator(read_options));
 
@@ -1273,6 +1305,37 @@ void PersistentStringCacheImpl::write_settings()
 
     auto s = db_->Write(write_options, &batch);
     throw_if_error(s, "write_settings()");
+}
+
+void PersistentStringCacheImpl::read_stats()
+{
+    string val;
+    auto s = db_->Get(read_options, STATS_VALUES, &val);
+    throw_if_error(s, "read_stats()");
+    stats_->deserialize(val);
+}
+
+void PersistentStringCacheImpl::write_stats()
+{
+    auto s = db_->Put(write_options, STATS_VALUES, stats_->serialize());
+    throw_if_error(s, "write_stats()");
+}
+
+bool PersistentStringCacheImpl::read_dirty_flag() const
+{
+    string dirty;
+    auto s = db_->Get(read_options, DIRTY_FLAG, &dirty);
+    if (s.IsNotFound())
+    {
+        return true;
+    }
+    return dirty == "1";
+}
+
+void PersistentStringCacheImpl::write_dirty_flag(bool is_dirty)
+{
+    auto s = db_->Put(write_options, DIRTY_FLAG, is_dirty ? "1" : "0");
+    throw_if_error(s, "write_dirty_flag()");
 }
 
 PersistentStringCacheImpl::DataTuple PersistentStringCacheImpl::get_data(string const& key, bool& found) const

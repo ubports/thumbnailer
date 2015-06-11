@@ -24,6 +24,8 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <sstream>
+#include <iostream>  // TODO: remove this
 
 namespace core
 {
@@ -41,7 +43,6 @@ public:
         , num_entries_(0)
         , cache_size_(0)
         , max_cache_size_(0)
-        , headroom_(0)
         , state_(Initialized)
     {
         clear();
@@ -58,7 +59,6 @@ public:
     int64_t num_entries_;
     int64_t cache_size_;
     int64_t max_cache_size_;
-    int64_t headroom_;
 
     // Values below are reset by a call to clear().
     int64_t hits_;
@@ -150,6 +150,58 @@ public:
         most_recent_miss_time_ = std::chrono::system_clock::time_point();
         longest_hit_run_time_ = std::chrono::system_clock::time_point();
         longest_miss_run_time_ = std::chrono::system_clock::time_point();
+    }
+
+    // Serialize the ephemeral part of the stats (counters and time stamps), but not histogram.
+
+    std::string serialize()
+    {
+        using namespace std;
+        using namespace std::chrono;
+
+        ostringstream os;
+        os << hits_ << " "
+           << misses_ << " "
+           << hits_since_last_miss_ << " "
+           << misses_since_last_hit_ << " "
+           << longest_hit_run_ << " "
+           << ttl_evictions_ << " "
+           << lru_evictions_ << " "
+           << duration_cast<milliseconds>(most_recent_hit_time_.time_since_epoch()).count() << " "
+           << duration_cast<milliseconds>(most_recent_miss_time_.time_since_epoch()).count() << " "
+           << duration_cast<milliseconds>(longest_hit_run_time_.time_since_epoch()).count() << " "
+           << duration_cast<milliseconds>(longest_miss_run_time_.time_since_epoch()).count();
+        return os.str();
+    }
+
+    // De-serialize the ephemeral part of the stats (counters and time stamps), but not histogram.
+
+    void deserialize(const std::string& s)
+    {
+        using namespace std;
+        using namespace std::chrono;
+
+        istringstream is(s);
+        int64_t mrht;
+        int64_t mrmt;
+        int64_t lhrt;
+        int64_t lmrt;
+        is >> hits_
+           >> misses_
+           >> hits_since_last_miss_
+           >> misses_since_last_hit_
+           >> longest_hit_run_
+           >> ttl_evictions_
+           >> lru_evictions_
+           >> mrht
+           >> mrmt
+           >> lhrt
+           >> lmrt;
+        assert(!is.bad());
+        most_recent_hit_time_ = system_clock::time_point(milliseconds(mrht));
+        most_recent_miss_time_ = system_clock::time_point(milliseconds(mrmt));
+        longest_hit_run_time_ = system_clock::time_point(milliseconds(lhrt));
+        longest_miss_run_time_ = system_clock::time_point(milliseconds(lmrt));
     }
 
 private:

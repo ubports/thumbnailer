@@ -150,11 +150,15 @@ private:
 
     void init_stats();
     void init_db(leveldb::Options options);
-    bool cache_is_new();
+    bool cache_is_new() const;
     void write_version();
     void check_version();
     void read_settings();
     void write_settings();
+    void read_stats();
+    void write_stats();
+    bool read_dirty_flag() const;
+    void write_dirty_flag(bool is_dirty);
     DataTuple get_data(std::string const& key, bool& found) const;
     bool get_value_and_metadata(std::string const& key,
                                 DataTuple& data,

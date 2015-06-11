@@ -1267,7 +1267,7 @@ TEST(PersistentStringCacheImpl, exceptions)
             // Write a garbage value into the version.
             open_db();
             string val = "nan";
-            auto s = db->Put(write_options, "YSCHEMA_VERSION", val);
+            auto s = db->Put(write_options, "XSCHEMA_VERSION", val);
             ASSERT_TRUE(s.ok());
             db.reset(nullptr);
         }
@@ -1290,7 +1290,7 @@ TEST(PersistentStringCacheImpl, exceptions)
             // Write a version mismatch.
             open_db();
             string val = "0";
-            auto s = db->Put(write_options, "YSCHEMA_VERSION", val);
+            auto s = db->Put(write_options, "XSCHEMA_VERSION", val);
             ASSERT_TRUE(s.ok());
             db.reset(nullptr);
         }
@@ -1306,7 +1306,7 @@ TEST(PersistentStringCacheImpl, exceptions)
             // Write a version mismatch.
             open_db();
             string val = "0";
-            auto s = db->Put(write_options, "YSCHEMA_VERSION", val);
+            auto s = db->Put(write_options, "XSCHEMA_VERSION", val);
             ASSERT_TRUE(s.ok());
             db.reset(nullptr);
         }
