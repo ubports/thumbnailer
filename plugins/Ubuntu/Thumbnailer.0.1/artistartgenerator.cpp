@@ -19,28 +19,26 @@
 */
 
 #include "artistartgenerator.h"
+
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
-#include <stdexcept>
-#include <QDebug>
-#include <QFile>
-#include <QUrlQuery>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
-
 namespace
 {
+
 const char DEFAULT_ARTIST_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
 
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
+const char BUS_NAME[] = "com.canonical.Thumbnailer";  // TODO: these constants are replicated all over the place
 const char BUS_PATH[] = "/com/canonical/Thumbnailer";
-}
+
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -76,6 +74,8 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     return new ThumbnailerImageResponse(requestedSize, DEFAULT_ARTIST_ART, std::move(watcher));
 }
 
-}
-}
-}
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

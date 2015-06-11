@@ -17,25 +17,18 @@
 */
 
 #include "thumbnailgenerator.h"
+
 #include "artgeneratorcommon.h"
 #include "thumbnailerimageresponse.h"
 
-#include <stdexcept>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <internal/safe_strerror.h>
+
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <QCoreApplication>
-#include <QDebug>
-#include <QMimeDatabase>
-#include <QUrl>
-#include <QDBusPendingCallWatcher>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
-
 namespace
 {
+
 const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
 const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
 
@@ -58,12 +51,14 @@ QString default_image_based_on_mime(QString const &id)
     return DEFAULT_ALBUM_ART;
 }
 
-}
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -87,7 +82,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     int fd = open(src_path.toUtf8().constData(), O_RDONLY | O_CLOEXEC);
     if (fd < 0)
     {
-        qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " << strerror(errno);
+        qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " +
+                    QString::fromStdString(internal::safe_strerror(errno));
         return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id));
     }
     QDBusUnixFileDescriptor unix_fd(fd);
@@ -107,6 +103,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));
 }
 
-}
-}
-}
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

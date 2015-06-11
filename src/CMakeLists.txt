@@ -12,15 +12,16 @@ set_source_files_properties(settings.cpp PROPERTIES
 OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
 
 add_library(thumbnailer STATIC
+    artdownloader.cpp
     file_io.cpp
     image.cpp
-    settings.cpp
     make_directories.cpp
     safe_strerror.cpp
+    settings.cpp
+    trace.cpp
     thumbnailer.cpp
     ubuntuserverdownloader.cpp
     videoscreenshotter.cpp
-    artdownloader.cpp
     ${CMAKE_SOURCE_DIR}/include/internal/artdownloader.h
     ${CMAKE_SOURCE_DIR}/include/internal/ubuntuserverdownloader.h
     ${CMAKE_SOURCE_DIR}/include/internal/artreply.h
