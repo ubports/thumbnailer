@@ -21,18 +21,15 @@
 #include <internal/thumbnailer.h>
 
 #include <internal/artreply.h>
-#include <internal/file_io.h>
-#include <internal/gobj_memory.h>
 #include <internal/image.h>
+#include <internal/imageextractor.h>
 #include <internal/make_directories.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
 #include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
-#include <internal/videoscreenshotter.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <core/persistent_string_cache.h>
 
 #pragma GCC diagnostic push
@@ -41,10 +38,7 @@
 #include <gio/gio.h>
 #pragma GCC diagnostic pop
 
-#include <QTimer>
 #include <unity/UnityExceptions.h>
-
-#include <iostream>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -169,7 +163,7 @@ protected:
 private:
     string filename_;
     FdPtr fd_;
-    unique_ptr<VideoScreenshotter> screenshotter_;
+    unique_ptr<ImageExtractor> image_extractor_;
 };
 
 class AlbumRequest : public RequestBase
@@ -428,10 +422,10 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
 
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
 {
-    if (screenshotter_)
+    if (image_extractor_)
     {
         // The image data has been extracted via vs-thumb
-        return ImageData(Image(screenshotter_->data()), CachePolicy::cache_fullsize, Location::local);
+        return ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
     }
 
     // Work out content type.
@@ -475,10 +469,10 @@ void LocalThumbnailRequest::download(chrono::milliseconds timeout)
     {
         timeout = timeout_;
     }
-    screenshotter_.reset(new VideoScreenshotter(fd_.get(), timeout));
-    connect(screenshotter_.get(), &VideoScreenshotter::finished, this, &LocalThumbnailRequest::downloadFinished,
+    image_extractor_.reset(new ImageExtractor(fd_.get(), timeout));
+    connect(image_extractor_.get(), &ImageExtractor::finished, this, &LocalThumbnailRequest::downloadFinished,
             Qt::DirectConnection);
-    screenshotter_->extract();
+    image_extractor_->extract();
 }
 
 AlbumRequest::AlbumRequest(Thumbnailer* thumbnailer,

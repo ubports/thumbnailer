@@ -20,6 +20,7 @@
 
 #include <core/internal/persistent_string_cache_stats.h>
 
+#include <leveldb/cache.h>
 #include <leveldb/write_batch.h>
 
 #include <iomanip>
@@ -346,6 +347,21 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path,
 
     leveldb::Options options;
     options.create_if_missing = true;
+
+    // For small caches, reduce memory consumption by reducing the size of the internal block cache.
+    // The block cache size is at least 512 kB. For caches 5-80 MB, it is 10% of the nominal cache size.
+    // For caches > 80 MB, the block cache is left at the default of 8 MB.
+    size_t block_cache_size = max_size_in_bytes / 10;
+    if (block_cache_size < 512 * 1024)
+    {
+        block_cache_size = 512 * 1024;
+    }
+    if (block_cache_size < 8 * 1024 * 1024)
+    {
+        block_cache_.reset(leveldb::NewLRUCache(block_cache_size));
+        options.block_cache = block_cache_.get();
+    }
+
     init_db(options);
 
     if (cache_is_new())
