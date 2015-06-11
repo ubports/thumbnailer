@@ -33,6 +33,22 @@ namespace
 const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
 const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
 
+QString default_image_based_on_mime(QString const &id)
+{
+    QMimeDatabase db;
+    QMimeType mime = db.mimeTypeForFile(id);
+
+    if (mime.name().contains("audio"))
+    {
+        return DEFAULT_ALBUM_ART;
+    }
+    else if (mime.name().contains("video"))
+    {
+        return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
+    }
+    return DEFAULT_ALBUM_ART;
+}
+
 }  // namespace
 
 namespace unity
@@ -64,11 +80,9 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     int fd = open(src_path.toUtf8().constData(), O_RDONLY | O_CLOEXEC);
     if (fd < 0)
     {
-        auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id));
         qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " +
                     QString::fromStdString(internal::safe_strerror(errno));
-        response->finish_later_with_default_image();
-        return response;
+        return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id));
     }
     QDBusUnixFileDescriptor unix_fd(fd);
     close(fd);
@@ -82,25 +96,9 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     }
 
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
-    auto watcher = new QDBusPendingCallWatcher(reply);
-    auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id), watcher);
-    return response;
-}
-
-QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id)
-{
-    QMimeDatabase db;
-    QMimeType mime = db.mimeTypeForFile(id);
-
-    if (mime.name().contains("audio"))
-    {
-        return DEFAULT_ALBUM_ART;
-    }
-    else if (mime.name().contains("video"))
-    {
-        return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
-    }
-    return DEFAULT_ALBUM_ART;
+    std::unique_ptr<QDBusPendingCallWatcher> watcher(
+        new QDBusPendingCallWatcher(reply));
+    return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));
 }
 
 }  // namespace qml
