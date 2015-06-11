@@ -49,13 +49,29 @@ public:
     ThumbnailRequest() = default;
     virtual ~ThumbnailRequest() = default;
 
+    enum class FetchStatus
+    {
+        cache_hit,
+        scaled_from_fullsize,
+        cached_failure,
+        needs_download,
+        downloaded,
+        not_found,
+        no_network,
+        error
+    };
+
     // Returns the empty string if the thumbnail data needs to be
     // downloaded to complete the request. If this happens, call
     // download() and wait for downloadFinished signal to fire, then
     // call thumbnail() again.
     virtual std::string thumbnail() = 0;
+
     // TODO: Timeout should be configurable?
     virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(10000)) = 0;
+
+    // Returns status of thumbnail() set by thumbnail();
+    virtual FetchStatus status() const = 0;
 
     virtual std::string const& key() const = 0;
 Q_SIGNALS:
@@ -115,11 +131,19 @@ public:
 
     AllStats stats() const;
 
+    enum class CacheSelector { all, full_size_cache, thumbnail_cache, failure_cache, LAST__ };
+
+    void clear_stats(CacheSelector selector);
+    void clear(CacheSelector selector);
+
 private:
     ArtDownloader* downloader() const
     {
         return downloader_.get();
     }
+
+    typedef std::vector<core::PersistentStringCache*> CacheVec;
+    CacheVec select_caches(CacheSelector selector) const;
 
     core::PersistentStringCache::UPtr full_size_cache_;  // Small cache of full (original) size images.
     core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.

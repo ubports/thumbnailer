@@ -7,9 +7,9 @@ add_executable(thumbnailer-service
   admininterface.cpp
   dbusinterface.cpp
   handler.cpp
-  ratelimiter.cpp
   inactivityhandler.cpp
   main.cpp
+  ratelimiter.cpp
   stats.cpp
   ${adaptor_files}
   )
@@ -17,6 +17,7 @@ add_executable(thumbnailer-service
 qt5_use_modules(thumbnailer-service DBus Concurrent)
 target_link_libraries(thumbnailer-service thumbnailer ${CMAKE_THREAD_LIBS_INIT})
 set_target_properties(thumbnailer-service PROPERTIES AUTOMOC TRUE)
+add_dependencies(thumbnailer-service vs-thumb)
 
 install(
   TARGETS thumbnailer-service

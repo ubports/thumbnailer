@@ -110,12 +110,16 @@ TEST_F(DBusTest, get_album_art)
 
 TEST_F(DBusTest, get_artist_art)
 {
-    QDBusReply<QDBusUnixFileDescriptor> reply =
-        dbus_->thumbnailer_->GetArtistArt("metallica", "load", QSize(24, 24));
-    assert_no_error(reply);
-    Image image(reply.value().fileDescriptor());
-    EXPECT_EQ(24, image.width());
-    EXPECT_EQ(24, image.width());
+    // We do this twice, so we get a cache hit on the second try.
+    for (int i = 0; i < 2; ++i)
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("metallica", "load", QSize(24, 24));
+        assert_no_error(reply);
+        Image image(reply.value().fileDescriptor());
+        EXPECT_EQ(24, image.width());
+        EXPECT_EQ(24, image.width());
+    }
 }
 
 TEST_F(DBusTest, thumbnail_image)
@@ -132,6 +136,46 @@ TEST_F(DBusTest, thumbnail_image)
     Image image(reply.value().fileDescriptor());
     EXPECT_EQ(256, image.width());
     EXPECT_EQ(160, image.height());
+}
+
+TEST_F(DBusTest, song_image)
+{
+    // We do this twice, so we get a cache hit on the second try.
+    for (int i = 0; i < 2; ++i)
+    {
+        const char* filename = TESTDATADIR "/testsong.ogg";
+        FdPtr fd(open(filename, O_RDONLY), do_close);
+        ASSERT_GE(fd.get(), 0);
+
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetThumbnail(
+                filename, QDBusUnixFileDescriptor(fd.get()), QSize(256, 256));
+        assert_no_error(reply);
+
+        Image image(reply.value().fileDescriptor());
+        EXPECT_EQ(200, image.width());
+        EXPECT_EQ(200, image.height());
+    }
+}
+
+TEST_F(DBusTest, video_image)
+{
+    // We do this twice, so we get a cache hit on the second try.
+    for (int i = 0; i < 2; ++i)
+    {
+        const char* filename = TESTDATADIR "/testvideo.ogg";
+        FdPtr fd(open(filename, O_RDONLY), do_close);
+        ASSERT_GE(fd.get(), 0);
+
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetThumbnail(
+                filename, QDBusUnixFileDescriptor(fd.get()), QSize(256, 256));
+        assert_no_error(reply);
+
+        Image image(reply.value().fileDescriptor());
+        EXPECT_EQ(256, image.width());
+        EXPECT_EQ(144, image.height());
+    }
 }
 
 TEST_F(DBusTest, thumbnail_no_such_file)
@@ -212,7 +256,7 @@ TEST_F(DBusTest, rate_limit_requests)
         replies[i].waitForFinished();
         EXPECT_FALSE(replies[i].isValid());
         string message = replies[i].error().message().toStdString();
-        EXPECT_TRUE(boost::contains(message, "Could not get thumbnail")) << message;
+        EXPECT_TRUE(boost::contains(message, "Handler::create_finished(): could not get thumbnail for ")) << message;
     }
 }
 
@@ -304,6 +348,29 @@ bool near_current_time(chrono::system_clock::time_point& t)
         return false;
     }
     return true;
+}
+
+TEST_F(DBusTest, bad_clear_params)
+{
+    QDBusReply<void> reply = dbus_->admin_->ClearStats(-1);
+    ASSERT_FALSE(reply.isValid());
+    string msg = reply.error().message().toStdString();
+    EXPECT_EQ("ClearStats(): invalid cache selector: -1", msg) << msg;
+
+    reply = dbus_->admin_->ClearStats(4);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("ClearStats(): invalid cache selector: 4", msg) << msg;
+
+    reply = dbus_->admin_->Clear(-1);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("Clear(): invalid cache selector: -1", msg) << msg;
+
+    reply = dbus_->admin_->Clear(4);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("Clear(): invalid cache selector: 4", msg) << msg;
 }
 
 TEST_F(DBusTest, stats)

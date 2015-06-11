@@ -16,12 +16,9 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
-#include "dbus_connection.h"
+#pragma once
 
-#include <service/dbus_names.h>
-
-using namespace std;
-using namespace unity::thumbnailer::service;
+#include "action.h"
 
 namespace unity
 {
@@ -32,24 +29,20 @@ namespace thumbnailer
 namespace tools
 {
 
-DBusConnection::DBusConnection()
-    : conn_(QDBusConnection::sessionBus())
-    , thumbnailer_(BUS_NAME, THUMBNAILER_BUS_PATH, conn_)
-    , admin_(BUS_NAME, ADMIN_BUS_PATH, conn_)
+class Clear : public Action
 {
-}
+public:
+    UNITY_DEFINES_PTRS(Clear);
 
-DBusConnection::~DBusConnection() = default;
+    Clear(QCommandLineParser& parser);
+    virtual ~Clear();
 
-ThumbnailerInterface& DBusConnection::thumbnailer() noexcept
-{
-    return thumbnailer_;
-}
+    virtual void run(DBusConnection& conn) override;
 
-AdminInterface& DBusConnection::admin() noexcept
-{
-    return admin_;
-}
+private:
+    QString cmd_;
+    int cache_id_;
+};
 
 }  // namespace tools
 

@@ -20,6 +20,7 @@
 #include <testsetup.h>
 
 #include <QDebug>
+
 #include <stdexcept>
 #include <stdlib.h>
 

@@ -17,14 +17,17 @@
 */
 
 #include "plugin.h"
+
 #include "albumartgenerator.h"
 #include "artistartgenerator.h"
 #include "thumbnailgenerator.h"
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -45,11 +48,12 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register albumart image provider:" << e.what();
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register albumart image provider: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register albumart image provider.";
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register "
+                      "albumart image provider: unknown exception";
     }
     // LCOV_EXCL_STOP
 
@@ -60,11 +64,12 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register artistart image provider:" << e.what();
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register artistart image provider: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register artistart image provider.";
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register "
+                      "artistart image provider: unknown exception";
     }
     // LCOV_EXCL_STOP
 
@@ -75,14 +80,18 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register thumbnailer image provider:" << e.what();
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register thumbnailer image provider: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register thumbnailer image provider.";
+        qWarning() << "ThumbnailerPlugin::initializeEngine(): Failed to register "
+                      "thumbnailer image provider: unknown exception";
     }
     // LCOV_EXCL_STOP
 }
-}
-}
-}
+
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity
