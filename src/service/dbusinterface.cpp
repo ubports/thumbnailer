@@ -193,7 +193,6 @@ void DBusInterface::requestFinished()
     auto queued_time = double(handler->queued_time().count()) / 1000000;
     auto download_time = double(handler->download_time().count()) / 1000000;
 
-    qDebug() << "Q: " << queued_time << ", D: " << download_time;
     if (queued_time > 0 || download_time > 0)
     {
         s << " [";
