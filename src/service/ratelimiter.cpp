@@ -36,17 +36,15 @@ RateLimiter::RateLimiter(int concurrency)
 
 RateLimiter::~RateLimiter() = default;
 
-void RateLimiter::schedule(std::function<void()> job, std::function<void()> job_started)
+void RateLimiter::schedule(std::function<void()> job)
 {
     if (running_ < concurrency_)
     {
-        job_started();
         running_++;
         job();
     }
     else
     {
-        job_started_ = job_started;
         queue_.push(job);
     }
 }
@@ -59,7 +57,6 @@ void RateLimiter::done()
     }
     else
     {
-        job_started_();
         auto job = queue_.front();
         queue_.pop();
         job();

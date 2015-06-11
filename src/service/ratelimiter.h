@@ -45,7 +45,7 @@ public:
     // Schedule a job to run.  If the concurrency limit has not been
     // reached, the job will be run immediately.  Otherwise it will be
     // added to the queue.
-    void schedule(std::function<void()> job, std::function<void()> job_started);
+    void schedule(std::function<void()> job);
 
     // Notify that a job has completed.  If there are queued jobs,
     // start the one at the head of the queue.
@@ -54,7 +54,6 @@ public:
 private:
     int const concurrency_;
     int running_;
-    std::function<void()> job_started_;
     std::queue<std::function<void()>> queue_;
 };
 

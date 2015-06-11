@@ -257,8 +257,7 @@ void Handler::checkFinished()
         {
             // otherwise move on to the download phase.
             p->schedule_start_time = chrono::system_clock::now();
-            p->limiter.schedule([&]{ p->request->download(); },
-                                [&]{ p->download_start_time = chrono::system_clock::now(); });
+            p->limiter.schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
         }
         catch (std::exception const& e)
         {
