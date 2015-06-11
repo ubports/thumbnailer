@@ -37,18 +37,17 @@ namespace thumbnailer
 namespace internal
 {
 
-class VideoScreenshotter final : public QObject
+class ImageExtractor final : public QObject
 {
     Q_OBJECT
 public:
-    VideoScreenshotter(int fd, std::chrono::milliseconds timeout);
-    ~VideoScreenshotter();
+    ImageExtractor(int fd, std::chrono::milliseconds timeout);
+    ~ImageExtractor();
 
-    VideoScreenshotter(const VideoScreenshotter& t) = delete;
-    VideoScreenshotter& operator=(const VideoScreenshotter& t) = delete;
+    ImageExtractor(const ImageExtractor& t) = delete;
+    ImageExtractor& operator=(const ImageExtractor& t) = delete;
 
     void extract();
-    std::string error_string();
     std::string data();
 
 Q_SIGNALS:

@@ -105,7 +105,7 @@ char const* to_time_string(chrono::system_clock::time_point tp)
 {
     if (tp == chrono::system_clock::time_point())
     {
-        return "never";
+        return "never\n";
     }
     time_t t = chrono::system_clock::to_time_t(tp);
     return asctime(localtime(&t));
@@ -177,10 +177,10 @@ void ShowStats::show_stats(service::CacheStats const& st)
     printf("    Longest miss run:      %" PRId64 "\n", int64_t(st.longest_miss_run));
     printf("    TTL evictions:         %" PRId64 "\n", int64_t(st.ttl_evictions));
     printf("    LRU evictions:         %" PRId64 "\n", int64_t(st.lru_evictions));
-    printf("    Most-recent hit time:  %s\n", to_time_string(st.most_recent_hit_time));
-    printf("    Most-recent miss time: %s\n", to_time_string(st.most_recent_miss_time));
-    printf("    Longest hit-run time:  %s\n", to_time_string(st.longest_hit_run_time));
-    printf("    Longest miss-run time: %s\n", to_time_string(st.longest_miss_run_time));
+    printf("    Most-recent hit time:  %s", to_time_string(st.most_recent_hit_time));
+    printf("    Most-recent miss time: %s", to_time_string(st.most_recent_miss_time));
+    printf("    Longest hit-run time:  %s", to_time_string(st.longest_hit_run_time));
+    printf("    Longest miss-run time: %s", to_time_string(st.longest_miss_run_time));
 
     if (show_histogram_)
     {

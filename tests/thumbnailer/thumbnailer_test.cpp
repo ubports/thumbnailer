@@ -21,8 +21,10 @@
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <internal/raii.h>
+#include <internal/trace.h>
 #include <testsetup.h>
 #include "utils/artserver.h"
+
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -33,7 +35,6 @@
 #pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 #include <QCoreApplication>
-#include <QDebug>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <unity/UnityExceptions.h>
@@ -497,7 +498,7 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
         catch (unity::ResourceException const& e)
         {
             string msg = e.to_string();
-            string exp = "VideoScreenshotter::data(): Error starting vs-thumb. QProcess::ProcessError";
+            string exp = "ImageExtractor::data(): failed to start no_such_directory/vs-thumb";
             EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
         }
         setenv("TN_UTILDIR", old_env.c_str(), true);

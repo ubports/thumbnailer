@@ -18,6 +18,7 @@
 */
 
 #include "albumartgenerator.h"
+
 #include "artgeneratorcommon.h"
 #include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"

@@ -19,6 +19,7 @@
 */
 
 #include "artistartgenerator.h"
+
 #include "artgeneratorcommon.h"
 #include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
@@ -73,8 +74,8 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     return response;
 }
 
-}  // qml
+}  // namespace qml
 
-}  // thumbnailer
+}  // namespace thumbnailer
 
-}  // unity
+}  // namespace unity
