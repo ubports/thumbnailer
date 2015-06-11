@@ -21,15 +21,13 @@
 #include "artistartgenerator.h"
 
 #include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
 
 namespace
 {
 
 const char DEFAULT_ARTIST_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
-
-const char BUS_NAME[] = "com.canonical.Thumbnailer";  // TODO: these constants are replicated all over the place
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
 
 }  // namespace
 
@@ -61,7 +59,7 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
         // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);

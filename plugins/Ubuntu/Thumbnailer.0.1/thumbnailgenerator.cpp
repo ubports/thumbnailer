@@ -19,6 +19,7 @@
 #include "thumbnailgenerator.h"
 
 #include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
 
 #include <internal/safe_strerror.h>
@@ -31,9 +32,6 @@ namespace
 
 const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
 const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
-
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
 
 QString default_image_based_on_mime(QString const &id)
 {
@@ -94,7 +92,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
         // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
     auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
