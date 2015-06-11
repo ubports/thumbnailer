@@ -104,6 +104,7 @@ TEST(PersistentStringCache, basic)
         EXPECT_FALSE(c->invalidate("x"));
         EXPECT_FALSE(c->touch("x"));
         c->invalidate();
+        c->compact();
         c->put("x", "");
         c->invalidate({"x"});
         EXPECT_FALSE(c->contains_key("x"));
