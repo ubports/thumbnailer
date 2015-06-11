@@ -21,15 +21,13 @@
 #include "artistartgenerator.h"
 
 #include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
 
 namespace
 {
 
 const char DEFAULT_ARTIST_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
-
-const char BUS_NAME[] = "com.canonical.Thumbnailer";  // TODO: these constants are replicated all over the place
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
 
 }  // namespace
 
@@ -52,10 +50,8 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     QUrlQuery query(id);
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
-        auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ARTIST_ART);
         qWarning() << "ArtistArtGenerator::requestImageResponse(): Invalid artistart uri:" << id;
-        response->finish_later_with_default_image();
-        return response;
+        return new ThumbnailerImageResponse(requestedSize, DEFAULT_ARTIST_ART);
     }
 
     if (!connection)
@@ -63,7 +59,7 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
         // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
@@ -71,9 +67,9 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
 
     // perform dbus call
     auto reply = iface->GetArtistArt(artist, album, requestedSize);
-    auto watcher = new QDBusPendingCallWatcher(reply);
-    auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ARTIST_ART, watcher);
-    return response;
+    std::unique_ptr<QDBusPendingCallWatcher> watcher(
+        new QDBusPendingCallWatcher(reply));
+    return new ThumbnailerImageResponse(requestedSize, DEFAULT_ARTIST_ART, std::move(watcher));
 }
 
 }  // namespace qml

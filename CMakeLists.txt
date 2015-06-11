@@ -4,6 +4,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 cmake_minimum_required(VERSION 2.8.10)
 
+# Suppress complaints by cmake about CMOPILE_DEFINITIONS_<Config> cause by qt5 cmake macros.
+cmake_policy(SET CMP0043 OLD)
+
 string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower) # Build types should always be lower case
 
 set(ACCEPTED_BUILD_TYPES "" none release debug relwithdebinfo coverage)

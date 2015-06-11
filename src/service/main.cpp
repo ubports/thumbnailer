@@ -23,6 +23,7 @@
 #include "dbusinterfaceadaptor.h"
 #include "inactivityhandler.h"
 #include <internal/trace.h>
+#include <service/dbus_names.h>
 
 #include <QCoreApplication>
 
@@ -32,20 +33,16 @@ using namespace std;
 using namespace unity::thumbnailer::internal;
 using namespace unity::thumbnailer::service;
 
-static const char BUS_NAME[] = "com.canonical.Thumbnailer";
-
-static const char BUS_THUMBNAILER_PATH[] = "/com/canonical/Thumbnailer";
-static const char BUS_ADMIN_PATH[] = "/com/canonical/ThumbnailerAdmin";
-
 int main(int argc, char** argv)
 {
     int rc = 1;
     try
     {
+        qDebug() << "Initializing";
+
         QCoreApplication app(argc, argv);
 
-        shared_ptr<Thumbnailer> thumbnailer;
-        thumbnailer = make_shared<Thumbnailer>();
+        auto thumbnailer = make_shared<Thumbnailer>();
 
         unity::thumbnailer::service::DBusInterface server(thumbnailer);
         new ThumbnailerAdaptor(&server);
@@ -54,8 +51,8 @@ int main(int argc, char** argv)
         new ThumbnailerAdminAdaptor(&admin_server);
 
         auto bus = QDBusConnection::sessionBus();
-        bus.registerObject(BUS_THUMBNAILER_PATH, &server);
-        bus.registerObject(BUS_ADMIN_PATH, &admin_server);
+        bus.registerObject(THUMBNAILER_BUS_PATH, &server);
+        bus.registerObject(ADMIN_BUS_PATH, &admin_server);
 
         qDBusRegisterMetaType<unity::thumbnailer::service::AllStats>();
 
@@ -66,7 +63,15 @@ int main(int argc, char** argv)
 
         new InactivityHandler(server);
 
+        qDebug() << "Ready";
         rc = app.exec();
+
+        // We must shut down the thumbnailer before we dismantle the DBus connection.
+        // Otherwise, it is possible for an old instance of this service to still
+        // be running, while a new instance is activated by DBus, and the database
+        // may not yet have been unlocked by the previous instance.
+        thumbnailer.reset();
+        qDebug() << "Exiting";
     }
     catch (std::exception const& e)
     {

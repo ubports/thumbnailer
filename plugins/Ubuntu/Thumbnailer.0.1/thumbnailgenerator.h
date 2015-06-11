@@ -44,9 +44,6 @@ public:
     const ThumbnailGenerator& operator=(ThumbnailGenerator&& other) = delete;
 
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
-
-protected:
-    QString return_default_image_based_on_mime(QString const &id);
 };
 }
 }

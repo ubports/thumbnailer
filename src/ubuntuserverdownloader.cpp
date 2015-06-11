@@ -34,8 +34,6 @@ using namespace std;
 namespace
 {
 constexpr const char UBUNTU_SERVER_BASE_URL[] = "https://dash.ubuntu.com";
-constexpr const char REQUESTED_ALBUM_IMAGE_SIZE[] = "350";
-constexpr const char REQUESTED_ARTIST_IMAGE_SIZE[] = "300";
 constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
 constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
 }
@@ -179,7 +177,7 @@ private:
 
 // helper methods to retrieve image urls
 QUrl get_art_url(
-    QString const& base_url, QString const& size, QString const& artist, QString const& album, QString const& api_key)
+    QString const& base_url, QString const& artist, QString const& album, QString const& api_key)
 {
     QString prefix_api_root = UBUNTU_SERVER_BASE_URL;
     char const* apiroot_c = getenv("THUMBNAILER_UBUNTU_APIROOT");
@@ -191,7 +189,6 @@ QUrl get_art_url(
     QUrlQuery q;
     q.addQueryItem("artist", artist);
     q.addQueryItem("album", album);
-    q.addQueryItem("size", size);
     q.addQueryItem("key", api_key);
 
     QUrl url(prefix_api_root + "/" + base_url);
@@ -201,12 +198,12 @@ QUrl get_art_url(
 
 QUrl get_album_art_url(QString const& artist, QString const& album, QString const& api_key)
 {
-    return get_art_url(ALBUM_ART_BASE_URL, REQUESTED_ALBUM_IMAGE_SIZE, artist, album, api_key);
+    return get_art_url(ALBUM_ART_BASE_URL, artist, album, api_key);
 }
 
 QUrl get_artist_art_url(QString const& artist, QString const& album, QString const& api_key)
 {
-    return get_art_url(ARTIST_ART_BASE_URL, REQUESTED_ARTIST_IMAGE_SIZE, artist, album, api_key);
+    return get_art_url(ARTIST_ART_BASE_URL, artist, album, api_key);
 }
 
 UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
