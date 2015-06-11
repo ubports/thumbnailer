@@ -39,7 +39,7 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     , default_image_(default_image)
     , watcher_(std::move(watcher))
 {
-    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::callFinished);
+    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
@@ -76,12 +76,12 @@ void ThumbnailerImageResponse::loadDefaultImage()
     texture_ = QQuickTextureFactory::textureFactoryForImage(result);
 }
 
-void ThumbnailerImageResponse::callFinished()
+void ThumbnailerImageResponse::dbusCallFinished()
 {
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        qWarning() << "ThumbnailerImageResponse::callFinished(): D-Bus error: " << reply.error().message();
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << reply.error().message();
         loadDefaultImage();
         Q_EMIT finished();
         return;
@@ -98,11 +98,11 @@ void ThumbnailerImageResponse::callFinished()
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "ThumbnailerImageResponse::callFinished(): Album art loader failed: " << e.what();
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): Album art loader failed: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "ThumbnailerImageResponse::callFinished(): unknown exception";
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): unknown exception";
     }
 
     loadDefaultImage();

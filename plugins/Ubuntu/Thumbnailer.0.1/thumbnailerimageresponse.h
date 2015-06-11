@@ -49,7 +49,7 @@ public:
     void cancel() override;
 
 private Q_SLOTS:
-    void callFinished();
+    void dbusCallFinished();
 
 private:
     void loadDefaultImage();
