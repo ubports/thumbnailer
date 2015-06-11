@@ -19,14 +19,7 @@
 
 #include "dbusinterface.h"
 
-#include <internal/safe_strerror.h>
-
-#include <QDebug>
-
-#include <algorithm>
-#include <map>
-#include <vector>
-#include <sstream>
+#include <internal/trace.h>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -34,9 +27,6 @@ using namespace unity::thumbnailer::internal;
 namespace
 {
 char const ART_ERROR[] = "com.canonical.Thumbnailer.Error.Failed";
-
-int const MAX_DOWNLOADS = 2;
-int const MAX_VIDEO_THUMBNAILS = 2;
 }
 
 namespace unity
@@ -53,8 +43,8 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
     , thumbnailer_(thumbnailer)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
-    , download_limiter_(MAX_DOWNLOADS)
-    , video_thumbnail_limiter_(MAX_VIDEO_THUMBNAILS)
+    , download_limiter_(settings_.max_downloads())
+    , extraction_limiter_(settings_.max_extractions())
 {
 }
 
@@ -66,9 +56,24 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
                                                    QString const& album,
                                                    QSize const& requestedSize)
 {
-    qDebug() << "Look up cover art for" << artist << "/" << album << "at size" << requestedSize;
-    auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, download_limiter_, std::move(request)));
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, std::move(request), details));
+    }
+    // LCOV_EXCL_START
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, e.what());
+    }
+    // LCOV_EXCL_STOP
     return QDBusUnixFileDescriptor();
 }
 
@@ -76,9 +81,24 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
                                                     QString const& album,
                                                     QSize const& requestedSize)
 {
-    qDebug() << "Look up artist art for" << artist << "/" << album << "at size" << requestedSize;
-    auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, download_limiter_, std::move(request)));
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, std::move(request), details));
+    }
+    // LCOV_EXCL_START
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, msg);
+    }
+    // LCOV_EXCL_STOP
     return QDBusUnixFileDescriptor();
 }
 
@@ -86,19 +106,23 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
                                                     QDBusUnixFileDescriptor const& filename_fd,
                                                     QSize const& requestedSize)
 {
-    qDebug() << "Create thumbnail for" << filename << "at size" << requestedSize;
-
     std::unique_ptr<ThumbnailRequest> request;
     try
     {
-        request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        QString details;
+        QTextStream s(&details);
+        s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 extraction_limiter_, std::move(request), details));
     }
     catch (exception const& e)
     {
-        sendErrorReply(ART_ERROR, e.what());
-        return QDBusUnixFileDescriptor();
+        QString msg = "DBusInterface::GetThumbnail(): " + filename + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, msg);
     }
-    queueRequest(new Handler(connection(), message(), check_thread_pool_, create_thread_pool_, video_thumbnail_limiter_, std::move(request)));
     return QDBusUnixFileDescriptor();
 }
 
@@ -121,6 +145,7 @@ void DBusInterface::queueRequest(Handler* handler)
         /* There are other requests for this item, so chain this
          * request to wait for them to complete first.  This way we
          * can take advantage of any cached downloads or failures. */
+        // TODO: should record tiem spent in queue
         connect(requests_for_key.back(), &Handler::finished,
                 handler, &Handler::begin);
     }
@@ -159,6 +184,18 @@ void DBusInterface::requestFinished()
     }
     // Queue deletion of handler when we re-enter the event loop.
     handler->deleteLater();
+
+    QString msg;
+    QTextStream s(&msg);
+    s.setRealNumberNotation(QTextStream::FixedNotation);
+    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000 << " sec";
+    auto download_time = double(handler->download_time().count()) / 1000000;
+    if (download_time > 0)
+    {
+        s << " [" << download_time << " sec]";
+    }
+    s << " (" << handler->status() << ")";
+    qDebug() << msg;
 }
 
 }  // namespace service

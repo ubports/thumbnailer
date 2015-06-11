@@ -21,8 +21,10 @@
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <internal/raii.h>
+#include <internal/trace.h>
 #include <testsetup.h>
 #include "utils/artserver.h"
+
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -33,7 +35,6 @@
 #pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 #include <QCoreApplication>
-#include <QDebug>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <unity/UnityExceptions.h>
@@ -173,6 +174,143 @@ TEST_F(ThumbnailerTest, changed_size)
         Thumbnailer tn;
         EXPECT_EQ(1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
     }
+}
+
+TEST_F(ThumbnailerTest, clear)
+{
+    Thumbnailer tn;
+
+    auto fill_cache = [&tn]
+    {
+        {
+            // Load a song so we have something in the full-size and thumbnail caches.
+            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
+            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize());
+            ASSERT_NE(nullptr, request.get());
+            // Audio thumbnails cannot be produced immediately
+            ASSERT_EQ("", request->thumbnail());
+
+            QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+            request->download(chrono::milliseconds(15000));
+            ASSERT_TRUE(spy.wait(20000));
+            string thumb = request->thumbnail();
+            ASSERT_NE("", thumb);
+            Image img(thumb);
+            EXPECT_EQ(200, img.width());
+            EXPECT_EQ(200, img.height());
+        }
+
+        {
+            // Load same song again at different size, so we get a hit on full-size cache.
+            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
+            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize(20, 20));
+            ASSERT_NE(nullptr, request.get());
+            ASSERT_NE("", request->thumbnail());
+        }
+
+        {
+            // Load same song again at same size, so we get a hit on thumbnail cache.
+            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
+            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize(20, 20));
+            ASSERT_NE(nullptr, request.get());
+            ASSERT_NE("", request->thumbnail());
+        }
+
+        {
+            // Load an empty image, so we have something in the failure cache.
+            FdPtr fd(open(EMPTY_IMAGE, O_RDONLY), do_close);
+            string thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
+            EXPECT_EQ("", thumb);
+        }
+
+        {
+            // Load empty image again, so we get a hit on failure cache.
+            FdPtr fd(open(EMPTY_IMAGE, O_RDONLY), do_close);
+            string thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
+            EXPECT_EQ("", thumb);
+        }
+    };
+
+    fill_cache();
+
+    // Just to show that fill_cache() does put things into the cache and the stats are as expected.
+    auto stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.failure_stats.size());
+    EXPECT_EQ(1, stats.full_size_stats.hits());
+    EXPECT_EQ(1, stats.thumbnail_stats.hits());
+    EXPECT_EQ(1, stats.failure_stats.hits());
+
+    // Clear all caches and check that they are empty.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.size());
+    EXPECT_EQ(0, stats.thumbnail_stats.size());
+    EXPECT_EQ(0, stats.failure_stats.size());
+
+    // Clear full-size cache only.
+    fill_cache();
+    tn.clear(Thumbnailer::CacheSelector::full_size_cache);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.size());
+    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.failure_stats.size());
+
+    // Clear thumbnail cache only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear(Thumbnailer::CacheSelector::thumbnail_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(0, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.failure_stats.size());
+
+    // Clear failure cache only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear(Thumbnailer::CacheSelector::failure_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(0, stats.failure_stats.size());
+
+    // Clear all stats.
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.hits());
+    EXPECT_EQ(0, stats.thumbnail_stats.hits());
+    EXPECT_EQ(0, stats.failure_stats.hits());
+
+    // Re-fill the cache and clear full-size stats only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear_stats(Thumbnailer::CacheSelector::full_size_cache);
+    stats = tn.stats();
+    EXPECT_EQ(0, stats.full_size_stats.hits());
+    EXPECT_EQ(1, stats.thumbnail_stats.hits());
+    EXPECT_EQ(1, stats.failure_stats.hits());
+
+    // Re-fill the cache and clear thumbnail stats only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear_stats(Thumbnailer::CacheSelector::thumbnail_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.hits());
+    EXPECT_EQ(0, stats.thumbnail_stats.hits());
+    EXPECT_EQ(1, stats.failure_stats.hits());
+
+    // Re-fill the cache and clear failure stats only.
+    tn.clear(Thumbnailer::CacheSelector::all);
+    tn.clear_stats(Thumbnailer::CacheSelector::all);
+    fill_cache();
+    tn.clear_stats(Thumbnailer::CacheSelector::failure_cache);
+    stats = tn.stats();
+    EXPECT_EQ(1, stats.full_size_stats.hits());
+    EXPECT_EQ(1, stats.thumbnail_stats.hits());
+    EXPECT_EQ(0, stats.failure_stats.hits());
 }
 
 TEST_F(ThumbnailerTest, bad_fd)
@@ -360,7 +498,7 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
         catch (unity::ResourceException const& e)
         {
             string msg = e.to_string();
-            string exp = "VideoScreenshotter::data(): Error starting vs-thumb. QProcess::ProcessError";
+            string exp = "ImageExtractor::data(): failed to start no_such_directory/vs-thumb";
             EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
         }
         setenv("TN_UTILDIR", old_env.c_str(), true);

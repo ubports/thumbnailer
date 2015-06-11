@@ -10,7 +10,7 @@ TestCase {
     width: canvas.width > 0 ? canvas.width : 100
     height: canvas.height > 0 ? canvas.height : 100
 
-    property size size: Qt.size(image.implicitWidth, image.implicitHeight)
+    readonly property size size: Qt.size(image.implicitWidth, image.implicitHeight)
     property size requestedSize: Qt.size(-1, -1)
 
     Image {

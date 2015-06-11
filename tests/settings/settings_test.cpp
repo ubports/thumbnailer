@@ -40,6 +40,8 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
+    EXPECT_EQ(2, settings.max_downloads());
+    EXPECT_EQ(2, settings.max_extractions());
 }
 
 TEST(Settings, missing_schema)
@@ -50,13 +52,15 @@ TEST(Settings, missing_schema)
     // installed.
     Settings settings("no.such.schema");
 
-    EXPECT_EQ("", settings.art_api_key());
+    EXPECT_EQ("0f450aa882a6125ebcbfb3d7f7aa25bc", settings.art_api_key());
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
     EXPECT_EQ(1920, settings.max_thumbnail_size());
     EXPECT_EQ(168, settings.retry_not_found_hours());
     EXPECT_EQ(2, settings.retry_error_hours());
+    EXPECT_EQ(2, settings.max_downloads());
+    EXPECT_EQ(2, settings.max_extractions());
 }
 
 TEST(Settings, changed_settings)

@@ -10,7 +10,7 @@
     <key type="i" name="full-size-cache-size">
       <default>50</default>
       <summary>Size of the full-size image cache in megabytes</summary>
-      <description>The full-size cache is used to store full-size extracted video frames and downloaded album art.</description>
+      <description>The full-size cache is used to store full-size extracted media artwork and downloaded album art.</description>
     </key>
 
     <key type="i" name="thumbnail-cache-size">
@@ -54,6 +54,22 @@
         error (such as the server not responding), this parameter defines how long
         the thumbnailer waits before trying to download the same image again.
         The default is two hours.
+     </description>
+    </key>
+
+    <key type="i" name="max-downloads">
+      <default>2</default>
+      <summary>Maximum number of concurrent downloads</summary>
+      <description>
+        This parameter sets the maximum number of concurrent downloads for remote artwork.
+     </description>
+    </key>
+
+    <key type="i" name="max-extractions">
+      <default>2</default>
+      <summary>Maximum number of concurrent image extractions</summary>
+      <description>
+        This parameter sets the maximum number of concurrent image extractions from local media files.
      </description>
     </key>
   </schema>

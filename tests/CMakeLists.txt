@@ -29,8 +29,11 @@ endforeach()
 set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
 
 add_subdirectory(copyright)
-add_subdirectory(headers)
 add_subdirectory(whitespace)
+
+if (${slowtests})
+    add_subdirectory(headers)
+endif()
 
 add_subdirectory(core)
 
