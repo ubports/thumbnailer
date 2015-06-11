@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: MichiHenning <michi@canonical.com>
+ * Authored by: Michi Henning <michi@canonical.com>
  */
 
 #include <internal/make_directories.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd.
+ * Copyright (C) 2014 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -16,12 +16,9 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
-#include "dbus_connection.h"
+#pragma once
 
-#include <service/dbus_names.h>
-
-using namespace std;
-using namespace unity::thumbnailer::service;
+#include <string>
 
 namespace unity
 {
@@ -29,29 +26,14 @@ namespace unity
 namespace thumbnailer
 {
 
-namespace tools
+namespace service
 {
 
-DBusConnection::DBusConnection()
-    : conn_(QDBusConnection::sessionBus())
-    , thumbnailer_(BUS_NAME, THUMBNAILER_BUS_PATH, conn_)
-    , admin_(BUS_NAME, ADMIN_BUS_PATH, conn_)
-{
-}
+static const char BUS_NAME[] = "com.canonical.Thumbnailer";
+static const char THUMBNAILER_BUS_PATH[] = "/com/canonical/Thumbnailer";
+static const char ADMIN_BUS_PATH[] = "/com/canonical/ThumbnailerAdmin";
 
-DBusConnection::~DBusConnection() = default;
-
-ThumbnailerInterface& DBusConnection::thumbnailer() noexcept
-{
-    return thumbnailer_;
-}
-
-AdminInterface& DBusConnection::admin() noexcept
-{
-    return admin_;
-}
-
-}  // namespace tools
+}  // namespace service
 
 }  // namespace thumbnailer
 

@@ -7,12 +7,13 @@ set_source_files_properties(${dbusinterface_xml} PROPERTIES
 qt5_add_dbus_interface(interface_files ${dbusinterface_xml} thumbnailerinterface)
 
 add_library(thumbnailer-qml MODULE
-  plugin.cpp
   albumartgenerator.cpp
   artgeneratorcommon.cpp
   artistartgenerator.cpp
-  thumbnailgenerator.cpp
+  ${CMAKE_SOURCE_DIR}/src/safe_strerror.cpp
+  plugin.cpp
   thumbnailerimageresponse.cpp
+  thumbnailgenerator.cpp
   ${interface_files}
 )
 

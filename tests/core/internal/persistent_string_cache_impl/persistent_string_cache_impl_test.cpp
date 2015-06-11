@@ -1463,8 +1463,9 @@ TEST(PersistentStringCacheImpl, invalidate)
     EXPECT_EQ(0, c.size());
     EXPECT_EQ(0, c.size_in_bytes());
 
-    // For coverage mainly, and to verify that invalidate() indeed compacts the DB.
+    // For coverage mainly, and to verify that compact() indeed compacts the DB.
     c.invalidate();
+    c.compact();
     EXPECT_LT(c.disk_size_in_bytes(), 1000);
 }
 
