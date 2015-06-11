@@ -412,14 +412,7 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path, P
     init_stats();
 }
 
-PersistentStringCacheImpl::~PersistentStringCacheImpl()
-{
-    // When not in use, consume as little disk space as possible.
-    if (db_)
-    {
-        db_->CompactRange(nullptr, nullptr);
-    }
-}
+PersistentStringCacheImpl::~PersistentStringCacheImpl() = default;
 
 bool PersistentStringCacheImpl::get(string const& key, string& value) const
 {
@@ -1046,8 +1039,6 @@ void PersistentStringCacheImpl::invalidate()
         }
     }  // Close batch
 
-    db_->CompactRange(nullptr, nullptr);  // Avoid bulk deletions slowing down subsequent accesses.
-
     stats_->num_entries_ = 0;
     stats_->hist_clear();
     stats_->cache_size_ = 0;
@@ -1158,6 +1149,13 @@ void PersistentStringCacheImpl::trim_to(int64_t used_size_in_bytes)
         delete_at_least(stats_->cache_size_ - used_size_in_bytes);
     }
     assert(stats_->num_entries_ == hist_sum(stats_->hist_));
+}
+
+void PersistentStringCacheImpl::compact()
+{
+    lock_guard<decltype(mutex_)> lock(mutex_);
+
+    db_->CompactRange(nullptr, nullptr);
 }
 
 void PersistentStringCacheImpl::set_handler(CacheEvent events, PersistentStringCache::EventCallback cb)

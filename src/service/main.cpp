@@ -42,8 +42,7 @@ int main(int argc, char** argv)
 
         QCoreApplication app(argc, argv);
 
-        shared_ptr<Thumbnailer> thumbnailer;
-        thumbnailer = make_shared<Thumbnailer>();
+        auto thumbnailer = make_shared<Thumbnailer>();
 
         unity::thumbnailer::service::DBusInterface server(thumbnailer);
         new ThumbnailerAdaptor(&server);
@@ -66,6 +65,12 @@ int main(int argc, char** argv)
 
         qDebug() << "Ready";
         rc = app.exec();
+
+        // We must shut down the thumbnailer before we dismantle the DBus connection.
+        // Otherwise, it is possible for an old instance of this service to still
+        // be running, while a new instance is activated by DBus, and the database
+        // may not yet have been unlocked by the previous instance.
+        thumbnailer.reset();
         qDebug() << "Exiting";
     }
     catch (std::exception const& e)
