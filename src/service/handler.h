@@ -80,6 +80,7 @@ Q_SIGNALS:
 private:
     void sendThumbnail(QDBusUnixFileDescriptor const& unix_fd);
     void sendError(QString const& error);
+    void gotCredentials(CredentialsCache::Credentials const& credentials);
     QDBusUnixFileDescriptor check();
     QDBusUnixFileDescriptor create();
 

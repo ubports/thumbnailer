@@ -103,7 +103,11 @@ void CredentialsCache::get(QString const& peer, Callback callback)
 void CredentialsCache::received_credentials(QString const& peer, QDBusPendingReply<QVariantMap> reply)
 {
     Credentials credentials;
-    if (!reply.isError())
+    if (reply.isError())
+    {
+        qWarning() << "CredentialsCache::received_credentials: error retrieving credentials for" << peer << ":" << reply.error().message();
+    }
+    else
     {
         credentials.valid = true;
         // The contents of this map are described in the specification here:
@@ -116,7 +120,7 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
                 // The label is null terminated.
                 assert(label[label.size()-1] == '\0');
                 label.truncate(label.size() - 1);
-                // Does the label have a mode string appended?
+                // Trim the mode off the end of the label.
                 int pos = label.lastIndexOf(' ');
                 if (pos > 0 && label.endsWith(')') && label[pos+1] == '(')
                 {

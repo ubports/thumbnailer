@@ -186,6 +186,21 @@ string const& Handler::key() const
 
 void Handler::begin()
 {
+    p->creds.get(p->message.service(),
+                 [this](CredentialsCache::Credentials const& credentials) {
+                     gotCredentials(credentials);
+                 });
+}
+
+void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
+{
+    if (!credentials.valid)
+    {
+        sendError("gotCredentials(): " + details() + ": could not retrieve peer credentials");
+        return;
+    }
+    qDebug() << "Label for" << p->message.service() << "is" << QString::fromStdString(credentials.label);
+
     auto do_check = [this]() -> FdOrError
     {
         try
