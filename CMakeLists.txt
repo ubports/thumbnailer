@@ -120,9 +120,8 @@ enable_coverage_report(
         thumbnailer-qml
         vs-thumb
         testutils
-        core
     FILTER
-        #${CMAKE_SOURCE_DIR}/include/core/*
+        ${CMAKE_SOURCE_DIR}/include/core/*
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*
     TESTS
