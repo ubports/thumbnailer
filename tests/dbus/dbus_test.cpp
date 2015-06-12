@@ -451,7 +451,16 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, duration_cast<milliseconds>(s.longest_hit_run_time.time_since_epoch()).count());
         EXPECT_TRUE(near_current_time(s.longest_miss_run_time));
         auto list = s.histogram;
-        EXPECT_EQ(1, list[18]);
+        // There must be exactly one bin with value 1 now.
+        int count = 0;
+        for (auto c : list)
+        {
+            if (c != 0)
+            {
+                ++count;
+            }
+        }
+        EXPECT_EQ(1, count);
     }
 
     {

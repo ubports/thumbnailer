@@ -462,7 +462,7 @@ string Image::to_jpeg() const
     gchar* buf;
     gsize size;
     GError* err = nullptr;
-    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, "quality", "100", NULL))
+    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, NULL))
     {
         // LCOV_EXCL_START
         string msg = string("Image::get_data(): cannot convert to jpeg: ") + err->message;

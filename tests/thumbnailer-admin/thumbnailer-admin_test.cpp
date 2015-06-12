@@ -166,16 +166,16 @@ TEST_F(AdminTest, histogram)
     EXPECT_EQ(0, ar.run(QStringList{"stats", "-v", "t"}));
     output = ar.stdout();
     EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
-    EXPECT_TRUE(output.find("10000-19999: 1") != string::npos) << output;
+    EXPECT_TRUE(output.find("8000-8999: 1") != string::npos) << output;
 
     // Add a small file to the cache
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=32", TESTDATADIR "/orientation-1.jpg"}));
     EXPECT_EQ(0, ar.run(QStringList{"stats", "-v", "t"}));
     output = ar.stdout();
     EXPECT_TRUE(output.find("Size:                  2") != string::npos) << output;
-    EXPECT_TRUE(output.find("1000-1999: 1") != string::npos) << output;
+    EXPECT_TRUE(output.find("900-999: 1") != string::npos) << output;
     EXPECT_TRUE(output.find("5000-5999: 0") != string::npos) << output;
-    EXPECT_TRUE(output.find("10000-19999: 1") != string::npos) << output;
+    EXPECT_TRUE(output.find("8000-8999: 1") != string::npos) << output;
 }
 
 TEST_F(AdminTest, cmd_parsing)
