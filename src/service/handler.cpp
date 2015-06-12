@@ -187,7 +187,8 @@ string const& Handler::key() const
 void Handler::begin()
 {
     p->creds.get(p->message.service(),
-                 [this](CredentialsCache::Credentials const& credentials) {
+                 [this](CredentialsCache::Credentials const& credentials)
+                 {
                      gotCredentials(credentials);
                  });
 }

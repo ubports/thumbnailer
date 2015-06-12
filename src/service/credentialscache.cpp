@@ -79,10 +79,10 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     }
 
     // If the credentials exist in the previous generation of the
-    // cache, move them to the current iteration.
+    // cache, move them to the current generation.
     try
     {
-        Credentials const& credentials = old_cache_.at(peer);
+        Credentials& credentials = old_cache_.at(peer);
         cache_.emplace(peer, std::move(credentials));
         old_cache_.erase(peer);
         callback(cache_.at(peer));
@@ -110,7 +110,8 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     unique_ptr<Request> request(
         new Request(bus_daemon_.GetConnectionCredentials(peer)));
     QObject::connect(&request->watcher, &QDBusPendingCallWatcher::finished,
-                     [this, peer](QDBusPendingCallWatcher *watcher) {
+                     [this, peer](QDBusPendingCallWatcher *watcher)
+                     {
                          this->received_credentials(peer, *watcher);
                      });
     request->callbacks.push_back(callback);
@@ -162,8 +163,7 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
     cache_.emplace(peer, credentials);
 
     // Notify anyone waiting on the request and remove it from the map:
-    unique_ptr<Request>& request = pending_.at(peer);
-    for (auto& callback : request->callbacks)
+    for (auto& callback : pending_.at(peer)->callbacks)
     {
         callback(credentials);
     }
