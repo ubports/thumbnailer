@@ -455,14 +455,20 @@ Image Image::scale(QSize requested_size) const
     return scaled;
 }
 
-string Image::to_jpeg() const
+string Image::to_jpeg(int quality) const
 {
     assert(pixbuf_);
+
+    if (quality < 0 || quality > 100)
+    {
+        throw invalid_argument("Image::to_jpeg(): quality out of range [0..100]: " + to_string(quality));
+    }
+    string s_qual = to_string(quality);
 
     gchar* buf;
     gsize size;
     GError* err = nullptr;
-    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, NULL))
+    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, "quality", s_qual.c_str(), NULL))
     {
         // LCOV_EXCL_START
         string msg = string("Image::get_data(): cannot convert to jpeg: ") + err->message;
