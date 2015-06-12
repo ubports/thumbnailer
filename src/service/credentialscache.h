@@ -41,8 +41,7 @@ namespace service
 {
 
 
-class CredentialsCache : public QObject {
-    Q_OBJECT
+class CredentialsCache final {
 public:
     struct Credentials
     {
@@ -53,7 +52,7 @@ public:
     };
     typedef std::function<void(Credentials const&)> Callback;
 
-    CredentialsCache(QDBusConnection const& bus, QObject *parent);
+    CredentialsCache(QDBusConnection const& bus);
     ~CredentialsCache();
 
     CredentialsCache(CredentialsCache const&) = delete;

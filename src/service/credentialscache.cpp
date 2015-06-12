@@ -52,9 +52,8 @@ struct CredentialsCache::Request
     Request(QDBusPendingReply<QVariantMap> call) : watcher(call) {}
 };
 
-CredentialsCache::CredentialsCache(QDBusConnection const& bus, QObject *parent)
-    : QObject(parent)
-    , bus_daemon_(DBUS_BUS_NAME, DBUS_BUS_PATH, bus)
+CredentialsCache::CredentialsCache(QDBusConnection const& bus)
+    : bus_daemon_(DBUS_BUS_NAME, DBUS_BUS_PATH, bus)
     , apparmor_enabled_(aa_is_enabled())
 {
 }
@@ -63,7 +62,7 @@ CredentialsCache::~CredentialsCache() = default;
 
 void CredentialsCache::get(QString const& peer, Callback callback)
 {
-    // Have we already cached these credentials?
+    // Return the credentials directly if they are cached
     try
     {
         Credentials const& credentials = cache_.at(peer);
@@ -72,9 +71,11 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     }
     catch (std::out_of_range const &)
     {
+        // ignore
     }
 
-    // Is there a pending request for these credentials?
+    // If the credentials are already being requested, add ourselves
+    // to the callback list.
     try
     {
         unique_ptr<Request>& request = pending_.at(peer);
@@ -83,14 +84,16 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     }
     catch (std::out_of_range const &)
     {
+        // ignore
     }
 
+    // Ask the bus daemon for the peer's credentials
     unique_ptr<Request> request(
         new Request(bus_daemon_.GetConnectionCredentials(peer)));
-    connect(&request->watcher, &QDBusPendingCallWatcher::finished,
-            [this,peer](QDBusPendingCallWatcher *watcher) {
-                this->received_credentials(peer, *watcher);
-            });
+    QObject::connect(&request->watcher, &QDBusPendingCallWatcher::finished,
+                     [this, peer](QDBusPendingCallWatcher *watcher) {
+                         this->received_credentials(peer, *watcher);
+                     });
     request->callbacks.push_back(callback);
     pending_.emplace(peer, std::move(request));
 }
