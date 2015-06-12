@@ -16,7 +16,7 @@
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
  *          James Henstridge <james.henstridge@canonical.com>
  *          Pawel Stolowski <pawel.stolowski@canonical.com>
-*/
+ */
 
 #include "artgeneratorcommon.h"
 

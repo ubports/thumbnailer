@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-#
 # Copyright (C) 2013 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Authored by: Michi Henning <michi.henning@canonical.com>
-#
 
 #
 # Little helper program to test that source files do not contain trailing whitespace

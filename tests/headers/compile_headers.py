@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
-#
-# Copyright (C) 2013 Canonical Ltd
+# Copyright (C) 2013 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -16,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Authored by: Michi Henning <michi.henning@canonical.com>
-#
 
 #
 # Little helper program to test that header files are stand-alone compilable (and therefore don't depend on
