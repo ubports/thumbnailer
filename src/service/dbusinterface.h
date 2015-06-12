@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "credentialscache.h"
 #include "handler.h"
 #include "ratelimiter.h"
 
@@ -65,9 +66,12 @@ Q_SIGNALS:
     void startInactivity();
 
 private:
+    CredentialsCache& credentials();
+
     std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
     std::shared_ptr<QThreadPool> check_thread_pool_;
     std::shared_ptr<QThreadPool> create_thread_pool_;
+    std::unique_ptr<CredentialsCache> credentials_;
     std::map<Handler*, std::unique_ptr<Handler>> requests_;
     std::map<std::string, std::vector<Handler*>> request_keys_;
     unity::thumbnailer::internal::Settings settings_;

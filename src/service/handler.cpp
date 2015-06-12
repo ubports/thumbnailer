@@ -122,6 +122,7 @@ struct HandlerPrivate
     shared_ptr<QThreadPool> check_pool;
     shared_ptr<QThreadPool> create_pool;
     RateLimiter& limiter;
+    CredentialsCache& creds;
     unique_ptr<ThumbnailRequest> request;
     chrono::system_clock::time_point start_time;            // Overall start time
     chrono::system_clock::time_point finish_time;           // Overall finish time
@@ -139,6 +140,7 @@ struct HandlerPrivate
                    shared_ptr<QThreadPool> check_pool,
                    shared_ptr<QThreadPool> create_pool,
                    RateLimiter& limiter,
+                   CredentialsCache& creds,
                    unique_ptr<ThumbnailRequest>&& request,
                    QString const& details)
         : bus(bus)
@@ -146,6 +148,7 @@ struct HandlerPrivate
         , check_pool(check_pool)
         , create_pool(create_pool)
         , limiter(limiter)
+        , creds(creds)
         , request(move(request))
         , details(details)
     {
@@ -158,9 +161,10 @@ Handler::Handler(QDBusConnection const& bus,
                  shared_ptr<QThreadPool> check_pool,
                  shared_ptr<QThreadPool> create_pool,
                  RateLimiter& limiter,
+                 CredentialsCache& creds,
                  unique_ptr<ThumbnailRequest>&& request,
                  QString const& details)
-    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, move(request), details))
+    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, creds, move(request), details))
 {
     connect(&p->checkWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::checkFinished);
     connect(p->request.get(), &ThumbnailRequest::downloadFinished, this, &Handler::downloadFinished);

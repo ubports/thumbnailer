@@ -20,6 +20,8 @@
 #include "credentialscache.h"
 
 #include <QDBusPendingCallWatcher>
+
+#include <assert.h>
 #include <vector>
 #include <sys/apparmor.h>
 
@@ -110,7 +112,18 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
         if (apparmor_enabled_)
         {
             QByteArray label = reply.value().value(LINUX_SECURITY_LABEL).value<QByteArray>();
-            credentials.label = string(label.constData(), label.size());
+            if (label.size() > 0) {
+                // The label is null terminated.
+                assert(label[label.size()-1] == '\0');
+                label.truncate(label.size() - 1);
+                // Does the label have a mode string appended?
+                int pos = label.lastIndexOf(' ');
+                if (pos > 0 && label.endsWith(')') && label[pos+1] == '(')
+                {
+                    label.truncate(pos);
+                }
+                credentials.label = string(label.constData(), label.size());
+            }
         }
         else
         {
