@@ -417,6 +417,7 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path, P
     read_settings();
 
     init_stats();
+    write_dirty_flag(true);
 }
 
 PersistentStringCacheImpl::~PersistentStringCacheImpl()
@@ -426,14 +427,16 @@ PersistentStringCacheImpl::~PersistentStringCacheImpl()
         write_stats();
         write_dirty_flag(false);
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        cerr << make_message(string("~PersistentCache(): ") + e.what()) << endl;
+        cerr << make_message(string("~PersistentStringCacheImpl(): ") + e.what()) << endl;
     }
     catch (...)
     {
-        cerr << make_message("~PersistentCache(): unknown exception") << endl;
+        cerr << make_message("~PersistentStringCacheImpl(): unknown exception") << endl;
     }
+    // LCOV_EXCL_STOP
 }
 
 bool PersistentStringCacheImpl::get(string const& key, string& value) const
