@@ -178,19 +178,19 @@ static string const ATIME_END = "E";
 static string const ETIME_BEGIN = "E";
 static string const ETIME_END = "F";
 
+// We store the stats so they are not lost across process re-starts.
+
+static string const STATS_BEGIN = "X";
+static string const STATS_END = "Y";
+
 // The settings range stores data about the cache itself, such as
 // max size and expiration policy. The prefix for this
 // range must be outside the range [ALL_BEGIN..ALL_END).
 // The schema version is there so we can change the way things are written into leveldb
 // and detect when an old cache is opened with a newer version.
 
-static string const SETTINGS_BEGIN = "X";
-static string const SETTINGS_END = "Y";
-
-// We store the stats so they are not lost across process re-starts.
-
-static string const STATS_BEGIN = "Y";
-static string const STATS_END = "Z";
+static string const SETTINGS_BEGIN = "Y";
+static string const SETTINGS_END = "Z";
 
 // This key stores a dirty flag that we set after successful open
 // and clear in the destructor. This allows to detect, on start-up
@@ -200,8 +200,8 @@ static string const DIRTY_FLAG = "!DIRTY";
 
 // These span the entire range of keys in all tables (except settings and stats).
 
-static string const ALL_BEGIN = VALUES_BEGIN;  // Must be lowest prefix for all tables and indexes.
-static string const ALL_END = SETTINGS_BEGIN;  // Must be highest prefix for all tables and indexes.
+static string const ALL_BEGIN = VALUES_BEGIN;  // Must be lowest prefix for all tables and indexes, incl stats.
+static string const ALL_END = SETTINGS_BEGIN;  // Must be highest prefix for all tables and indexes, incl stats.
 
 static string const SETTINGS_MAX_SIZE = SETTINGS_BEGIN + "MAX_SIZE";
 static string const SETTINGS_POLICY = SETTINGS_BEGIN + "POLICY";
@@ -1277,7 +1277,7 @@ void PersistentStringCacheImpl::check_version()
     }
     if (old_version != SCHEMA_VERSION)
     {
-        // Wipe all tables and stats (but not settings). // TODO
+        // Wipe all tables and stats (but not settings).
         leveldb::WriteBatch batch;
         IteratorUPtr it(db_->NewIterator(read_options));
 
