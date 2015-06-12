@@ -583,7 +583,7 @@ int64_t PersistentStringCacheImpl::disk_size_in_bytes() const
 {
     lock_guard<decltype(mutex_)> lock(mutex_);
 
-    leveldb::Range everything(nullptr, nullptr);
+    leveldb::Range everything(ALL_BEGIN, SETTINGS_END);
     array<uint64_t, 1> sizes = {{0}};
     db_->GetApproximateSizes(&everything, 1, sizes.data());
     return sizes[0];
