@@ -199,7 +199,7 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
         sendError("gotCredentials(): " + details() + ": could not retrieve peer credentials");
         return;
     }
-    qDebug() << "Label for" << p->message.service() << "is" << QString::fromStdString(credentials.label);
+    qDebug() << "Peer" << p->message.service() << "has uid =" << credentials.user << "label =" << QString::fromStdString(credentials.label);
 
     auto do_check = [this]() -> FdOrError
     {
