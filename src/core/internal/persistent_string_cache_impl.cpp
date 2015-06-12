@@ -20,6 +20,7 @@
 
 #include <core/internal/persistent_string_cache_stats.h>
 
+#include <leveldb/cache.h>
 #include <leveldb/write_batch.h>
 
 #include <iomanip>
@@ -367,6 +368,21 @@ PersistentStringCacheImpl::PersistentStringCacheImpl(string const& cache_path,
 
     leveldb::Options options;
     options.create_if_missing = true;
+
+    // For small caches, reduce memory consumption by reducing the size of the internal block cache.
+    // The block cache size is at least 512 kB. For caches 5-80 MB, it is 10% of the nominal cache size.
+    // For caches > 80 MB, the block cache is left at the default of 8 MB.
+    size_t block_cache_size = max_size_in_bytes / 10;
+    if (block_cache_size < 512 * 1024)
+    {
+        block_cache_size = 512 * 1024;
+    }
+    if (block_cache_size < 8 * 1024 * 1024)
+    {
+        block_cache_.reset(leveldb::NewLRUCache(block_cache_size));
+        options.block_cache = block_cache_.get();
+    }
+
     init_db(options);
 
     if (cache_is_new())
@@ -1064,8 +1080,6 @@ void PersistentStringCacheImpl::invalidate()
         }
     }  // Close batch
 
-    db_->CompactRange(nullptr, nullptr);  // Avoid bulk deletions slowing down subsequent accesses.
-
     stats_->num_entries_ = 0;
     stats_->hist_clear();
     stats_->cache_size_ = 0;
@@ -1177,6 +1191,13 @@ void PersistentStringCacheImpl::trim_to(int64_t used_size_in_bytes)
         delete_at_least(stats_->cache_size_ - used_size_in_bytes);
     }
     assert(stats_->num_entries_ == hist_sum(stats_->hist_));
+}
+
+void PersistentStringCacheImpl::compact()
+{
+    lock_guard<decltype(mutex_)> lock(mutex_);
+
+    db_->CompactRange(nullptr, nullptr);
 }
 
 void PersistentStringCacheImpl::set_handler(CacheEvent events, PersistentStringCache::EventCallback cb)

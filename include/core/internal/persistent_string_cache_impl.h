@@ -101,6 +101,7 @@ public:
     void clear_stats() noexcept;
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
+    void compact();
     void set_headroom(int64_t headroom);
     void set_handler(CacheEvent events, PersistentStringCache::EventCallback cb);
 
@@ -176,7 +177,8 @@ private:
     void throw_invalid_argument(std::string const& msg) const;
     void throw_corrupt_error(std::string const& msg) const;
 
-    PersistentStringCache* pimpl_;  // Back-pointer to owning pimpl.
+    PersistentStringCache* pimpl_;                 // Back-pointer to owning pimpl.
+    std::unique_ptr<leveldb::Cache> block_cache_;  // Must be defined *before* db_!
     std::unique_ptr<leveldb::DB> db_;
     std::shared_ptr<PersistentStringCacheStats> stats_;
 
