@@ -198,7 +198,7 @@ static string const SETTINGS_END = "Z";
 
 static string const DIRTY_FLAG = "!DIRTY";
 
-// These span the entire range of keys in all tables (except settings and stats).
+// These span the entire range of keys in all tables and stats (except settings and dirty flag).
 
 static string const ALL_BEGIN = VALUES_BEGIN;  // Must be lowest prefix for all tables and indexes, incl stats.
 static string const ALL_END = SETTINGS_BEGIN;  // Must be highest prefix for all tables and indexes, incl stats.
@@ -583,7 +583,7 @@ int64_t PersistentStringCacheImpl::disk_size_in_bytes() const
 {
     lock_guard<decltype(mutex_)> lock(mutex_);
 
-    leveldb::Range everything(ALL_BEGIN, SETTINGS_END);
+    leveldb::Range everything(nullptr, nullptr);
     array<uint64_t, 1> sizes = {{0}};
     db_->GetApproximateSizes(&everything, 1, sizes.data());
     return sizes[0];
