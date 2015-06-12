@@ -35,6 +35,8 @@ char const DBUS_BUS_PATH[] = "/org/freedesktop/DBus";
 char const UNIX_USER_ID[] = "UnixUserID";
 char const LINUX_SECURITY_LABEL[] = "LinuxSecurityLabel";
 
+int const MAX_CACHE_SIZE = 50;
+
 }
 
 namespace unity
@@ -69,6 +71,21 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     {
         Credentials const& credentials = cache_.at(peer);
         callback(credentials);
+        return;
+    }
+    catch (std::out_of_range const &)
+    {
+        // ignore
+    }
+
+    // If the credentials exist in the previous generation of the
+    // cache, move them to the current iteration.
+    try
+    {
+        Credentials const& credentials = old_cache_.at(peer);
+        cache_.emplace(peer, std::move(credentials));
+        old_cache_.erase(peer);
+        callback(cache_.at(peer));
         return;
     }
     catch (std::out_of_range const &)
@@ -136,7 +153,12 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
         }
     }
 
-    // FIXME: manage size of cache
+    // If we've hit our maximum cache size, start a new generation.
+    if (cache_.size() >= MAX_CACHE_SIZE)
+    {
+        old_cache_ = std::move(cache_);
+        cache_.clear();
+    }
     cache_.emplace(peer, credentials);
 
     // Notify anyone waiting on the request and remove it from the map:

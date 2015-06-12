@@ -68,6 +68,7 @@ private:
     bool apparmor_enabled_;
 
     std::map<QString,Credentials> cache_;
+    std::map<QString,Credentials> old_cache_;
     std::map<QString,std::unique_ptr<Request>> pending_;
 
     void received_credentials(QString const& peer, QDBusPendingReply<QVariantMap> reply);
