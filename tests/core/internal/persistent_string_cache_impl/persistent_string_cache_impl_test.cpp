@@ -1470,6 +1470,7 @@ TEST(PersistentStringCacheImpl, invalidate)
 
 TEST(PersistentStringCacheImpl, stats)
 {
+    PersistentCacheStats original_stats;
     {
         unlink_db(TEST_DB);
 
@@ -1620,9 +1621,31 @@ TEST(PersistentStringCacheImpl, stats)
         EXPECT_EQ(P(900, 999), bounds[18]);
         EXPECT_EQ(P(900000000, 999999999), bounds[72]);
         EXPECT_EQ(P(1000000000, numeric_limits<int32_t>::max()), bounds[73]);
+
+        // Generate a few hits and misses.
+        for (auto i = 0; i < 10; ++i)
+        {
+            c.get(to_string(i), val);
+        }
+        s = c.stats();
+        original_stats = s;
+        EXPECT_EQ(1, original_stats.hits());
+        EXPECT_EQ(9, original_stats.misses());
+        EXPECT_EQ(0, original_stats.hits_since_last_miss());
+        EXPECT_EQ(5, original_stats.misses_since_last_hit());
+        EXPECT_EQ(1, original_stats.longest_hit_run());
+        EXPECT_EQ(5, original_stats.longest_miss_run());
+        EXPECT_EQ(0, original_stats.ttl_evictions());
+        EXPECT_EQ(0, original_stats.lru_evictions());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.most_recent_hit_time());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.most_recent_miss_time());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.longest_hit_run_time());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.longest_miss_run_time());
     }
 
     {
+        using namespace std::chrono;
+
         // Re-open previous cache.
         PersistentStringCacheImpl c(TEST_DB);
 
@@ -1637,6 +1660,33 @@ TEST(PersistentStringCacheImpl, stats)
         {
             EXPECT_EQ(0, hist[i]);  // Other bins must still be empty.
         }
+
+        // Ephemeral counters must still be intact.
+        EXPECT_EQ(original_stats.hits(), s.hits());
+        EXPECT_EQ(original_stats.misses(), s.misses());
+        EXPECT_EQ(original_stats.hits_since_last_miss(), s.hits_since_last_miss());
+        EXPECT_EQ(original_stats.misses_since_last_hit(), s.misses_since_last_hit());
+        EXPECT_EQ(original_stats.longest_hit_run(), s.longest_hit_run());
+        EXPECT_EQ(original_stats.longest_miss_run(), s.longest_miss_run());
+        EXPECT_EQ(original_stats.ttl_evictions(), s.ttl_evictions());
+        EXPECT_EQ(original_stats.lru_evictions(), s.lru_evictions());
+
+        // Time stamps must still be intact.
+        auto orig_t = duration_cast<milliseconds>(original_stats.most_recent_hit_time().time_since_epoch()).count();
+        auto s_t = duration_cast<milliseconds>(s.most_recent_hit_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+
+        orig_t = duration_cast<milliseconds>(original_stats.most_recent_miss_time().time_since_epoch()).count();
+        s_t = duration_cast<milliseconds>(s.most_recent_miss_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+
+        orig_t = duration_cast<milliseconds>(original_stats.longest_hit_run_time().time_since_epoch()).count();
+        s_t = duration_cast<milliseconds>(s.longest_hit_run_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+
+        orig_t = duration_cast<milliseconds>(original_stats.longest_miss_run_time().time_since_epoch()).count();
+        s_t = duration_cast<milliseconds>(s.longest_miss_run_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
     }
 }
 

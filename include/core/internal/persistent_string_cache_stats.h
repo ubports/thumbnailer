@@ -25,7 +25,6 @@
 #include <cmath>
 #include <cstring>
 #include <sstream>
-#include <iostream>  // TODO: remove this
 
 namespace core
 {
@@ -165,6 +164,7 @@ public:
            << hits_since_last_miss_ << " "
            << misses_since_last_hit_ << " "
            << longest_hit_run_ << " "
+           << longest_miss_run_ << " "
            << ttl_evictions_ << " "
            << lru_evictions_ << " "
            << duration_cast<milliseconds>(most_recent_hit_time_.time_since_epoch()).count() << " "
@@ -191,6 +191,7 @@ public:
            >> hits_since_last_miss_
            >> misses_since_last_hit_
            >> longest_hit_run_
+           >> longest_miss_run_
            >> ttl_evictions_
            >> lru_evictions_
            >> mrht
