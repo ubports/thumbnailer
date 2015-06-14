@@ -301,7 +301,7 @@ typedef std::unique_ptr<leveldb::Iterator> IteratorUPtr;
 
 // For assertions, so we can verify that num_entries_ matches the sum of entries in the histogram.
 
-int64_t hist_sum(PersistentCacheStats::Histogram const& h)
+int64_t hist_sum(PersistentCacheStats::Histogram const& h) noexcept
 {
     int64_t size = 0;
     for (auto num : h)

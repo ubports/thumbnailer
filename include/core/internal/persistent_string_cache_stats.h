@@ -83,7 +83,7 @@ public:
     };
     State state_;
 
-    void inc_hits()
+    void inc_hits() noexcept
     {
         ++hits_since_last_miss_;
         ++hits_;
@@ -101,7 +101,7 @@ public:
         }
     }
 
-    void inc_misses()
+    void inc_misses() noexcept
     {
         ++misses_since_last_hit_;
         ++misses_;
@@ -119,19 +119,19 @@ public:
         }
     }
 
-    void hist_decrement(int64_t size)
+    void hist_decrement(int64_t size) noexcept
     {
         assert(size > 0);
         --hist_[size_to_index(size)];
     }
 
-    void hist_increment(int64_t size)
+    void hist_increment(int64_t size) noexcept
     {
         assert(size > 0);
         ++hist_[size_to_index(size)];
     }
 
-    void hist_clear()
+    void hist_clear() noexcept
     {
         memset(&hist_[0], 0, hist_.size() * sizeof(PersistentCacheStats::Histogram::value_type));
     }
@@ -154,7 +154,7 @@ public:
 
     // Serialize the stats.
 
-    std::string serialize()
+    std::string serialize() const
     {
         using namespace std;
         using namespace std::chrono;
@@ -183,7 +183,7 @@ public:
 
     // De-serialize the stats.
 
-    void deserialize(const std::string& s)
+    void deserialize(const std::string& s) noexcept
     {
         using namespace std;
         using namespace std::chrono;
@@ -219,7 +219,7 @@ public:
     }
 
 private:
-    unsigned size_to_index(int64_t size)
+    unsigned size_to_index(int64_t size) const noexcept
     {
         using namespace std;
         assert(size > 0);

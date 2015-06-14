@@ -187,12 +187,12 @@ chrono::system_clock::time_point PersistentCacheStats::longest_miss_run_time() c
     return p_->longest_miss_run_time_;
 }
 
-PersistentCacheStats::Histogram const& PersistentCacheStats::histogram() const
+PersistentCacheStats::Histogram const& PersistentCacheStats::histogram() const noexcept
 {
     return p_->hist_;
 }
 
-PersistentCacheStats::HistogramBounds const& PersistentCacheStats::histogram_bounds()
+PersistentCacheStats::HistogramBounds const& PersistentCacheStats::histogram_bounds() noexcept
 {
     static HistogramBounds bounds = []()
     {

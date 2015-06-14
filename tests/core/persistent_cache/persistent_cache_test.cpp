@@ -76,7 +76,7 @@ Person CacheCodec<Person>::decode(string const& str)
 
 TEST(PersistentCache, person_key)
 {
-    unlink_db(test_db);
+    unlink_db("my_db");
 
     using PersonCache = core::PersistentCache<Person, string>;
 
