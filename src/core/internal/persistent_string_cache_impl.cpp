@@ -24,6 +24,7 @@
 #include <leveldb/write_batch.h>
 
 #include <iomanip>
+#include <iostream>
 #include <system_error>
 
 /*
@@ -276,12 +277,12 @@ string k_etime_index(int64_t etime, string const& key)
 
 // Little helpers to get milliseconds since the epoch.
 
-int64_t ticks(chrono::time_point<chrono::system_clock> tp)
+int64_t ticks(chrono::time_point<chrono::system_clock> tp) noexcept
 {
     return chrono::duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
 }
 
-int64_t now_ticks()
+int64_t now_ticks() noexcept
 {
     return ticks(chrono::system_clock::now());
 }
@@ -290,7 +291,7 @@ int64_t now_ticks()
 
 static auto const clock_origin = ticks(chrono::system_clock::time_point());
 
-int64_t epoch_ticks()
+int64_t epoch_ticks() noexcept
 {
     return clock_origin;
 }
