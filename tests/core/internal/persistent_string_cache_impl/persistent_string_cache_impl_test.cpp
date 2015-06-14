@@ -1649,9 +1649,13 @@ TEST(PersistentStringCacheImpl, stats)
 
         // Re-open previous cache.
         PersistentStringCacheImpl c(TEST_DB);
+        auto s = c.stats();
+
+        // size and size_in_bytes must be the same.
+        EXPECT_EQ(1, s.size());
+        EXPECT_EQ(31, s.size_in_bytes());
 
         // Histogram must be re-established when opened.
-        auto s = c.stats();
         auto hist = s.histogram();
         EXPECT_EQ(0, hist[0]);
         EXPECT_EQ(0, hist[1]);
@@ -1688,6 +1692,59 @@ TEST(PersistentStringCacheImpl, stats)
         orig_t = duration_cast<milliseconds>(original_stats.longest_miss_run_time().time_since_epoch()).count();
         s_t = duration_cast<milliseconds>(s.longest_miss_run_time().time_since_epoch()).count();
         EXPECT_EQ(orig_t, s_t);
+    }
+
+    {
+        // Simulate crash by clearing the dirty flag.
+        unique_ptr<leveldb::DB> db;
+        leveldb::Options options;
+        leveldb::DB* p;
+        auto s = leveldb::DB::Open(options, TEST_DB, &p);
+        ASSERT_TRUE(s.ok());
+        db.reset(p);
+        leveldb::WriteOptions write_options;
+        string val = "1";
+        s = db->Put(write_options, "!DIRTY", val);
+        ASSERT_TRUE(s.ok());
+    };
+
+    {
+        using namespace std::chrono;
+
+        // Re-open previous (now dirty) cache.
+        PersistentStringCacheImpl c(TEST_DB);
+        auto s = c.stats();
+
+        // size and size_in_bytes must be the same.
+        EXPECT_EQ(1, s.size());
+        EXPECT_EQ(31, s.size_in_bytes());
+
+        // Histogram must be re-established when opened.
+        auto hist = s.histogram();
+        EXPECT_EQ(0, hist[0]);
+        EXPECT_EQ(0, hist[1]);
+        EXPECT_EQ(0, hist[2]);
+        EXPECT_EQ(1, hist[3]);
+        for (unsigned i = 4; i < hist.size(); ++i)
+        {
+            EXPECT_EQ(0, hist[i]);  // Other bins must still be empty.
+        }
+
+        // Ephemeral counters must all be zero.
+        EXPECT_EQ(0, s.hits());
+        EXPECT_EQ(0, s.misses());
+        EXPECT_EQ(0, s.hits_since_last_miss());
+        EXPECT_EQ(0, s.misses_since_last_hit());
+        EXPECT_EQ(0, s.longest_hit_run());
+        EXPECT_EQ(0, s.longest_miss_run());
+        EXPECT_EQ(0, s.ttl_evictions());
+        EXPECT_EQ(0, s.lru_evictions());
+
+        // Time stamps must all be at the epoch.
+        EXPECT_EQ(system_clock::time_point(), s.most_recent_hit_time());
+        EXPECT_EQ(system_clock::time_point(), s.most_recent_miss_time());
+        EXPECT_EQ(system_clock::time_point(), s.longest_hit_run_time());
+        EXPECT_EQ(system_clock::time_point(), s.longest_miss_run_time());
     }
 }
 

@@ -315,38 +315,39 @@ int64_t hist_sum(PersistentCacheStats::Histogram const& h)
 
 }  // namespace
 
-// Run over the Atime index (it's smaller than the Data table)
-// and count the number of entries and bytes. This avoids an additional
-// write for each modification to the cache at the cost of slightly
-// longer start-up time for large caches.
-
 void PersistentStringCacheImpl::init_stats()
 {
     int64_t num = 0;
     int64_t size = 0;
 
-    // If we shut down cleanly last time, read the ephemeral stats values.
+    // If we shut down cleanly last time, read the saved stats values.
     bool is_dirty = read_dirty_flag();
     if (!is_dirty)
     {
         read_stats();
     }
-
-    IteratorUPtr it(db_->NewIterator(read_options));
-    leveldb::Slice const atime_prefix(ATIME_BEGIN);
-    it->Seek(atime_prefix);
-    while (it->Valid() && it->key().starts_with(atime_prefix))
+    else
     {
-        ++num;
-        auto bytes = stoll(it->value().ToString());
-        size += bytes;
-        stats_->hist_increment(bytes);
-        it->Next();
+        // We didn't shut down cleanly or the cache is new.
+        // Run over the Atime index (it's smaller than the Data table)
+        // and count the number of entries and bytes, and initialize
+        // the histogram.
+        IteratorUPtr it(db_->NewIterator(read_options));
+        leveldb::Slice const atime_prefix(ATIME_BEGIN);
+        it->Seek(atime_prefix);
+        while (it->Valid() && it->key().starts_with(atime_prefix))
+        {
+            ++num;
+            auto bytes = stoll(it->value().ToString());
+            size += bytes;
+            stats_->hist_increment(bytes);
+            it->Next();
+        }
+        throw_if_error(it->status(), "cannot initialize cache");
+        stats_->num_entries_ = num;
+        stats_->cache_size_ = size;
     }
-    throw_if_error(it->status(), "cannot initialize cache");
-    stats_->num_entries_ = num;
     assert(stats_->num_entries_ == hist_sum(stats_->hist_));
-    stats_->cache_size_ = size;
 }
 
 // Open existing database or create an empty one.
@@ -1353,7 +1354,7 @@ bool PersistentStringCacheImpl::read_dirty_flag() const
     {
         return true;
     }
-    return dirty == "1";
+    return dirty != "0";
 }
 
 void PersistentStringCacheImpl::write_dirty_flag(bool is_dirty)

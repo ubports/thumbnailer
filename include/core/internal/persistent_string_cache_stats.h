@@ -39,9 +39,9 @@ class PersistentStringCacheStats
 public:
     PersistentStringCacheStats() noexcept
         : policy_(CacheDiscardPolicy::lru_only)
+        , max_cache_size_(0)
         , num_entries_(0)
         , cache_size_(0)
-        , max_cache_size_(0)
         , state_(Initialized)
     {
         clear();
@@ -55,9 +55,11 @@ public:
 
     std::string cache_path_;           // Immutable
     core::CacheDiscardPolicy policy_;  // Immutable
+    int64_t max_cache_size_;
+
     int64_t num_entries_;
     int64_t cache_size_;
-    int64_t max_cache_size_;
+    PersistentCacheStats::Histogram hist_;
 
     // Values below are reset by a call to clear().
     int64_t hits_;
@@ -72,7 +74,6 @@ public:
     std::chrono::system_clock::time_point most_recent_miss_time_;
     std::chrono::system_clock::time_point longest_hit_run_time_;
     std::chrono::system_clock::time_point longest_miss_run_time_;
-    PersistentCacheStats::Histogram hist_;
 
     enum State
     {
@@ -151,7 +152,7 @@ public:
         longest_miss_run_time_ = std::chrono::system_clock::time_point();
     }
 
-    // Serialize the ephemeral part of the stats (counters and time stamps), but not histogram.
+    // Serialize the stats.
 
     std::string serialize()
     {
@@ -159,7 +160,9 @@ public:
         using namespace std::chrono;
 
         ostringstream os;
-        os << hits_ << " "
+        os << num_entries_ << " "
+           << cache_size_ << " "
+           << hits_ << " "
            << misses_ << " "
            << hits_since_last_miss_ << " "
            << misses_since_last_hit_ << " "
@@ -171,10 +174,14 @@ public:
            << duration_cast<milliseconds>(most_recent_miss_time_.time_since_epoch()).count() << " "
            << duration_cast<milliseconds>(longest_hit_run_time_.time_since_epoch()).count() << " "
            << duration_cast<milliseconds>(longest_miss_run_time_.time_since_epoch()).count();
+        for (auto d : hist_)
+        {
+            os << " " << d;
+        }
         return os.str();
     }
 
-    // De-serialize the ephemeral part of the stats (counters and time stamps), but not histogram.
+    // De-serialize the stats.
 
     void deserialize(const std::string& s)
     {
@@ -186,7 +193,9 @@ public:
         int64_t mrmt;
         int64_t lhrt;
         int64_t lmrt;
-        is >> hits_
+        is >> num_entries_
+           >> cache_size_
+           >> hits_
            >> misses_
            >> hits_since_last_miss_
            >> misses_since_last_hit_
@@ -198,6 +207,10 @@ public:
            >> mrmt
            >> lhrt
            >> lmrt;
+        for (unsigned i = 0; i < PersistentCacheStats::NUM_BINS; ++i)
+        {
+            is >> hist_[i];
+        }
         assert(!is.bad());
         most_recent_hit_time_ = system_clock::time_point(milliseconds(mrht));
         most_recent_miss_time_ = system_clock::time_point(milliseconds(mrmt));
