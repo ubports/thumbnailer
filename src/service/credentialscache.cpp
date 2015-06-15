@@ -123,7 +123,9 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
     Credentials credentials;
     if (reply.isError())
     {
-        qWarning() << "CredentialsCache::received_credentials: error retrieving credentials for" << peer << ":" << reply.error().message();
+        qWarning() << "CredentialsCache::received_credentials(): "
+            "error retrieving credentials for" << peer <<
+            ":" << reply.error().message();
     }
     else
     {
