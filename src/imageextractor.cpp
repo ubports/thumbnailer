@@ -24,6 +24,7 @@
 #include <internal/file_io.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
+#include <internal/trace.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -70,10 +71,13 @@ ImageExtractor::ImageExtractor(int fd, chrono::milliseconds timeout)
 
 ImageExtractor::~ImageExtractor()
 {
-    auto error = process_.error();
-    if (error != QProcess::FailedToStart)
+    if (process_.state() != QProcess::NotRunning)
     {
-        process_.waitForFinished(timeout_ms_);
+        process_.kill();
+        if (!process_.waitForFinished(timeout_ms_))
+        {
+            qWarning() << "ImageExtractor::~ImageExtractor(): subprocess did not exit";
+        }
     }
 }
 
