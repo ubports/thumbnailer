@@ -76,6 +76,11 @@ public:
     {
         return key_;
     }
+    void set_client_credentials(uid_t user, std::string const& label) override
+    {
+        client_user_ = user;
+        client_apparmor_label_ = label;
+    }
     enum class CachePolicy
     {
         cache_fullsize,
@@ -134,6 +139,8 @@ protected:
     Thumbnailer const* thumbnailer_;
     string key_;
     QSize const requested_size_;
+    uid_t client_user_ = 0;
+    string client_apparmor_label_;
 
 private:
     FetchStatus status_;
