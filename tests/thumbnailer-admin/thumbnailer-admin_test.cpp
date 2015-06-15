@@ -254,6 +254,44 @@ TEST_F(AdminTest, clear_parsing)
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 }
 
+TEST_F(AdminTest, compact_parsing)
+{
+    AdminRunner ar;
+
+    // Too many args
+    EXPECT_EQ(1, ar.run(QStringList{"compact", "i", "t"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: too many arguments")) << ar.stderr();
+
+    // Second arg wrong
+    EXPECT_EQ(1, ar.run(QStringList{"compact", "foo"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: invalid cache_id: foo")) << ar.stderr();
+
+    // Bad option
+    EXPECT_EQ(1, ar.run(QStringList{"compact", "foo", "-x"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'x'.")) << ar.stderr();
+
+    // Help option
+    EXPECT_EQ(1, ar.run(QStringList{"compact", "-h"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
+}
+
+TEST_F(AdminTest, shutdown_parsing)
+{
+    AdminRunner ar;
+
+    // Too many args
+    EXPECT_EQ(1, ar.run(QStringList{"shutdown", "i"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: too many arguments")) << ar.stderr();
+
+    // Bad option
+    EXPECT_EQ(1, ar.run(QStringList{"shutdown", "-x"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'x'.")) << ar.stderr();
+
+    // Help option
+    EXPECT_EQ(1, ar.run(QStringList{"shutdown", "-h"}));
+    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
+}
+
 TEST_F(AdminTest, clear_and_clear_stats)
 {
     AdminRunner ar;
@@ -481,6 +519,17 @@ TEST_F(AdminTest, bad_files)
         "cannot open no_such_directory/orientation-2_0x0.jpg: No such file or directory\n",
         ar.stderr())
         << ar.stderr();
+}
+
+TEST_F(AdminTest, shutdown)
+{
+    AdminRunner ar;
+
+    // For coverage.
+    EXPECT_EQ(0, ar.run(QStringList{"compact"})) << ar.stderr();
+
+    // For coverage. (Test output shows trace with "Exiting".)
+    EXPECT_EQ(0, ar.run(QStringList{"shutdown"})) << ar.stderr();
 }
 
 class RemoteServer : public AdminTest

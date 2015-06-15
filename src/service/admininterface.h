@@ -51,6 +51,7 @@ public Q_SLOTS:
     AllStats Stats();
     void ClearStats(int cache_id);
     void Clear(int cache_id);
+    void Compact(int cache_id);
     void Shutdown();
 
 private:

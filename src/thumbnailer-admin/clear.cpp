@@ -35,14 +35,18 @@ Clear::Clear(QCommandLineParser& parser)
     : Action(parser)
     , cache_id_(0)
 {
-    assert(command_ == "clear" || command_ == "clear-stats");
+    assert(command_ == "clear" || command_ == "clear-stats" || command_ == "compact");
     if (command_ == "clear")
     {
         parser.addPositionalArgument("clear", "Clear caches", "clear");
     }
-    else
+    else if (command_ == "clear-stats")
     {
         parser.addPositionalArgument("clear-stats", "Clear statistics", "clear-stats");
+    }
+    else
+    {
+        parser.addPositionalArgument("compact", "Compact caches", "compact");
     }
     parser.addPositionalArgument("cache_id", "Select cache (i=image, t=thumbnail, f=failure)", "[cache_id]");
 
@@ -83,7 +87,19 @@ Clear::~Clear()
 
 void Clear::run(DBusConnection& conn)
 {
-    auto method = command_ == "clear" ? &AdminInterface::Clear : &AdminInterface::ClearStats;
+    decltype(&AdminInterface::Clear) method;
+    if (command_ == "clear")
+    {
+        method = &AdminInterface::Clear;
+    }
+    else if (command_ == "clear-stats")
+    {
+        method = &AdminInterface::ClearStats;
+    }
+    else
+    {
+        method = &AdminInterface::Compact;
+    }
     auto reply = (conn.admin().*method)(cache_id_);
     reply.waitForFinished();
     if (!reply.isValid())

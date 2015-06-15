@@ -350,7 +350,7 @@ bool near_current_time(chrono::system_clock::time_point& t)
     return true;
 }
 
-TEST_F(DBusTest, bad_clear_params)
+TEST_F(DBusTest, bad_clear_or_compact_params)
 {
     QDBusReply<void> reply = dbus_->admin_->ClearStats(-1);
     ASSERT_FALSE(reply.isValid());
@@ -371,6 +371,16 @@ TEST_F(DBusTest, bad_clear_params)
     ASSERT_FALSE(reply.isValid());
     msg = reply.error().message().toStdString();
     EXPECT_EQ("Clear(): invalid cache selector: 4", msg) << msg;
+
+    reply = dbus_->admin_->Compact(-1);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("Compact(): invalid cache selector: -1", msg) << msg;
+
+    reply = dbus_->admin_->Compact(4);
+    ASSERT_FALSE(reply.isValid());
+    msg = reply.error().message().toStdString();
+    EXPECT_EQ("Compact(): invalid cache selector: 4", msg) << msg;
 }
 
 TEST_F(DBusTest, stats)
@@ -511,7 +521,7 @@ TEST_F(DBusTest, stats)
     }
 
     reply = dbus_->admin_->Stats();
-    ASSERT_TRUE(reply.isValid());
+    ASSERT_TRUE(reply.isValid()) << reply.error().message().toStdString();
 
     {
         CacheStats s = reply.value().failure_stats;
@@ -535,6 +545,18 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(1, s.size);
         EXPECT_EQ(2, s.hits);
         EXPECT_EQ(4, s.misses);
+    }
+
+    {
+        // For coverage
+        QDBusReply<void> reply = dbus_->admin_->Compact(0);
+        EXPECT_TRUE(reply.isValid()) << reply.error().message().toStdString();
+    }
+
+    {
+        // For coverage
+        QDBusReply<void> reply = dbus_->admin_->Shutdown();
+        EXPECT_TRUE(reply.isValid()) << reply.error().message().toStdString();
     }
 }
 

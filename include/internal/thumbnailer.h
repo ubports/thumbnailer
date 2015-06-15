@@ -135,6 +135,7 @@ public:
 
     void clear_stats(CacheSelector selector);
     void clear(CacheSelector selector);
+    void compact(CacheSelector selector);
 
 private:
     ArtDownloader* downloader() const

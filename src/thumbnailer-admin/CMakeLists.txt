@@ -16,6 +16,7 @@ add_executable(thumbnailer-admin
     get_remote_thumbnail.cpp
     parse_size.cpp
     show_stats.cpp
+    shutdown.cpp
     thumbnailer-admin.cpp
     util.cpp
     ${CMAKE_SOURCE_DIR}/src/file_io.cpp
