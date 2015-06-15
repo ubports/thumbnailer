@@ -201,13 +201,33 @@ void DBusInterface::requestFinished()
     QString msg;
     QTextStream s(&msg);
     s.setRealNumberNotation(QTextStream::FixedNotation);
-    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000 << " sec";
+    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000;
+
+    auto queued_time = double(handler->queued_time().count()) / 1000000;
     auto download_time = double(handler->download_time().count()) / 1000000;
+
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << " [";
+    }
+    if (queued_time > 0)
+    {
+        s << "q: " << queued_time;
+        if (download_time > 0)
+        {
+            s << ", ";
+        }
+    }
     if (download_time > 0)
     {
-        s << " [" << download_time << " sec]";
+        s << "d: " << download_time;
     }
-    s << " (" << handler->status() << ")";
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << "]";
+    }
+
+    s << " sec (" << handler->status() << ")";
     qDebug() << msg;
 }
 
