@@ -21,6 +21,7 @@
 #include <internal/thumbnailer.h>
 
 #include <internal/artreply.h>
+#include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
 #include <internal/make_directories.h>
@@ -367,28 +368,17 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
     , filename_(filename)
     , fd_(-1, do_close)
 {
+    // We canonicalise the path name both to avoid caching the file
+    // multiple times, and to ensure our access checks are against the
+    // real file rather than a symlink.
     filename_ = boost::filesystem::canonical(filename).native();
-    fd_.reset(open(filename_.c_str(), O_RDONLY | O_CLOEXEC));
-    if (fd_.get() < 0)
-    {
-        // LCOV_EXCL_START
-        throw runtime_error("LocalThumbnailRequest(): Could not open " + filename_ + ": " + safe_strerror(errno));
-        // LCOV_EXCL_STOP
-    }
-    struct stat our_stat, client_stat;
-    if (fstat(fd_.get(), &our_stat) < 0)
+
+    struct stat st;
+    if (stat(filename_.c_str(), &st) < 0)
     {
         // LCOV_EXCL_START
         throw runtime_error("LocalThumbnailRequest(): Could not stat " + filename_ + ": " + safe_strerror(errno));
         // LCOV_EXCL_STOP
-    }
-    if (fstat(filename_fd, &client_stat) < 0)
-    {
-        throw runtime_error("LocalThumbnailRequest(): Could not stat file descriptor: " + safe_strerror(errno));
-    }
-    if (our_stat.st_dev != client_stat.st_dev || our_stat.st_ino != client_stat.st_ino)
-    {
-        throw runtime_error("LocalThumbnailRequest(): file descriptor does not refer to file " + filename_);
     }
 
     // The full cache key for the file is the concatenation of path
@@ -402,11 +392,11 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
     // due to file removal or file update are rare).
     key_ = filename_;
     key_ += '\0';
-    key_ += to_string(our_stat.st_ino);
+    key_ += to_string(st.st_ino);
     key_ += '\0';
-    key_ += to_string(our_stat.st_mtim.tv_sec) + "." + to_string(our_stat.st_mtim.tv_nsec);
+    key_ += to_string(st.st_mtim.tv_sec) + "." + to_string(st.st_mtim.tv_nsec);
     key_ += '\0';
-    key_ += to_string(our_stat.st_ctim.tv_sec) + "." + to_string(our_stat.st_ctim.tv_nsec);
+    key_ += to_string(st.st_ctim.tv_sec) + "." + to_string(st.st_ctim.tv_nsec);
 }
 
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
@@ -415,6 +405,18 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     {
         // The image data has been extracted via vs-thumb
         return ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
+    }
+
+    if (client_user_ != geteuid())
+    {
+        // LCOV_EXCL_START
+        throw runtime_error("LocalThumbnailRequest::fetch(): Request comes from a different user ID");
+        // LCOV_EXCL_STOP
+    }
+    if (!apparmor_can_read(client_apparmor_label_, filename_)) {
+        // LCOV_EXCL_START
+        throw runtime_error("LocalThumbnailRequest::fetch(): AppArmor policy forbids access to " + filename_);
+        // LCOV_EXCL_STOP
     }
 
     // Work out content type.
@@ -434,6 +436,14 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     if (content_type.empty())
     {
         return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+    }
+
+    fd_.reset(open(filename_.c_str(), O_RDONLY | O_CLOEXEC));
+    if (fd_.get() < 0)
+    {
+        // LCOV_EXCL_START
+        throw runtime_error("LocalThumbnailRequest(): Could not open " + filename_ + ": " + safe_strerror(errno));
+        // LCOV_EXCL_STOP
     }
 
     // Call the appropriate image extractor and return the image data as JPEG (not scaled).
