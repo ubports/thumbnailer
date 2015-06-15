@@ -52,6 +52,15 @@ DBusInterface::~DBusInterface()
 {
 }
 
+CredentialsCache& DBusInterface::credentials()
+{
+    if (!credentials_)
+    {
+        credentials_.reset(new CredentialsCache(connection()));
+    }
+    return *credentials_.get();
+}
+
 QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
                                                    QString const& album,
                                                    QSize const& requestedSize)
@@ -64,7 +73,8 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, std::move(request), details));
+                                 download_limiter_, credentials(),
+                                 std::move(request), details));
     }
     // LCOV_EXCL_START
     catch (exception const& e)
@@ -89,7 +99,8 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, std::move(request), details));
+                                 download_limiter_, credentials(),
+                                 std::move(request), details));
     }
     // LCOV_EXCL_START
     catch (exception const& e)
@@ -107,6 +118,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
                                                     QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;
+
     try
     {
         QString details;
@@ -115,7 +127,8 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 extraction_limiter_, std::move(request), details));
+                                 extraction_limiter_, credentials(),
+                                 std::move(request), details));
     }
     catch (exception const& e)
     {

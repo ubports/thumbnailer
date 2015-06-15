@@ -97,6 +97,7 @@ pkg_check_modules(GOBJ_DEPS REQUIRED gobject-2.0)
 pkg_check_modules(GIO_DEPS REQUIRED gio-2.0 gio-unix-2.0)
 pkg_check_modules(IMG_DEPS REQUIRED gdk-pixbuf-2.0 libexif)
 pkg_check_modules(UNITY_API_DEPS REQUIRED libunity-api)
+pkg_check_modules(APPARMOR_DEPS REQUIRED libapparmor)
 
 include_directories(${GST_DEPS_INCLUDE_DIRS})
 include_directories(${GOBJ_DEPS_INCLUDE_DIRS})

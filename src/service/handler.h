@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "credentialscache.h"
 #include "ratelimiter.h"
 #include <internal/thumbnailer.h>
 
@@ -51,6 +52,7 @@ public:
             std::shared_ptr<QThreadPool> check_pool,
             std::shared_ptr<QThreadPool> create_pool,
             RateLimiter& limiter,
+            CredentialsCache& creds,
             std::unique_ptr<internal::ThumbnailRequest>&& request,
             QString const& details);
     ~Handler();
@@ -78,6 +80,7 @@ Q_SIGNALS:
 private:
     void sendThumbnail(QDBusUnixFileDescriptor const& unix_fd);
     void sendError(QString const& error);
+    void gotCredentials(CredentialsCache::Credentials const& credentials);
     QDBusUnixFileDescriptor check();
     QDBusUnixFileDescriptor create();
 
