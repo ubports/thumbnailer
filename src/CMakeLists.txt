@@ -13,6 +13,7 @@ OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
 
 add_library(thumbnailer STATIC
     artdownloader.cpp
+    check_access.cpp
     file_io.cpp
     image.cpp
     imageextractor.cpp
