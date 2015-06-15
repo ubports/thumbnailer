@@ -40,6 +40,7 @@ target_link_libraries(thumbnailer
     ${GIO_DEPS_LDFLAGS}
     ${IMG_DEPS_LDFLAGS}
     ${UNITY_API_DEPS_LDFLAGS}
+    ${APPARMOR_DEPS_LDFLAGS}
 )
 
 add_subdirectory(service)
