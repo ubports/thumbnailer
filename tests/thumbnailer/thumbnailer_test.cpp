@@ -392,21 +392,21 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     }
 }
 
-TEST_F(ThumbnailerTest, DISABLED_replace_video)
+TEST_F(ThumbnailerTest, replace_video)
 {
     string testfile = tempdir_path() + "/foo.ogv";
     ASSERT_EQ(0, link(TEST_VIDEO, testfile.c_str())) << strerror(errno);
 
     Thumbnailer tn;
     auto request = tn.get_thumbnail(testfile, QSize());
+    request->set_client_credentials(geteuid(), "unconfined");
+    ASSERT_EQ("", request->thumbnail());
 
     // Replace test image with a different file with different
     // dimensions so we can tell which one is thumbnailed.
     ASSERT_EQ(0, unlink(testfile.c_str()));
     ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
 
-    request->set_client_credentials(geteuid(), "unconfined");
-    ASSERT_EQ("", request->thumbnail());
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
