@@ -52,6 +52,7 @@ public:
     int retry_error_hours() const;
     int max_downloads() const;
     int max_extractions() const;
+    int extraction_timeout() const;  // In seconds
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;

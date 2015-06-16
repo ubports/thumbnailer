@@ -66,9 +66,7 @@ public:
     // download() and wait for downloadFinished signal to fire, then
     // call thumbnail() again.
     virtual std::string thumbnail() = 0;
-
-    // TODO: Timeout should be configurable?
-    virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(10000)) = 0;
+    virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) = 0;
 
     // Returns status of thumbnail() set by thumbnail();
     virtual FetchStatus status() const = 0;
@@ -152,8 +150,9 @@ private:
     core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.
     core::PersistentStringCache::UPtr failure_cache_;    // Cache for failed attempts (value is always empty).
     int max_size_;                                       // Max thumbnail size in pixels.
-    int retry_not_found_hours_;                          // Retry wait time for authoritative "no artwork" answer
-    int retry_error_hours_;                              // Retry wait time for unexpected server errors
+    int retry_not_found_hours_;                          // Retry wait time for authoritative "no artwork" answer.
+    int retry_error_hours_;                              // Retry wait time for unexpected server errors.
+    std::chrono::milliseconds extraction_timeout_;       // How long to wait before giving up during extraction.
     std::unique_ptr<ArtDownloader> downloader_;
 
     friend class RequestBase;

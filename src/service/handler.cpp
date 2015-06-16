@@ -126,7 +126,8 @@ struct HandlerPrivate
     unique_ptr<ThumbnailRequest> request;
     chrono::system_clock::time_point start_time;            // Overall start time
     chrono::system_clock::time_point finish_time;           // Overall finish time
-    chrono::system_clock::time_point download_start_time;   // Time at which download/extract is scheduled.
+    chrono::system_clock::time_point schedule_start_time;   // Time at which download/extract is scheduled.
+    chrono::system_clock::time_point download_start_time;   // Time at which download/extract is started.
     chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
     QString details;
     QString status;
@@ -268,14 +269,15 @@ void Handler::checkFinished()
         sendThumbnail(fd_error.fd);
         // Set time again, because sending the thumbnail could take a while.
         p->finish_time = chrono::system_clock::now();
+        p->schedule_start_time = p->download_start_time;  // Didn't do any download.
     }
     else
     {
         try
         {
             // otherwise move on to the download phase.
-            p->download_start_time = chrono::system_clock::now();
-            p->limiter.schedule([&]{ p->request->download(); });
+            p->schedule_start_time = chrono::system_clock::now();
+            p->limiter.schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
         }
         catch (std::exception const& e)
         {
@@ -381,11 +383,20 @@ chrono::microseconds Handler::completion_time() const
     return chrono::duration_cast<chrono::microseconds>(p->finish_time - p->start_time);
 }
 
+chrono::microseconds Handler::queued_time() const
+{
+    // Returned duration may be zero if the request wasn't kept waiting in the queue.
+    return chrono::duration_cast<chrono::microseconds>(p->download_start_time - p->schedule_start_time);
+}
+
 chrono::microseconds Handler::download_time() const
 {
     // Not a typo: we really mean to check finish_time, not download_finish_time in the assert.
     assert(p->finish_time != chrono::system_clock::time_point());
-    // Returned duration may be zero if we had a cache hit or extracted from a local image file.
+    if (p->download_start_time == chrono::system_clock::time_point())
+    {
+        return chrono::microseconds(0);  // We had a cache hit and didn't download
+    }
     return chrono::duration_cast<chrono::microseconds>(p->download_finish_time - p->download_start_time);
 }
 
