@@ -20,7 +20,6 @@
 
 #include "parse_size.h"
 #include <internal/file_io.h>
-#include <internal/raii.h>
 #include <internal/safe_strerror.h>
 #include "util.h"
 
@@ -90,18 +89,7 @@ void GetLocalThumbnail::run(DBusConnection& conn)
 {
     try
     {
-        QDBusUnixFileDescriptor ufd;
-        {
-            FdPtr fd(do_close);
-            fd.reset(open(input_path_.toUtf8().data(), O_RDONLY));
-            if (fd.get() == -1)
-            {
-                throw QString("GetLocalThumbnail::run(): cannot open ") + input_path_ + ": " +
-                    QString::fromStdString(safe_strerror(errno));
-            }
-            ufd.setFileDescriptor(fd.get());
-        }
-        auto reply = conn.thumbnailer().GetThumbnail(input_path_, ufd, size_);
+        auto reply = conn.thumbnailer().GetThumbnail(input_path_, size_);
         reply.waitForFinished();
         if (!reply.isValid())
         {

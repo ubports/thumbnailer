@@ -22,11 +22,6 @@
 #include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
 
-#include <internal/safe_strerror.h>
-
-#include <fcntl.h>
-#include <unistd.h>
-
 namespace
 {
 
@@ -77,15 +72,6 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * cases we don't want to do that for performance reasons, so this
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
-    int fd = open(src_path.toUtf8().constData(), O_RDONLY | O_CLOEXEC);
-    if (fd < 0)
-    {
-        qDebug() << "ThumbnailGenerator::requestImageResponse(): cannot open " + src_path + ": " +
-                    QString::fromStdString(internal::safe_strerror(errno));
-        return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id));
-    }
-    QDBusUnixFileDescriptor unix_fd(fd);
-    close(fd);
 
     if (!connection)
     {
@@ -95,7 +81,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
         iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
-    auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
+    auto reply = iface->GetThumbnail(src_path, requestedSize);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
     return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));

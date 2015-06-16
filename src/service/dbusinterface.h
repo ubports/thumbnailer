@@ -52,7 +52,6 @@ public Q_SLOTS:
     QDBusUnixFileDescriptor GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QDBusUnixFileDescriptor GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QDBusUnixFileDescriptor GetThumbnail(QString const& filename,
-                                         QDBusUnixFileDescriptor const& filename_fd,
                                          QSize const& requestedSize);
 
 private:

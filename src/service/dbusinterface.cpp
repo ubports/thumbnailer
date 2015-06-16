@@ -114,7 +114,6 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
 }
 
 QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
-                                                    QDBusUnixFileDescriptor const& filename_fd,
                                                     QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;

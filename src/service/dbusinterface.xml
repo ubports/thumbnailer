@@ -18,10 +18,9 @@
     </method>
     <method name="GetThumbnail">
       <arg direction="in" type="s" name="filename" />
-      <arg direction="in" type="h" name="filename_fd" />
       <arg direction="in" type="(ii)" name="requestedSize" />
       <arg direction="out" type="h" name="fd" />
-      <annotation name="org.qtproject.QtDBus.QtTypeName.In2" value="QSize" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.In1" value="QSize" />
       <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
     </method>
   </interface>
