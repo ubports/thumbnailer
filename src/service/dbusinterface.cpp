@@ -124,7 +124,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         QString details;
         QTextStream s(&details);
         s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
                                  extraction_limiter_, credentials(),

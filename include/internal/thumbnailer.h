@@ -109,7 +109,6 @@ public:
      * If the thumbnail could not be generated, an empty string is returned.
      */
     std::unique_ptr<ThumbnailRequest> get_thumbnail(std::string const& filename,
-                                                    int filename_fd,
                                                     QSize const& requested_size);
 
     /**

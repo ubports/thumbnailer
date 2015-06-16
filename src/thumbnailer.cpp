@@ -156,7 +156,6 @@ class LocalThumbnailRequest : public RequestBase
 public:
     LocalThumbnailRequest(Thumbnailer* thumbnailer,
                           string const& filename,
-                          int filename_fd,
                           QSize const& requested_size);
 
 protected:
@@ -362,7 +361,6 @@ ThumbnailRequest::FetchStatus RequestBase::status() const
 
 LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
                                              string const& filename,
-                                             int filename_fd,
                                              QSize const& requested_size)
     : RequestBase(thumbnailer, "", requested_size)
     , filename_(filename)
@@ -605,14 +603,13 @@ Thumbnailer::Thumbnailer()
 Thumbnailer::~Thumbnailer() = default;
 
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
-                                                        int filename_fd,
                                                         QSize const& requested_size)
 {
     assert(!filename.empty());
 
     try
     {
-        return unique_ptr<ThumbnailRequest>(new LocalThumbnailRequest(this, filename, filename_fd, requested_size));
+        return unique_ptr<ThumbnailRequest>(new LocalThumbnailRequest(this, filename, requested_size));
     }
     catch (std::exception const&)
     {
