@@ -431,6 +431,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     }
     if (!apparmor_can_read(client_apparmor_label_, filename_)) {
         // LCOV_EXCL_START
+        qDebug() << "Apparmor label" << QString::fromStdString(client_apparmor_label_) << "has no access to" << QString::fromStdString(filename_);
         throw runtime_error("LocalThumbnailRequest::fetch(): AppArmor policy forbids access to " + filename_);
         // LCOV_EXCL_STOP
     }
