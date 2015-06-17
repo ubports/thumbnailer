@@ -13,20 +13,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Jussi Pakkanen <jussi.pakkanen@canonical.com>
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #pragma once
 
-#define TESTDATADIR "@TESTDATADIR@"
+#include <string>
 
-#define TESTSRCDIR "@CMAKE_CURRENT_SOURCE_DIR@"
-#define TESTBINDIR "@CMAKE_CURRENT_BINARY_DIR@"
+namespace unity
+{
 
-#define GSETTINGS_SCHEMA_DIR "@CMAKE_BINARY_DIR@/data"
+namespace thumbnailer
+{
 
-#define THUMBNAILER_SERVICE "@CMAKE_BINARY_DIR@/src/service/thumbnailer-service"
-#define FAKE_ART_SERVER "@CMAKE_CURRENT_SOURCE_DIR@/server/server.py"
-#define THUMBNAILER_TEST_DEFAULT_IMAGE "@CMAKE_SOURCE_DIR@/data/album_missing.png"
+namespace internal
+{
 
-#define THUMBNAILER_ADMIN "@CMAKE_BINARY_DIR@/src/thumbnailer-admin/thumbnailer-admin"
+// Returns true if the given AppArmor profile can read the given path.
+// Note that if path is a symlink, the check will be against the
+// symlink path rather than the symlink target.
+bool apparmor_can_read(std::string const& apparmor_label,
+                       std::string const& path);
+
+}  // namespace internal
+
+}  // namespace thumbnailer
+
+}  // namespace unity
