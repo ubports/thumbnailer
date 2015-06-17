@@ -50,7 +50,6 @@ bool query_file(Access access, string const& label, string const& path)
     query += '\0';
     query += AA_CLASS_FILE;
     query += path;
-    query += '\0';
 
     int allowed = 0, audited = 0;
     if (aa_query_label(static_cast<uint32_t>(access), const_cast<char*>(query.data()), query.size(), &allowed, &audited) < 0)
