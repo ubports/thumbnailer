@@ -201,7 +201,16 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
         sendError("gotCredentials(): " + details() + ": could not retrieve peer credentials");
         return;
     }
-    p->request->set_client_credentials(credentials.user, credentials.label);
+    try
+    {
+        p->request->check_client_credentials(
+            credentials.user, credentials.label);
+    }
+    catch (std::exception const& e)
+    {
+        sendError("gotCredentials(): " + details() + ": " + e.what());
+        return;
+    }
 
     auto do_check = [this]() -> FdOrError
     {

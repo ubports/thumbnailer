@@ -73,8 +73,9 @@ public:
 
     virtual std::string const& key() const = 0;
 
-    // Set the credentials of the caller.
-    virtual void set_client_credentials(uid_t user, std::string const& apparmor_label) = 0;
+    // Check that the client has access to the thumbnail.  Throws an
+    // exception on authentication failure.
+    virtual void check_client_credentials(uid_t user, std::string const& apparmor_label) = 0;
 
 Q_SIGNALS:
     void downloadFinished();
