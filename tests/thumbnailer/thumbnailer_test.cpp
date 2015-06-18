@@ -93,18 +93,15 @@ TEST_F(ThumbnailerTest, basic)
     Image img;
 
     request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
 
     // Again, this time we get the answer from the failure cache.
     request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
 
     request = tn.get_thumbnail(TEST_IMAGE, QSize());
-    request->set_client_credentials(geteuid(), "unconfined");
     EXPECT_TRUE(boost::starts_with(request->key(), TEST_IMAGE)) << request->key();
     thumb = request->thumbnail();
     img = Image(thumb);
@@ -113,28 +110,24 @@ TEST_F(ThumbnailerTest, basic)
 
     // Again, for coverage. This time the thumbnail comes from the cache.
     request = tn.get_thumbnail(TEST_IMAGE, QSize());
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
 
     request = tn.get_thumbnail(TEST_IMAGE, QSize(160, 160));
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(160, img.width());
     EXPECT_EQ(120, img.height());
 
     request = tn.get_thumbnail(TEST_IMAGE, QSize(1000, 1000));  // Will not up-scale
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
 
     request = tn.get_thumbnail(TEST_IMAGE, QSize(100, 100));  // From EXIF data
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(100, img.width());
@@ -143,7 +136,6 @@ TEST_F(ThumbnailerTest, basic)
     try
     {
         request = tn.get_thumbnail(BAD_IMAGE, QSize());
-        request->set_client_credentials(geteuid(), "unconfined");
         request->thumbnail();
         FAIL();
     }
@@ -154,21 +146,18 @@ TEST_F(ThumbnailerTest, basic)
     }
 
     request = tn.get_thumbnail(RGB_IMAGE, QSize(48, 48));
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(48, img.height());
 
     request = tn.get_thumbnail(BIG_IMAGE, QSize());  // > 1920, so will be trimmed down
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
 
     request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // unconstrained, so will not be trimmed down
-    request->set_client_credentials(geteuid(), "unconfined");
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(2731, img.width());
@@ -200,7 +189,6 @@ TEST_F(ThumbnailerTest, clear)
             // Load a song so we have something in the full-size and thumbnail caches.
             auto request = tn.get_thumbnail(TEST_SONG, QSize());
             ASSERT_NE(nullptr, request.get());
-            request->set_client_credentials(geteuid(), "unconfined");
             // Audio thumbnails cannot be produced immediately
             ASSERT_EQ("", request->thumbnail());
 
@@ -218,7 +206,6 @@ TEST_F(ThumbnailerTest, clear)
             // Load same song again at different size, so we get a hit on full-size cache.
             auto request = tn.get_thumbnail(TEST_SONG, QSize(20, 20));
             ASSERT_NE(nullptr, request.get());
-            request->set_client_credentials(geteuid(), "unconfined");
             ASSERT_NE("", request->thumbnail());
         }
 
@@ -226,21 +213,18 @@ TEST_F(ThumbnailerTest, clear)
             // Load same song again at same size, so we get a hit on thumbnail cache.
             auto request = tn.get_thumbnail(TEST_SONG, QSize(20, 20));
             ASSERT_NE(nullptr, request.get());
-            request->set_client_credentials(geteuid(), "unconfined");
             ASSERT_NE("", request->thumbnail());
         }
 
         {
             // Load an empty image, so we have something in the failure cache.
             auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
-            request->set_client_credentials(geteuid(), "unconfined");
             EXPECT_EQ("", request->thumbnail());
         }
 
         {
             // Load empty image again, so we get a hit on failure cache.
             auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
-            request->set_client_credentials(geteuid(), "unconfined");
             EXPECT_EQ("", request->thumbnail());
         }
     };
@@ -340,7 +324,6 @@ TEST_F(ThumbnailerTest, DISABLED_replace_photo)
     ASSERT_EQ(0, unlink(testfile.c_str()));
     ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
 
-    request->set_client_credentials(geteuid(), "unconfined");
     string data = request->thumbnail();
     Image img(data);
     EXPECT_EQ(640, img.width());
@@ -352,7 +335,6 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     Thumbnailer tn;
     auto request = tn.get_thumbnail(TEST_VIDEO, QSize());
     ASSERT_NE(nullptr, request.get());
-    request->set_client_credentials(geteuid(), "unconfined");
     // Video thumbnails cannot be produced immediately
     ASSERT_EQ("", request->thumbnail());
 
@@ -371,7 +353,6 @@ TEST_F(ThumbnailerTest, thumbnail_video)
         // Fetch the thumbnail again with the same size.
         // That causes it to come from the thumbnail cache.
         auto request = tn.get_thumbnail(TEST_VIDEO, QSize());
-        request->set_client_credentials(geteuid(), "unconfined");
         string thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
@@ -383,7 +364,6 @@ TEST_F(ThumbnailerTest, thumbnail_video)
         // Fetch the thumbnail again with a different size.
         // That causes it to be scaled from the thumbnail cache.
         auto request = tn.get_thumbnail(TEST_VIDEO, QSize(500, 500));
-        request->set_client_credentials(geteuid(), "unconfined");
         string thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
@@ -399,7 +379,6 @@ TEST_F(ThumbnailerTest, replace_video)
 
     Thumbnailer tn;
     auto request = tn.get_thumbnail(testfile, QSize());
-    request->set_client_credentials(geteuid(), "unconfined");
     ASSERT_EQ("", request->thumbnail());
 
     // Replace test image with a different file with different
@@ -422,7 +401,6 @@ TEST_F(ThumbnailerTest, thumbnail_song)
     Thumbnailer tn;
     auto request = tn.get_thumbnail(TEST_SONG, QSize());
     ASSERT_NE(nullptr, request.get());
-    request->set_client_credentials(geteuid(), "unconfined");
     // Audio thumbnails cannot be produced immediately
     ASSERT_EQ("", request->thumbnail());
 
@@ -467,7 +445,6 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
         setenv("TN_UTILDIR", "no_such_directory", true);
 
         auto request = tn.get_thumbnail(TEST_SONG, QSize());
-        request->set_client_credentials(geteuid(), "unconfined");
         EXPECT_EQ("", request->thumbnail());
 
         QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
@@ -486,6 +463,24 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
             EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
         }
         setenv("TN_UTILDIR", old_env.c_str(), true);
+    }
+}
+
+TEST_F(ThumbnailerTest, check_client_access)
+{
+    Thumbnailer tn;
+    auto request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    ASSERT_NE(nullptr, request.get());
+    // Check succeeds for correct user ID and valid label
+    request->check_client_credentials(geteuid(), "unconfined");
+    try
+    {
+        request->check_client_credentials(geteuid() + 1, "unconfined");
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_TRUE(boost::contains(e.what(), "Request comes from a different user ID")) << e.what();
     }
 }
 

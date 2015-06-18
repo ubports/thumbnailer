@@ -77,10 +77,8 @@ public:
     {
         return key_;
     }
-    void set_client_credentials(uid_t user, std::string const& label) override
+    void check_client_credentials(uid_t, std::string const&) override
     {
-        client_user_ = user;
-        client_apparmor_label_ = label;
     }
     enum class CachePolicy
     {
@@ -144,8 +142,6 @@ protected:
     string key_;
     QSize const requested_size_;
     chrono::milliseconds timeout_;
-    uid_t client_user_ = 0;
-    string client_apparmor_label_;
 
 private:
     FetchStatus status_;
@@ -162,6 +158,7 @@ public:
                           string const& filename,
                           QSize const& requested_size,
                           chrono::milliseconds timeout);
+    void check_client_credentials(uid_t user, std::string const& label) override;
 
 protected:
     ImageData fetch(QSize const& size_hint) override;
@@ -415,25 +412,29 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
     key_ += to_string(st.st_ctim.tv_sec) + "." + to_string(st.st_ctim.tv_nsec);
 }
 
+void LocalThumbnailRequest::check_client_credentials(uid_t user,
+                                                     std::string const& label)
+{
+    if (user != geteuid())
+    {
+        throw runtime_error("LocalThumbnailRequest::fetch(): Request comes from a different user ID");
+    }
+    if (!apparmor_can_read(label, filename_)) {
+        // LCOV_EXCL_START
+        qDebug() << "Apparmor label" << QString::fromStdString(label) << "has no access to" << QString::fromStdString(filename_);
+        throw runtime_error("LocalThumbnailRequest::fetch(): AppArmor policy forbids access to " + filename_);
+        // LCOV_EXCL_STOP
+    }
+
+}
+
+
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
 {
     if (image_extractor_)
     {
         // The image data has been extracted via vs-thumb
         return ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
-    }
-
-    if (client_user_ != geteuid())
-    {
-        // LCOV_EXCL_START
-        throw runtime_error("LocalThumbnailRequest::fetch(): Request comes from a different user ID");
-        // LCOV_EXCL_STOP
-    }
-    if (!apparmor_can_read(client_apparmor_label_, filename_)) {
-        // LCOV_EXCL_START
-        qDebug() << "Apparmor label" << QString::fromStdString(client_apparmor_label_) << "has no access to" << QString::fromStdString(filename_);
-        throw runtime_error("LocalThumbnailRequest::fetch(): AppArmor policy forbids access to " + filename_);
-        // LCOV_EXCL_STOP
     }
 
     // Work out content type.
