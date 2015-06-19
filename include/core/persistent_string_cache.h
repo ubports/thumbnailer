@@ -310,7 +310,12 @@ public:
 
     /**
     \brief Returns statistics for the cache.
+
+    The returned statistics are persistent and are restored the next
+    time an existing cache is opened. Call clear_stats() to explicitly
+    reset the statistics counters and time stamps to zero.
     \return An object that provides accessors to statistics and settings.
+    \see clear_stats()
     */
     PersistentCacheStats stats() const;
 
