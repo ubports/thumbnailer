@@ -1,20 +1,19 @@
 /*
- * Copyright (C) 2015 Canonical, Ltd.
+ * Copyright (C) 2015 Canonical Ltd.
  *
- * Authors:
- *    James Henstridge <james.henstridge@canonical.com>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of version 3 of the GNU General Public License as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #include "handler.h"
@@ -122,10 +121,12 @@ struct HandlerPrivate
     shared_ptr<QThreadPool> check_pool;
     shared_ptr<QThreadPool> create_pool;
     RateLimiter& limiter;
+    CredentialsCache& creds;
     unique_ptr<ThumbnailRequest> request;
     chrono::system_clock::time_point start_time;            // Overall start time
     chrono::system_clock::time_point finish_time;           // Overall finish time
-    chrono::system_clock::time_point download_start_time;   // Time at which download/extract is scheduled.
+    chrono::system_clock::time_point schedule_start_time;   // Time at which download/extract is scheduled.
+    chrono::system_clock::time_point download_start_time;   // Time at which download/extract is started.
     chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
     QString details;
     QString status;
@@ -139,6 +140,7 @@ struct HandlerPrivate
                    shared_ptr<QThreadPool> check_pool,
                    shared_ptr<QThreadPool> create_pool,
                    RateLimiter& limiter,
+                   CredentialsCache& creds,
                    unique_ptr<ThumbnailRequest>&& request,
                    QString const& details)
         : bus(bus)
@@ -146,6 +148,7 @@ struct HandlerPrivate
         , check_pool(check_pool)
         , create_pool(create_pool)
         , limiter(limiter)
+        , creds(creds)
         , request(move(request))
         , details(details)
     {
@@ -158,9 +161,10 @@ Handler::Handler(QDBusConnection const& bus,
                  shared_ptr<QThreadPool> check_pool,
                  shared_ptr<QThreadPool> create_pool,
                  RateLimiter& limiter,
+                 CredentialsCache& creds,
                  unique_ptr<ThumbnailRequest>&& request,
                  QString const& details)
-    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, move(request), details))
+    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, creds, move(request), details))
 {
     connect(&p->checkWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::checkFinished);
     connect(p->request.get(), &ThumbnailRequest::downloadFinished, this, &Handler::downloadFinished);
@@ -182,6 +186,31 @@ string const& Handler::key() const
 
 void Handler::begin()
 {
+    p->creds.get(p->message.service(),
+                 [this](CredentialsCache::Credentials const& credentials)
+                 {
+                     gotCredentials(credentials);
+                 });
+}
+
+void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
+{
+    if (!credentials.valid)
+    {
+        sendError("gotCredentials(): " + details() + ": could not retrieve peer credentials");
+        return;
+    }
+    try
+    {
+        p->request->check_client_credentials(
+            credentials.user, credentials.label);
+    }
+    catch (std::exception const& e)
+    {
+        sendError("gotCredentials(): " + details() + ": " + e.what());
+        return;
+    }
+
     auto do_check = [this]() -> FdOrError
     {
         try
@@ -248,14 +277,15 @@ void Handler::checkFinished()
         sendThumbnail(fd_error.fd);
         // Set time again, because sending the thumbnail could take a while.
         p->finish_time = chrono::system_clock::now();
+        p->schedule_start_time = p->download_start_time;  // Didn't do any download.
     }
     else
     {
         try
         {
             // otherwise move on to the download phase.
-            p->download_start_time = chrono::system_clock::now();
-            p->limiter.schedule([&]{ p->request->download(); });
+            p->schedule_start_time = chrono::system_clock::now();
+            p->limiter.schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
         }
         catch (std::exception const& e)
         {
@@ -361,11 +391,20 @@ chrono::microseconds Handler::completion_time() const
     return chrono::duration_cast<chrono::microseconds>(p->finish_time - p->start_time);
 }
 
+chrono::microseconds Handler::queued_time() const
+{
+    // Returned duration may be zero if the request wasn't kept waiting in the queue.
+    return chrono::duration_cast<chrono::microseconds>(p->download_start_time - p->schedule_start_time);
+}
+
 chrono::microseconds Handler::download_time() const
 {
     // Not a typo: we really mean to check finish_time, not download_finish_time in the assert.
     assert(p->finish_time != chrono::system_clock::time_point());
-    // Returned duration may be zero if we had a cache hit or extracted from a local image file.
+    if (p->download_start_time == chrono::system_clock::time_point())
+    {
+        return chrono::microseconds(0);  // We had a cache hit and didn't download
+    }
     return chrono::duration_cast<chrono::microseconds>(p->download_finish_time - p->download_start_time);
 }
 

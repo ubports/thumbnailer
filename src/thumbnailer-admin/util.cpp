@@ -2,15 +2,15 @@
  * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Michi Henning <michi.henning@canonical.com>
@@ -53,12 +53,10 @@ QString current_directory()
 }
 
 // Construct an output path from inpath and size. The outputh path
-// is the stem of the input path with the size and ".jpg" appended.r
+// is the stem of the input path with the size and ".jpg" appended.
 // For example, if the input is "xyz/some_image.png", and the size
 // is (32, 48), the output becomes "some_image_32x48.jpg".
 // If dir is non-empty, it is prepended to the returned path.
-// Any occurences of '/' in inpath are replaced with '-' (just in
-// case some artist or album name contains a slash).
 
 string make_output_path(string const& inpath, QSize const& size, string const& dir)
 {

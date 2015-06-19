@@ -13,28 +13,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <internal/artdownloader.h>
+#pragma once
 
-#include <QUrl>
+#include <string>
 
-#include <stdexcept>
-
-using namespace unity::thumbnailer::internal;
-
-ArtDownloader::ArtDownloader(QObject* parent)
-    : QObject(parent)
+namespace unity
 {
-}
 
-void ArtDownloader::assert_valid_url(QUrl const& url) const
+namespace thumbnailer
 {
-    // LCOV_EXCL_START
-    if (!url.isValid())
-    {
-        throw std::logic_error("ArtDownloader::assert_valid_url(): The url provided is not valid");
-    }
-    // LCOV_EXCL_STOP
-}
+
+namespace internal
+{
+
+// Returns true if the given AppArmor profile can read the given path.
+// Note that if path is a symlink, the check will be against the
+// symlink path rather than the symlink target.
+bool apparmor_can_read(std::string const& apparmor_label,
+                       std::string const& path);
+
+}  // namespace internal
+
+}  // namespace thumbnailer
+
+}  // namespace unity

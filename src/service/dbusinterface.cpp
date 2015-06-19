@@ -1,20 +1,19 @@
 /*
- * Copyright (C) 2014 Canonical, Ltd.
+ * Copyright (C) 2014 Canonical Ltd.
  *
- * Authors:
- *    James Henstridge <james.henstridge@canonical.com>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of version 3 of the GNU General Public License as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #include "dbusinterface.h"
@@ -65,6 +64,15 @@ DBusInterface::~DBusInterface()
 {
 }
 
+CredentialsCache& DBusInterface::credentials()
+{
+    if (!credentials_)
+    {
+        credentials_.reset(new CredentialsCache(connection()));
+    }
+    return *credentials_.get();
+}
+
 QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
                                                    QString const& album,
                                                    QSize const& requestedSize)
@@ -77,7 +85,8 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, std::move(request), details));
+                                 download_limiter_, credentials(),
+                                 std::move(request), details));
     }
     // LCOV_EXCL_START
     catch (exception const& e)
@@ -102,7 +111,8 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, std::move(request), details));
+                                 download_limiter_, credentials(),
+                                 std::move(request), details));
     }
     // LCOV_EXCL_START
     catch (exception const& e)
@@ -116,19 +126,20 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
 }
 
 QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
-                                                    QDBusUnixFileDescriptor const& filename_fd,
                                                     QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;
+
     try
     {
         QString details;
         QTextStream s(&details);
         s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), filename_fd.fileDescriptor(), requestedSize);
+        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 *extraction_limiter_, std::move(request), details));
+                                 *extraction_limiter_, credentials(),
+                                 std::move(request), details));
     }
     catch (exception const& e)
     {
@@ -201,13 +212,33 @@ void DBusInterface::requestFinished()
     QString msg;
     QTextStream s(&msg);
     s.setRealNumberNotation(QTextStream::FixedNotation);
-    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000 << " sec";
+    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000;
+
+    auto queued_time = double(handler->queued_time().count()) / 1000000;
     auto download_time = double(handler->download_time().count()) / 1000000;
+
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << " [";
+    }
+    if (queued_time > 0)
+    {
+        s << "q: " << queued_time;
+        if (download_time > 0)
+        {
+            s << ", ";
+        }
+    }
     if (download_time > 0)
     {
-        s << " [" << download_time << " sec]";
+        s << "d: " << download_time;
     }
-    s << " (" << handler->status() << ")";
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << "]";
+    }
+
+    s << " sec (" << handler->status() << ")";
     qDebug() << msg;
 }
 

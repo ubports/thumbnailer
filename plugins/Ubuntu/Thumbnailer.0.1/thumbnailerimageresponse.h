@@ -14,7 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Xavi Garcia <xavi.garcia.mena@canonical.com>
-*/
+ */
 
 #pragma once
 

@@ -13,6 +13,7 @@ OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
 
 add_library(thumbnailer STATIC
     artdownloader.cpp
+    check_access.cpp
     file_io.cpp
     image.cpp
     imageextractor.cpp
@@ -40,6 +41,7 @@ target_link_libraries(thumbnailer
     ${GIO_DEPS_LDFLAGS}
     ${IMG_DEPS_LDFLAGS}
     ${UNITY_API_DEPS_LDFLAGS}
+    ${APPARMOR_DEPS_LDFLAGS}
 )
 
 add_subdirectory(service)

@@ -1,0 +1,3 @@
+add_executable(check_access_test check_access_test.cpp)
+target_link_libraries(check_access_test thumbnailer gtest)
+add_test(check_access check_access_test)

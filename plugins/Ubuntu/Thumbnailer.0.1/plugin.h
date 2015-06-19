@@ -14,7 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: James Henstridge <james.henstridge@canonical.com>
-*/
+ */
 
 #pragma once
 

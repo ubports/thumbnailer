@@ -91,19 +91,17 @@ TEST_F(ThumbnailerTest, basic)
     std::unique_ptr<ThumbnailRequest> request;
     string thumb;
     Image img;
-    FdPtr fd(-1, do_close);
 
-    fd.reset(open(EMPTY_IMAGE, O_RDONLY));
-    thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
+    request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+    thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
 
     // Again, this time we get the answer from the failure cache.
-    fd.reset(open(EMPTY_IMAGE, O_RDONLY));
-    thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
+    request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+    thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
 
-    fd.reset(open(TEST_IMAGE, O_RDONLY));
-    request = tn.get_thumbnail(TEST_IMAGE, fd.get(), QSize());
+    request = tn.get_thumbnail(TEST_IMAGE, QSize());
     EXPECT_TRUE(boost::starts_with(request->key(), TEST_IMAGE)) << request->key();
     thumb = request->thumbnail();
     img = Image(thumb);
@@ -111,30 +109,35 @@ TEST_F(ThumbnailerTest, basic)
     EXPECT_EQ(480, img.height());
 
     // Again, for coverage. This time the thumbnail comes from the cache.
-    thumb = tn.get_thumbnail(TEST_IMAGE, fd.get(), QSize())->thumbnail();
+    request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
 
-    thumb = tn.get_thumbnail(TEST_IMAGE, fd.get(), QSize(160, 160))->thumbnail();
+    request = tn.get_thumbnail(TEST_IMAGE, QSize(160, 160));
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(160, img.width());
     EXPECT_EQ(120, img.height());
 
-    thumb = tn.get_thumbnail(TEST_IMAGE, fd.get(), QSize(1000, 1000))->thumbnail();  // Will not up-scale
+    request = tn.get_thumbnail(TEST_IMAGE, QSize(1000, 1000));  // Will not up-scale
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
 
-    thumb = tn.get_thumbnail(TEST_IMAGE, fd.get(), QSize(100, 100))->thumbnail();  // From EXIF data
+    request = tn.get_thumbnail(TEST_IMAGE, QSize(100, 100));  // From EXIF data
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(100, img.width());
     EXPECT_EQ(75, img.height());
 
-    fd.reset(open(BAD_IMAGE, O_RDONLY));
     try
     {
-        tn.get_thumbnail(BAD_IMAGE, fd.get(), QSize())->thumbnail();
+        request = tn.get_thumbnail(BAD_IMAGE, QSize());
+        request->thumbnail();
+        FAIL();
     }
     catch (std::exception const& e)
     {
@@ -142,20 +145,20 @@ TEST_F(ThumbnailerTest, basic)
         EXPECT_TRUE(boost::starts_with(msg, "unity::ResourceException: RequestBase::thumbnail(): key = ")) << msg;
     }
 
-    fd.reset(open(RGB_IMAGE, O_RDONLY));
-    thumb = tn.get_thumbnail(RGB_IMAGE, fd.get(), QSize(48, 48))->thumbnail();
+    request = tn.get_thumbnail(RGB_IMAGE, QSize(48, 48));
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(48, img.height());
 
-    fd.reset(open(BIG_IMAGE, O_RDONLY));
-    thumb = tn.get_thumbnail(BIG_IMAGE, fd.get(), QSize())->thumbnail();  // > 1920, so will be trimmed down
+    request = tn.get_thumbnail(BIG_IMAGE, QSize());  // > 1920, so will be trimmed down
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
 
-    thumb =
-        tn.get_thumbnail(BIG_IMAGE, fd.get(), QSize(0, 0))->thumbnail();  // unconstrained, so will not be trimmed down
+    request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // unconstrained, so will not be trimmed down
+    thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(2731, img.width());
     EXPECT_EQ(2048, img.height());
@@ -184,8 +187,7 @@ TEST_F(ThumbnailerTest, clear)
     {
         {
             // Load a song so we have something in the full-size and thumbnail caches.
-            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
-            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize());
+            auto request = tn.get_thumbnail(TEST_SONG, QSize());
             ASSERT_NE(nullptr, request.get());
             // Audio thumbnails cannot be produced immediately
             ASSERT_EQ("", request->thumbnail());
@@ -202,32 +204,28 @@ TEST_F(ThumbnailerTest, clear)
 
         {
             // Load same song again at different size, so we get a hit on full-size cache.
-            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
-            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize(20, 20));
+            auto request = tn.get_thumbnail(TEST_SONG, QSize(20, 20));
             ASSERT_NE(nullptr, request.get());
             ASSERT_NE("", request->thumbnail());
         }
 
         {
             // Load same song again at same size, so we get a hit on thumbnail cache.
-            FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
-            auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize(20, 20));
+            auto request = tn.get_thumbnail(TEST_SONG, QSize(20, 20));
             ASSERT_NE(nullptr, request.get());
             ASSERT_NE("", request->thumbnail());
         }
 
         {
             // Load an empty image, so we have something in the failure cache.
-            FdPtr fd(open(EMPTY_IMAGE, O_RDONLY), do_close);
-            string thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
-            EXPECT_EQ("", thumb);
+            auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+            EXPECT_EQ("", request->thumbnail());
         }
 
         {
             // Load empty image again, so we get a hit on failure cache.
-            FdPtr fd(open(EMPTY_IMAGE, O_RDONLY), do_close);
-            string thumb = tn.get_thumbnail(EMPTY_IMAGE, fd.get(), QSize())->thumbnail();
-            EXPECT_EQ("", thumb);
+            auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+            EXPECT_EQ("", request->thumbnail());
         }
     };
 
@@ -313,44 +311,13 @@ TEST_F(ThumbnailerTest, clear)
     EXPECT_EQ(0, stats.failure_stats.hits());
 }
 
-TEST_F(ThumbnailerTest, bad_fd)
-{
-    Thumbnailer tn;
-
-    // Invalid file descriptor
-    try
-    {
-        tn.get_thumbnail(TEST_IMAGE, -1, QSize());
-    }
-    catch (std::exception const& e)
-    {
-        string msg = e.what();
-        EXPECT_TRUE(boost::contains(msg, ": Could not stat file descriptor:")) << msg;
-    }
-
-    // File descriptor for wrong file
-    FdPtr fd(open(TEST_VIDEO, O_RDONLY), do_close);
-    try
-    {
-        tn.get_thumbnail(TEST_IMAGE, fd.get(), QSize());
-    }
-    catch (std::exception const& e)
-    {
-        string msg = e.what();
-        EXPECT_TRUE(boost::contains(msg, ": file descriptor does not refer to file ")) << msg;
-    }
-}
-
-TEST_F(ThumbnailerTest, replace_photo)
+TEST_F(ThumbnailerTest, DISABLED_replace_photo)
 {
     string testfile = tempdir_path() + "/foo.jpg";
     ASSERT_EQ(0, link(TEST_IMAGE, testfile.c_str()));
 
     Thumbnailer tn;
-    FdPtr fd(open(testfile.c_str(), O_RDONLY), do_close);
-    auto request = tn.get_thumbnail(testfile, fd.get(), QSize());
-    // The client FD isn't needed any more, so close it.
-    fd.reset(-1);
+    auto request = tn.get_thumbnail(testfile, QSize());
 
     // Replace test image with a different file with different
     // dimensions so we can tell which one is thumbnailed.
@@ -366,8 +333,7 @@ TEST_F(ThumbnailerTest, replace_photo)
 TEST_F(ThumbnailerTest, thumbnail_video)
 {
     Thumbnailer tn;
-    FdPtr fd(open(TEST_VIDEO, O_RDONLY), do_close);
-    auto request = tn.get_thumbnail(TEST_VIDEO, fd.get(), QSize());
+    auto request = tn.get_thumbnail(TEST_VIDEO, QSize());
     ASSERT_NE(nullptr, request.get());
     // Video thumbnails cannot be produced immediately
     ASSERT_EQ("", request->thumbnail());
@@ -386,7 +352,7 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     {
         // Fetch the thumbnail again with the same size.
         // That causes it to come from the thumbnail cache.
-        auto request = tn.get_thumbnail(TEST_VIDEO, fd.get(), QSize());
+        auto request = tn.get_thumbnail(TEST_VIDEO, QSize());
         string thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
@@ -397,7 +363,7 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     {
         // Fetch the thumbnail again with a different size.
         // That causes it to be scaled from the thumbnail cache.
-        auto request = tn.get_thumbnail(TEST_VIDEO, fd.get(), QSize(500, 500));
+        auto request = tn.get_thumbnail(TEST_VIDEO, QSize(500, 500));
         string thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
@@ -412,17 +378,14 @@ TEST_F(ThumbnailerTest, replace_video)
     ASSERT_EQ(0, link(TEST_VIDEO, testfile.c_str())) << strerror(errno);
 
     Thumbnailer tn;
-    FdPtr fd(open(testfile.c_str(), O_RDONLY | O_CLOEXEC), do_close);
-    auto request = tn.get_thumbnail(testfile, fd.get(), QSize());
-    // The client FD isn't needed any more, so close it.
-    fd.reset(-1);
+    auto request = tn.get_thumbnail(testfile, QSize());
+    ASSERT_EQ("", request->thumbnail());
 
     // Replace test image with a different file with different
     // dimensions so we can tell which one is thumbnailed.
     ASSERT_EQ(0, unlink(testfile.c_str()));
     ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
 
-    ASSERT_EQ("", request->thumbnail());
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
@@ -436,8 +399,7 @@ TEST_F(ThumbnailerTest, replace_video)
 TEST_F(ThumbnailerTest, thumbnail_song)
 {
     Thumbnailer tn;
-    FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
-    auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize());
+    auto request = tn.get_thumbnail(TEST_SONG, QSize());
     ASSERT_NE(nullptr, request.get());
     // Audio thumbnails cannot be produced immediately
     ASSERT_EQ("", request->thumbnail());
@@ -482,8 +444,7 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
 
         setenv("TN_UTILDIR", "no_such_directory", true);
 
-        FdPtr fd(open(TEST_SONG, O_RDONLY), do_close);
-        auto request = tn.get_thumbnail(TEST_SONG, fd.get(), QSize());
+        auto request = tn.get_thumbnail(TEST_SONG, QSize());
         EXPECT_EQ("", request->thumbnail());
 
         QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
@@ -502,6 +463,24 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
             EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
         }
         setenv("TN_UTILDIR", old_env.c_str(), true);
+    }
+}
+
+TEST_F(ThumbnailerTest, check_client_access)
+{
+    Thumbnailer tn;
+    auto request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    ASSERT_NE(nullptr, request.get());
+    // Check succeeds for correct user ID and valid label
+    request->check_client_credentials(geteuid(), "unconfined");
+    try
+    {
+        request->check_client_credentials(geteuid() + 1, "unconfined");
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_TRUE(boost::contains(e.what(), "Request comes from a different user ID")) << e.what();
     }
 }
 
@@ -615,7 +594,7 @@ TEST_F(RemoteServer, no_such_local_image)
 
     try
     {
-        auto request = tn.get_thumbnail("no_such_file", -1, QSize());
+        auto request = tn.get_thumbnail("no_such_file", QSize());
         FAIL();
     }
     catch (unity::ResourceException const& e)

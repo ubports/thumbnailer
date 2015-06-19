@@ -10,7 +10,6 @@ add_library(thumbnailer-qml MODULE
   albumartgenerator.cpp
   artgeneratorcommon.cpp
   artistartgenerator.cpp
-  ${CMAKE_SOURCE_DIR}/src/safe_strerror.cpp
   plugin.cpp
   thumbnailerimageresponse.cpp
   thumbnailgenerator.cpp

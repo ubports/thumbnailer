@@ -2,15 +2,15 @@
  * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Michi Henning <michi.henning@canonical.com>
@@ -20,7 +20,6 @@
 
 #include "parse_size.h"
 #include <internal/file_io.h>
-#include <internal/raii.h>
 #include <internal/safe_strerror.h>
 #include "util.h"
 
@@ -90,18 +89,7 @@ void GetLocalThumbnail::run(DBusConnection& conn)
 {
     try
     {
-        QDBusUnixFileDescriptor ufd;
-        {
-            FdPtr fd(do_close);
-            fd.reset(open(input_path_.toUtf8().data(), O_RDONLY));
-            if (fd.get() == -1)
-            {
-                throw QString("GetLocalThumbnail::run(): cannot open ") + input_path_ + ": " +
-                    QString::fromStdString(safe_strerror(errno));
-            }
-            ufd.setFileDescriptor(fd.get());
-        }
-        auto reply = conn.thumbnailer().GetThumbnail(input_path_, ufd, size_);
+        auto reply = conn.thumbnailer().GetThumbnail(input_path_, size_);
         reply.waitForFinished();
         if (!reply.isValid())
         {
