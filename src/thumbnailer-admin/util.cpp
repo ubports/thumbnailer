@@ -53,12 +53,10 @@ QString current_directory()
 }
 
 // Construct an output path from inpath and size. The outputh path
-// is the stem of the input path with the size and ".jpg" appended.r
+// is the stem of the input path with the size and ".jpg" appended.
 // For example, if the input is "xyz/some_image.png", and the size
 // is (32, 48), the output becomes "some_image_32x48.jpg".
 // If dir is non-empty, it is prepended to the returned path.
-// Any occurences of '/' in inpath are replaced with '-' (just in
-// case some artist or album name contains a slash).
 
 string make_output_path(string const& inpath, QSize const& size, string const& dir)
 {
