@@ -2,15 +2,15 @@
  * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Michi Henning <michi.henning@canonical.com>
@@ -509,8 +509,8 @@ TEST_F(AdminTest, bad_files)
     AdminRunner ar;
 
     EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file"}));
-    EXPECT_EQ("thumbnailer-admin: GetLocalThumbnail::run(): cannot open no_such_file: No such file or directory\n",
-              ar.stderr())
+    EXPECT_TRUE(starts_with(ar.stderr(),
+                            "thumbnailer-admin: DBusInterface::GetThumbnail(): no_such_file: unity::ResourceException: Thumbnailer::get_thumbnail():\n    boost::filesystem::canonical: No such file or directory:"))
         << ar.stderr();
 
     EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", "no_such_directory"}));

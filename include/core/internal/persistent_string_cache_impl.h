@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -59,7 +59,6 @@ public:
     int64_t size_in_bytes() const noexcept;
     int64_t max_size_in_bytes() const noexcept;
     int64_t disk_size_in_bytes() const;
-    int64_t headroom() const noexcept;
     CacheDiscardPolicy discard_policy() const noexcept;
     core::PersistentCacheStats stats() const;
 
@@ -102,7 +101,6 @@ public:
     void resize(int64_t size_in_bytes);
     void trim_to(int64_t used_size_in_bytes);
     void compact();
-    void set_headroom(int64_t headroom);
     void set_handler(CacheEvent events, PersistentStringCache::EventCallback cb);
 
 private:
@@ -116,19 +114,19 @@ private:
         int64_t etime;  // Expiry time, msec since the epoch
         int64_t size;   // Size in bytes
 
-        DataTuple(int64_t at, int64_t et, int64_t s)
+        DataTuple(int64_t at, int64_t et, int64_t s) noexcept
             : atime(at)
             , etime(et)
             , size(s)
         {
         }
 
-        DataTuple()
+        DataTuple() noexcept
             : DataTuple(0, 0, 0)
         {
         }
 
-        DataTuple(std::string const& s)
+        DataTuple(std::string const& s) noexcept
         {
             std::istringstream is(s);
             is >> atime >> etime >> size;
@@ -151,11 +149,15 @@ private:
 
     void init_stats();
     void init_db(leveldb::Options options);
-    bool cache_is_new();
+    bool cache_is_new() const;
     void write_version();
     void check_version();
     void read_settings();
     void write_settings();
+    void read_stats();
+    void write_stats();
+    bool read_dirty_flag() const;
+    void write_dirty_flag(bool is_dirty);
     DataTuple get_data(std::string const& key, bool& found) const;
     bool get_value_and_metadata(std::string const& key,
                                 DataTuple& data,

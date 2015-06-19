@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-#
+
 # Copyright (C) 2015 Canonical Ltd.
-# Author: Xavi Garcia <xavi.garcia.mena@canonical.com>
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 3.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+# Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
 
 import xml.etree.ElementTree as ET
 import getopt, sys, os

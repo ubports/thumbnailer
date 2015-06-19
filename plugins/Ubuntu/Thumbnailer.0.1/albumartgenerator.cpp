@@ -15,7 +15,7 @@
  *
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
  *          James Henstridge <james.henstridge@canonical.com>
-*/
+ */
 
 #include "albumartgenerator.h"
 

@@ -1,5 +1,3 @@
-add_definitions(${APPARMOR_DEPS_CFLAGS})
-
 qt5_add_dbus_adaptor(adaptor_files dbusinterface.xml dbusinterface.h unity::thumbnailer::service::DBusInterface)
 qt5_add_dbus_adaptor(adaptor_files admininterface.xml admininterface.h unity::thumbnailer::service::AdminInterface)
 
@@ -21,7 +19,7 @@ add_executable(thumbnailer-service
   )
 
 qt5_use_modules(thumbnailer-service DBus Concurrent)
-target_link_libraries(thumbnailer-service thumbnailer ${CMAKE_THREAD_LIBS_INIT} ${APPARMOR_DEPS_LDFLAGS})
+target_link_libraries(thumbnailer-service thumbnailer)
 set_target_properties(thumbnailer-service PROPERTIES AUTOMOC TRUE)
 add_dependencies(thumbnailer-service vs-thumb)
 

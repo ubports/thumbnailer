@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -310,7 +310,12 @@ public:
 
     /**
     \brief Returns statistics for the cache.
+
+    The returned statistics are persistent and are restored the next
+    time an existing cache is opened. Call clear_stats() to explicitly
+    reset the statistics counters and time stamps to zero.
     \return An object that provides accessors to statistics and settings.
+    \see clear_stats()
     */
     PersistentCacheStats stats() const;
 

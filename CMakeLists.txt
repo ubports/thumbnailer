@@ -104,6 +104,7 @@ include_directories(${GOBJ_DEPS_INCLUDE_DIRS})
 include_directories(${GIO_DEPS_INCLUDE_DIRS})
 include_directories(${IMG_DEPS_INCLUDE_DIRS})
 include_directories(${UNITY_API_DEPS_INCLUDE_DIRS})
+include_directories(${APPARMOR_DEPS_INCLUDE_DIRS})
 include_directories(include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
