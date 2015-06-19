@@ -739,6 +739,14 @@ void Thumbnailer::clear(CacheSelector selector)
     }
 }
 
+void Thumbnailer::compact(CacheSelector selector)
+{
+    for (auto c : select_caches(selector))
+    {
+        c->compact();
+    }
+}
+
 }  // namespace internal
 
 }  // namespace thumbnailer

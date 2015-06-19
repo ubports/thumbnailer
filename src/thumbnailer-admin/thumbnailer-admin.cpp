@@ -21,6 +21,7 @@
 #include "get_local_thumbnail.h"
 #include "get_remote_thumbnail.h"
 #include "show_stats.h"
+#include "shutdown.h"
 
 #include <boost/filesystem.hpp>
 
@@ -58,7 +59,9 @@ ActionMap const valid_actions =
     { "get",         { &create_action<GetLocalThumbnail>,  "Get thumbnail from local file" } },
     { "get_artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
     { "get_album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },
-    { "clear",       { &create_action<Clear>,              "Clear caches" } }
+    { "clear",       { &create_action<Clear>,              "Clear caches" } },
+    { "compact",     { &create_action<Clear>,              "Compact caches" } },
+    { "shutdown",    { &create_action<Shutdown>,           "Shut down thumbnailer service" } }
 };
 
 QString command_summary()

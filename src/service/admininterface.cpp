@@ -118,6 +118,17 @@ void AdminInterface::Clear(int cache_id)
     thumbnailer_->clear(selector);
 }
 
+void AdminInterface::Compact(int cache_id)
+{
+    if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
+    {
+        sendErrorReply(ADMIN_ERROR, QString("Compact(): invalid cache selector: ") + QString::number(cache_id));
+        return;
+    }
+    auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
+    thumbnailer_->compact(selector);
+}
+
 void AdminInterface::Shutdown()
 {
     QCoreApplication::instance()->quit();

@@ -179,6 +179,14 @@ TEST_F(ThumbnailerTest, changed_size)
     }
 }
 
+TEST_F(ThumbnailerTest, compact)
+{
+    Thumbnailer tn;
+
+    // For coverage.
+    tn.compact(Thumbnailer::CacheSelector::all);
+}
+
 TEST_F(ThumbnailerTest, clear)
 {
     Thumbnailer tn;

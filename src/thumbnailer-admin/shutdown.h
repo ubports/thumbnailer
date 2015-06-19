@@ -29,18 +29,15 @@ namespace thumbnailer
 namespace tools
 {
 
-class Clear : public Action
+class Shutdown : public Action
 {
 public:
-    UNITY_DEFINES_PTRS(Clear);
+    UNITY_DEFINES_PTRS(Shutdown);
 
-    Clear(QCommandLineParser& parser);
-    virtual ~Clear();
+    Shutdown(QCommandLineParser& parser);
+    virtual ~Shutdown();
 
     virtual void run(DBusConnection& conn) override;
-
-private:
-    int cache_id_;
 };
 
 }  // namespace tools
