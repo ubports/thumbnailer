@@ -316,6 +316,32 @@ TEST(Image, exceptions)
             EXPECT_STREQ("Image::pixel(): invalid y coordinate: 480", e.what());
         }
     }
+
+    {
+        string data = read_file(TESTIMAGE);
+        Image i(data);
+
+        try
+        {
+            i.to_jpeg(-1);
+            FAIL();
+        }
+        catch (invalid_argument const& e)
+        {
+            EXPECT_STREQ("Image::to_jpeg(): quality out of range [0..100]: -1", e.what());
+        }
+        try
+        {
+            i.to_jpeg(101);
+            FAIL();
+        }
+        catch (invalid_argument const& e)
+        {
+            EXPECT_STREQ("Image::to_jpeg(): quality out of range [0..100]: 101", e.what());
+        }
+        EXPECT_NO_THROW(i.to_jpeg(0));
+        EXPECT_NO_THROW(i.to_jpeg(100));
+    }
 }
 
 TEST(Image, load_fd)

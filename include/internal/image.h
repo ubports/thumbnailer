@@ -66,8 +66,8 @@ public:
     // requested size.
     Image scale(QSize requested_size) const;
 
-    // Returns image as JPEG data.
-    std::string to_jpeg() const;
+    // Returns image as JPEG data (quality must be in the range 0-100).
+    std::string to_jpeg(int quality = 75) const;
 
 private:
     void load(Reader& reader, QSize requested_size);

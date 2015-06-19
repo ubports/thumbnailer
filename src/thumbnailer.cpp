@@ -350,7 +350,7 @@ string RequestBase::thumbnail()
                     // Don't put ridiculously large images into the full-size cache.
                     full_size_image = full_size_image.scale(QSize(max_size, max_size));
                 }
-                thumbnailer_->full_size_cache_->put(key_, full_size_image.to_jpeg());
+                thumbnailer_->full_size_cache_->put(key_, full_size_image.to_jpeg(90));  // Keep high-quality image.
             }
             // If the image is already within the target dimensions, this
             // will be a no-op.
