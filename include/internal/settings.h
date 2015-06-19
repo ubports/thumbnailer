@@ -57,6 +57,7 @@ public:
 private:
     std::string get_string(char const* key, std::string const& default_value) const;
     int get_positive_int(char const* key, int default_value) const;
+    int get_positive_or_zero_int(char const* key, int default_value) const;
     int get_int(char const* key, int default_value) const;
 
     std::unique_ptr<GSettingsSchema, void(*)(GSettingsSchema*)> schema_;

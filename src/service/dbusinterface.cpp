@@ -20,6 +20,8 @@
 
 #include <internal/trace.h>
 
+#include <thread>
+
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
@@ -43,8 +45,19 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
     , download_limiter_(settings_.max_downloads())
-    , extraction_limiter_(settings_.max_extractions())
 {
+    auto limit = settings_.max_extractions();
+    if (limit == 0)
+    {
+        limit = std::thread::hardware_concurrency();
+        if (limit == 0)
+        {
+            // If the platform can't tell us how many
+            // cores we have, we assume 1.
+            limit = 1;  // LCOV_EXCL_LINE
+        }
+    }
+    extraction_limiter_.reset(new RateLimiter(limit));
 }
 
 DBusInterface::~DBusInterface()
@@ -125,7 +138,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 extraction_limiter_, credentials(),
+                                 *extraction_limiter_, credentials(),
                                  std::move(request), details));
     }
     catch (exception const& e)
