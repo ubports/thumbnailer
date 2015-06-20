@@ -28,7 +28,7 @@ add_library(testutils STATIC
     ${interface_files}
     ${CMAKE_SOURCE_DIR}/src/service/stats.cpp
 )
-qt5_use_modules(testutils Core DBus)
+qt5_use_modules(testutils Core DBus Test)
 target_link_libraries(testutils
-    ${QTDBUSTEST_DEPS_LDFLAGS}
+    Qt5::DBus Qt5::Core Qt5::Test ${QTDBUSTEST_DEPS_LIBRARIES}
 )

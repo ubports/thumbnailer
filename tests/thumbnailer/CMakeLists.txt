@@ -4,6 +4,9 @@ add_executable(thumbnailer_test
 )
 qt5_use_modules(thumbnailer_test DBus Network Test)
 target_link_libraries(thumbnailer_test
+    Qt5::DBus
+    Qt5::Network
+    Qt5::Test
     thumbnailer
     testutils
     gtest)
