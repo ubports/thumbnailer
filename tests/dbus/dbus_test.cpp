@@ -515,7 +515,7 @@ TEST_F(DBusTest, stats)
     {
         CacheStats s = reply.value().failure_stats;
         EXPECT_EQ(1, s.size);
-        EXPECT_EQ(2, s.hits);
+        EXPECT_EQ(1, s.hits);
         EXPECT_EQ(4, s.misses);
     }
 

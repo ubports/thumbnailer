@@ -88,6 +88,7 @@ public:
     {
         assert(reply_);
         connect(&timer_, &QTimer::timeout, this, &UbuntuServerArtReply::timeout);
+        timer_.setSingleShot(true);
         timer_.start(timeout.count());
     }
 

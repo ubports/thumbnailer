@@ -248,8 +248,7 @@ QDBusUnixFileDescriptor Handler::check()
 
 void Handler::checkFinished()
 {
-    // Set finish_time in case something below throws.
-    p->finish_time = chrono::system_clock::now();
+    p->finish_time = chrono::system_clock::now();     // Set finish_time in case something below throws.
 
     if (p->cancelled)
     {
@@ -277,9 +276,10 @@ void Handler::checkFinished()
         sendThumbnail(fd_error.fd);
         // Set time again, because sending the thumbnail could take a while.
         p->finish_time = chrono::system_clock::now();
-        p->schedule_start_time = p->download_start_time;  // Didn't do any download.
+        return;
     }
-    else
+
+    if (p->request->status() == ThumbnailRequest::FetchStatus::needs_download)
     {
         try
         {
@@ -289,9 +289,14 @@ void Handler::checkFinished()
         }
         catch (std::exception const& e)
         {
+            p->finish_time = chrono::system_clock::now();
             sendError(e.what());
         }
+        return;
     }
+
+    p->finish_time = chrono::system_clock::now();
+    sendError("Handler::check_finished(): no artwork for " + details() + ": " + status());
 }
 
 void Handler::downloadFinished()
