@@ -57,6 +57,14 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
             limit = 1;  // LCOV_EXCL_LINE
         }
     }
+#ifdef __arm__
+    // TODO: Hack to deal with gstreamer problems on (at least) Mako.
+    //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
+    if (limit > 2)
+    {
+        limit = 2;
+    }
+#endif
     extraction_limiter_.reset(new RateLimiter(limit));
 }
 
