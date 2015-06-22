@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -222,6 +222,11 @@ void PersistentStringCache::resize(int64_t size_in_bytes)
 void PersistentStringCache::trim_to(int64_t used_size_in_bytes)
 {
     p_->trim_to(used_size_in_bytes);
+}
+
+void PersistentStringCache::compact()
+{
+    p_->compact();
 }
 
 void PersistentStringCache::set_handler(CacheEvent events, EventCallback cb)

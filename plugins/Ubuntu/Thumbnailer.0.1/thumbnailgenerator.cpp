@@ -14,39 +14,44 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
-*/
+ */
 
 #include "thumbnailgenerator.h"
+
 #include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
-
-#include <stdexcept>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-
-#include <QCoreApplication>
-#include <QDebug>
-#include <QMimeDatabase>
-#include <QUrl>
-#include <QDBusPendingCallWatcher>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
 
 namespace
 {
+
 const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
 const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
 
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
+QString default_image_based_on_mime(QString const &id)
+{
+    QMimeDatabase db;
+    QMimeType mime = db.mimeTypeForFile(id);
+
+    if (mime.name().contains("audio"))
+    {
+        return DEFAULT_ALBUM_ART;
+    }
+    else if (mime.name().contains("video"))
+    {
+        return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
+    }
+    return DEFAULT_ALBUM_ART;
 }
+
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -67,47 +72,23 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * cases we don't want to do that for performance reasons, so this
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
-    int fd = open(src_path.toUtf8().constData(), O_RDONLY | O_CLOEXEC);
-    if (fd < 0)
-    {
-        auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id));
-        qDebug() << "Thumbnail generator failed: " << strerror(errno);
-        response->finish_later_with_default_image();
-        return response;
-    }
-    QDBusUnixFileDescriptor unix_fd(fd);
-    close(fd);
 
     if (!connection)
     {
-        // Create them here and not them on the constrcutor so they belong to the proper thread
+        // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
-    auto reply = iface->GetThumbnail(src_path, unix_fd, requestedSize);
-    auto watcher = new QDBusPendingCallWatcher(reply);
-    auto response = new ThumbnailerImageResponse(id, requestedSize, return_default_image_based_on_mime(id), watcher);
-    return response;
+    auto reply = iface->GetThumbnail(src_path, requestedSize);
+    std::unique_ptr<QDBusPendingCallWatcher> watcher(
+        new QDBusPendingCallWatcher(reply));
+    return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));
 }
 
-QString ThumbnailGenerator::return_default_image_based_on_mime(QString const &id)
-{
-    QMimeDatabase db;
-    QMimeType mime = db.mimeTypeForFile(id);
+}  // namespace qml
 
-    if (mime.name().contains("audio"))
-    {
-        return DEFAULT_ALBUM_ART;
-    }
-    else if (mime.name().contains("video"))
-    {
-        return DEFAULT_VIDEO_ART;
-    }
-    return DEFAULT_ALBUM_ART;
-}
+}  // namespace thumbnailer
 
-}
-}
-}
+}  // namespace unity

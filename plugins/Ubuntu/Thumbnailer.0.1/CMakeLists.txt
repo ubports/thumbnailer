@@ -7,18 +7,18 @@ set_source_files_properties(${dbusinterface_xml} PROPERTIES
 qt5_add_dbus_interface(interface_files ${dbusinterface_xml} thumbnailerinterface)
 
 add_library(thumbnailer-qml MODULE
-  plugin.cpp
   albumartgenerator.cpp
   artgeneratorcommon.cpp
   artistartgenerator.cpp
-  thumbnailgenerator.cpp
+  plugin.cpp
   thumbnailerimageresponse.cpp
+  thumbnailgenerator.cpp
   ${interface_files}
 )
 
 set_target_properties(thumbnailer-qml PROPERTIES AUTOMOC TRUE)
 qt5_use_modules(thumbnailer-qml Qml Quick DBus)
-target_link_libraries(thumbnailer-qml)
+target_link_libraries(thumbnailer-qml Qt5::Qml Qt5::Quick Qt5::DBus)
 
 configure_file(qmldir qmldir)
 

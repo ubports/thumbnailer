@@ -2,15 +2,15 @@
  * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Michi Henning <michi.henning@canonical.com>
@@ -37,6 +37,8 @@ namespace service
 
 namespace
 {
+
+char const ADMIN_ERROR[] = "com.canonical.ThumbnailerAdmin.Error.Failed";
 
 // Conversion to QDateTime is somewhat awkward because system_clock
 // is not guaranteed to use the same epoch as QDateTime.
@@ -92,6 +94,39 @@ unity::thumbnailer::service::AllStats AdminInterface::Stats()
     all.thumbnail_stats = to_cache_stats(st.thumbnail_stats);
     all.failure_stats = to_cache_stats(st.failure_stats);
     return all;
+}
+
+void AdminInterface::ClearStats(int cache_id)
+{
+    if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
+    {
+        sendErrorReply(ADMIN_ERROR, QString("ClearStats(): invalid cache selector: ") + QString::number(cache_id));
+        return;
+    }
+    auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
+    thumbnailer_->clear_stats(selector);
+}
+
+void AdminInterface::Clear(int cache_id)
+{
+    if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
+    {
+        sendErrorReply(ADMIN_ERROR, QString("Clear(): invalid cache selector: ") + QString::number(cache_id));
+        return;
+    }
+    auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
+    thumbnailer_->clear(selector);
+}
+
+void AdminInterface::Compact(int cache_id)
+{
+    if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
+    {
+        sendErrorReply(ADMIN_ERROR, QString("Compact(): invalid cache selector: ") + QString::number(cache_id));
+        return;
+    }
+    auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
+    thumbnailer_->compact(selector);
 }
 
 void AdminInterface::Shutdown()

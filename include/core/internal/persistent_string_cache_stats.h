@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <sstream>
 
 namespace core
 {
@@ -38,10 +39,9 @@ class PersistentStringCacheStats
 public:
     PersistentStringCacheStats() noexcept
         : policy_(CacheDiscardPolicy::lru_only)
+        , max_cache_size_(0)
         , num_entries_(0)
         , cache_size_(0)
-        , max_cache_size_(0)
-        , headroom_(0)
         , state_(Initialized)
     {
         clear();
@@ -55,10 +55,11 @@ public:
 
     std::string cache_path_;           // Immutable
     core::CacheDiscardPolicy policy_;  // Immutable
+    int64_t max_cache_size_;
+
     int64_t num_entries_;
     int64_t cache_size_;
-    int64_t max_cache_size_;
-    int64_t headroom_;
+    PersistentCacheStats::Histogram hist_;
 
     // Values below are reset by a call to clear().
     int64_t hits_;
@@ -73,7 +74,6 @@ public:
     std::chrono::system_clock::time_point most_recent_miss_time_;
     std::chrono::system_clock::time_point longest_hit_run_time_;
     std::chrono::system_clock::time_point longest_miss_run_time_;
-    PersistentCacheStats::Histogram hist_;
 
     enum State
     {
@@ -83,7 +83,7 @@ public:
     };
     State state_;
 
-    void inc_hits()
+    void inc_hits() noexcept
     {
         ++hits_since_last_miss_;
         ++hits_;
@@ -101,7 +101,7 @@ public:
         }
     }
 
-    void inc_misses()
+    void inc_misses() noexcept
     {
         ++misses_since_last_hit_;
         ++misses_;
@@ -119,19 +119,19 @@ public:
         }
     }
 
-    void hist_decrement(int64_t size)
+    void hist_decrement(int64_t size) noexcept
     {
         assert(size > 0);
         --hist_[size_to_index(size)];
     }
 
-    void hist_increment(int64_t size)
+    void hist_increment(int64_t size) noexcept
     {
         assert(size > 0);
         ++hist_[size_to_index(size)];
     }
 
-    void hist_clear()
+    void hist_clear() noexcept
     {
         memset(&hist_[0], 0, hist_.size() * sizeof(PersistentCacheStats::Histogram::value_type));
     }
@@ -152,8 +152,74 @@ public:
         longest_miss_run_time_ = std::chrono::system_clock::time_point();
     }
 
+    // Serialize the stats.
+
+    std::string serialize() const
+    {
+        using namespace std;
+        using namespace std::chrono;
+
+        ostringstream os;
+        os << num_entries_ << " "
+           << cache_size_ << " "
+           << hits_ << " "
+           << misses_ << " "
+           << hits_since_last_miss_ << " "
+           << misses_since_last_hit_ << " "
+           << longest_hit_run_ << " "
+           << longest_miss_run_ << " "
+           << ttl_evictions_ << " "
+           << lru_evictions_ << " "
+           << duration_cast<milliseconds>(most_recent_hit_time_.time_since_epoch()).count() << " "
+           << duration_cast<milliseconds>(most_recent_miss_time_.time_since_epoch()).count() << " "
+           << duration_cast<milliseconds>(longest_hit_run_time_.time_since_epoch()).count() << " "
+           << duration_cast<milliseconds>(longest_miss_run_time_.time_since_epoch()).count();
+        for (auto d : hist_)
+        {
+            os << " " << d;
+        }
+        return os.str();
+    }
+
+    // De-serialize the stats.
+
+    void deserialize(const std::string& s) noexcept
+    {
+        using namespace std;
+        using namespace std::chrono;
+
+        istringstream is(s);
+        int64_t mrht;
+        int64_t mrmt;
+        int64_t lhrt;
+        int64_t lmrt;
+        is >> num_entries_
+           >> cache_size_
+           >> hits_
+           >> misses_
+           >> hits_since_last_miss_
+           >> misses_since_last_hit_
+           >> longest_hit_run_
+           >> longest_miss_run_
+           >> ttl_evictions_
+           >> lru_evictions_
+           >> mrht
+           >> mrmt
+           >> lhrt
+           >> lmrt;
+        for (unsigned i = 0; i < PersistentCacheStats::NUM_BINS; ++i)
+        {
+            is >> hist_[i];
+        }
+        assert(!is.bad());
+        most_recent_hit_time_ = system_clock::time_point(milliseconds(mrht));
+        most_recent_miss_time_ = system_clock::time_point(milliseconds(mrmt));
+        longest_hit_run_time_ = system_clock::time_point(milliseconds(lhrt));
+        longest_miss_run_time_ = system_clock::time_point(milliseconds(lmrt));
+    }
+
 private:
-    unsigned size_to_index(int64_t size)
+    unsigned size_to_index(int64_t size) const noexcept
     {
         using namespace std;
         assert(size > 0);

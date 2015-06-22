@@ -14,7 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
-*/
+ */
 
 #pragma once
 
@@ -44,9 +44,6 @@ public:
     const ThumbnailGenerator& operator=(ThumbnailGenerator&& other) = delete;
 
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
-
-protected:
-    QString return_default_image_based_on_mime(QString const &id);
 };
 }
 }

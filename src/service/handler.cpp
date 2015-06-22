@@ -1,27 +1,27 @@
 /*
- * Copyright (C) 2015 Canonical, Ltd.
+ * Copyright (C) 2015 Canonical Ltd.
  *
- * Authors:
- *    James Henstridge <james.henstridge@canonical.com>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of version 3 of the GNU General Public License as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #include "handler.h"
-#include <internal/safe_strerror.h>
-#include <internal/raii.h>
 
-#include <QDebug>
+#include <internal/raii.h>
+#include <internal/safe_strerror.h>
+#include <internal/trace.h>
+
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QtConcurrent>
@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+using namespace std;
 using namespace unity::thumbnailer::internal;
 
 namespace
@@ -44,15 +45,15 @@ struct FdOrError
     QString error;
 };
 
-QDBusUnixFileDescriptor write_to_tmpfile(std::string const& image)
+QDBusUnixFileDescriptor write_to_tmpfile(string const& image)
 {
     static auto find_tmpdir = []
     {
         char const* dirp = getenv("TMPDIR");
-        std::string dir = dirp ? dirp : "/tmp";
+        string dir = dirp ? dirp : "/tmp";
         return dir;
     };
-    static std::string dir = find_tmpdir();
+    static string dir = find_tmpdir();
 
     FdPtr fd(open(dir.c_str(), O_TMPFILE | O_RDWR | O_CLOEXEC), do_close);
     // Different kernel verions return different errno if they don't
@@ -66,29 +67,37 @@ QDBusUnixFileDescriptor write_to_tmpfile(std::string const& image)
         // open /tmp.
         //
         // As a fallback, use mkstemp() and unlink the resulting file.
-        std::string tmpfile = dir + "/thumbnail.XXXXXX";
+        // LCOV_EXCL_START
+        string tmpfile = dir + "/thumbnail.XXXXXX";
         fd.reset(mkostemp(const_cast<char*>(tmpfile.data()), O_CLOEXEC));
         if (fd.get() >= 0)
         {
             unlink(tmpfile.data());
         }
+        // LCOV_EXCL_STOP
     }
     if (fd.get() < 0)
     {
-        std::string err = "cannot create tmpfile in " + dir + ": " + safe_strerror(errno);
-        throw std::runtime_error(err);
+        // LCOV_EXCL_START
+        string err = "Handler: cannot create tmpfile in " + dir + ": " + safe_strerror(errno);
+        throw runtime_error(err);
+        // LCOV_EXCL_STOP
     }
     auto rc = write(fd.get(), &image[0], image.size());
     if (rc == -1)
     {
-        std::string err = "cannot write image data in " + dir + ": " + safe_strerror(errno);
-        throw std::runtime_error(err);
+        // LCOV_EXCL_START
+        string err = "Handler: cannot write image data in " + dir + ": " + safe_strerror(errno);
+        throw runtime_error(err);
+        // LCOV_EXCL_STOP
     }
-    else if (std::string::size_type(rc) != image.size())
+    else if (string::size_type(rc) != image.size())
     {
-        std::string err = "short write for image data in " + dir + "(requested = " + std::to_string(image.size()) +
-                          ", actual = " + std::to_string(rc) + ")";
-        throw std::runtime_error(err);
+        // LCOV_EXCL_START
+        string err = "Handler: short write for image data in " + dir + "(requested = " +
+                          to_string(image.size()) + ", actual = " + to_string(rc) + ")";
+        throw runtime_error(err);
+        // LCOV_EXCL_STOP
     }
     lseek(fd.get(), SEEK_SET, 0);  // No error check needed, can't fail.
 
@@ -98,8 +107,10 @@ QDBusUnixFileDescriptor write_to_tmpfile(std::string const& image)
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace service
 {
 
@@ -107,10 +118,18 @@ struct HandlerPrivate
 {
     QDBusConnection bus;
     QDBusMessage const message;
-    std::shared_ptr<QThreadPool> check_pool;
-    std::shared_ptr<QThreadPool> create_pool;
+    shared_ptr<QThreadPool> check_pool;
+    shared_ptr<QThreadPool> create_pool;
     RateLimiter& limiter;
-    std::unique_ptr<ThumbnailRequest> request;
+    CredentialsCache& creds;
+    unique_ptr<ThumbnailRequest> request;
+    chrono::system_clock::time_point start_time;            // Overall start time
+    chrono::system_clock::time_point finish_time;           // Overall finish time
+    chrono::system_clock::time_point schedule_start_time;   // Time at which download/extract is scheduled.
+    chrono::system_clock::time_point download_start_time;   // Time at which download/extract is started.
+    chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
+    QString details;
+    QString status;
 
     bool cancelled = false;
     QFutureWatcher<FdOrError> checkWatcher;
@@ -118,27 +137,34 @@ struct HandlerPrivate
 
     HandlerPrivate(QDBusConnection const& bus,
                    QDBusMessage const& message,
-                   std::shared_ptr<QThreadPool> check_pool,
-                   std::shared_ptr<QThreadPool> create_pool,
+                   shared_ptr<QThreadPool> check_pool,
+                   shared_ptr<QThreadPool> create_pool,
                    RateLimiter& limiter,
-                   std::unique_ptr<ThumbnailRequest>&& request)
+                   CredentialsCache& creds,
+                   unique_ptr<ThumbnailRequest>&& request,
+                   QString const& details)
         : bus(bus)
         , message(message)
         , check_pool(check_pool)
         , create_pool(create_pool)
         , limiter(limiter)
-        , request(std::move(request))
+        , creds(creds)
+        , request(move(request))
+        , details(details)
     {
+        start_time = chrono::system_clock::now();
     }
 };
 
 Handler::Handler(QDBusConnection const& bus,
                  QDBusMessage const& message,
-                 std::shared_ptr<QThreadPool> check_pool,
-                 std::shared_ptr<QThreadPool> create_pool,
+                 shared_ptr<QThreadPool> check_pool,
+                 shared_ptr<QThreadPool> create_pool,
                  RateLimiter& limiter,
-                 std::unique_ptr<ThumbnailRequest>&& request)
-    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, std::move(request)))
+                 CredentialsCache& creds,
+                 unique_ptr<ThumbnailRequest>&& request,
+                 QString const& details)
+    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, creds, move(request), details))
 {
     connect(&p->checkWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::checkFinished);
     connect(p->request.get(), &ThumbnailRequest::downloadFinished, this, &Handler::downloadFinished);
@@ -151,26 +177,52 @@ Handler::~Handler()
     // ensure that jobs occurring in the thread pool complete.
     p->checkWatcher.waitForFinished();
     p->createWatcher.waitForFinished();
-    qDebug() << "Handler" << this << "destroyed";
 }
 
-std::string const& Handler::key() const
+string const& Handler::key() const
 {
     return p->request->key();
 }
 
 void Handler::begin()
 {
+    p->creds.get(p->message.service(),
+                 [this](CredentialsCache::Credentials const& credentials)
+                 {
+                     gotCredentials(credentials);
+                 });
+}
+
+void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
+{
+    if (!credentials.valid)
+    {
+        sendError("gotCredentials(): " + details() + ": could not retrieve peer credentials");
+        return;
+    }
+    try
+    {
+        p->request->check_client_credentials(
+            credentials.user, credentials.label);
+    }
+    catch (std::exception const& e)
+    {
+        sendError("gotCredentials(): " + details() + ": " + e.what());
+        return;
+    }
+
     auto do_check = [this]() -> FdOrError
     {
         try
         {
             return FdOrError{check(), nullptr};
         }
+        // LCOV_EXCL_START
         catch (std::exception const& e)
         {
             return FdOrError{QDBusUnixFileDescriptor(), e.what()};
         }
+        // LCOV_EXCL_STOP
     };
     p->checkWatcher.setFuture(QtConcurrent::run(p->check_pool.get(), do_check));
 }
@@ -182,9 +234,10 @@ void Handler::begin()
 // which will be returned to the user.
 //
 // If not, we continue to the asynchronous download stage.
+
 QDBusUnixFileDescriptor Handler::check()
 {
-    std::string art_image = p->request->thumbnail();
+    string art_image = p->request->thumbnail();
 
     if (art_image.empty())
     {
@@ -195,6 +248,8 @@ QDBusUnixFileDescriptor Handler::check()
 
 void Handler::checkFinished()
 {
+    p->finish_time = chrono::system_clock::now();     // Set finish_time in case something below throws.
+
     if (p->cancelled)
     {
         return;
@@ -207,28 +262,46 @@ void Handler::checkFinished()
     }
     catch (std::exception const& e)
     {
-        sendError(e.what());
+        sendError("checkFinished(): " + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isNull())
     {
-        sendError(fd_error.error);
+        sendError("checkFinished(): " + details() + ": " + fd_error.error);
         return;
     }
-    // Did we find a valid thumbnail in the cache?
+    // Did we find a valid thumbnail in the cache or generated it locally from an image file?
     if (fd_error.fd.isValid())
     {
         sendThumbnail(fd_error.fd);
+        // Set time again, because sending the thumbnail could take a while.
+        p->finish_time = chrono::system_clock::now();
+        return;
     }
-    else
+
+    if (p->request->status() == ThumbnailRequest::FetchStatus::needs_download)
     {
-        // otherwise move on to the download phase.
-        p->limiter.schedule([&]{ p->request->download(); });
+        try
+        {
+            // otherwise move on to the download phase.
+            p->schedule_start_time = chrono::system_clock::now();
+            p->limiter.schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
+        }
+        catch (std::exception const& e)
+        {
+            p->finish_time = chrono::system_clock::now();
+            sendError(e.what());
+        }
+        return;
     }
+
+    p->finish_time = chrono::system_clock::now();
+    sendError("Handler::check_finished(): no artwork for " + details() + ": " + status());
 }
 
 void Handler::downloadFinished()
 {
+    p->download_finish_time = chrono::system_clock::now();
     p->limiter.done();
 
     if (p->cancelled)
@@ -250,23 +323,26 @@ void Handler::downloadFinished()
     p->createWatcher.setFuture(QtConcurrent::run(p->create_pool.get(), do_create));
 }
 
-// create() picks up after the asynchrnous download stage completes.
+// create() picks up after the asynchronous download stage completes.
 // It effectively repeats the check() stage, except that thumbnailing
 // failures are now errors.  It is called synchronously in the thread
 // pool.
+
 QDBusUnixFileDescriptor Handler::create()
 {
-    std::string art_image = p->request->thumbnail();
+    string art_image = p->request->thumbnail();
 
     if (art_image.empty())
     {
-        throw std::runtime_error("Handler::create(): Could not get thumbnail");
+        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
     }
     return write_to_tmpfile(art_image);
 }
 
 void Handler::createFinished()
 {
+    // Set finish_time in case something below throws.
+    p->finish_time = chrono::system_clock::now();
     if (p->cancelled)
     {
         return;
@@ -279,12 +355,12 @@ void Handler::createFinished()
     }
     catch (std::exception const& e)
     {
-        sendError(e.what());
+        sendError(QString("Handler::create_finished(): ") + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isEmpty())
     {
-        sendError(fd_error.error);
+        sendError("Handler::create_finished(): " + fd_error.error);
         return;
     }
     if (fd_error.fd.isValid())
@@ -293,8 +369,9 @@ void Handler::createFinished()
     }
     else
     {
-        sendError("Handler::create() did not produce a valid file descriptor");
+        sendError("Handler::create(): invalid file descriptor for " + details());
     }
+    p->finish_time = chrono::system_clock::now();
 }
 
 void Handler::sendThumbnail(QDBusUnixFileDescriptor const& unix_fd)
@@ -305,9 +382,69 @@ void Handler::sendThumbnail(QDBusUnixFileDescriptor const& unix_fd)
 
 void Handler::sendError(QString const& error)
 {
+    if (p->request->status() == ThumbnailRequest::FetchStatus::error)
+    {
+        qWarning() << error;
+    }
     p->bus.send(p->message.createErrorReply(ART_ERROR, error));
     Q_EMIT finished();
 }
+
+chrono::microseconds Handler::completion_time() const
+{
+    assert(p->finish_time != chrono::system_clock::time_point());
+    return chrono::duration_cast<chrono::microseconds>(p->finish_time - p->start_time);
 }
+
+chrono::microseconds Handler::queued_time() const
+{
+    // Returned duration may be zero if the request wasn't kept waiting in the queue.
+    return chrono::duration_cast<chrono::microseconds>(p->download_start_time - p->schedule_start_time);
 }
+
+chrono::microseconds Handler::download_time() const
+{
+    // Not a typo: we really mean to check finish_time, not download_finish_time in the assert.
+    assert(p->finish_time != chrono::system_clock::time_point());
+    if (p->download_start_time == chrono::system_clock::time_point())
+    {
+        return chrono::microseconds(0);  // We had a cache hit and didn't download
+    }
+    return chrono::duration_cast<chrono::microseconds>(p->download_finish_time - p->download_start_time);
 }
+
+QString Handler::details() const
+{
+    return p->details;
+}
+
+QString Handler::status() const
+{
+    switch (p->request->status())
+    {
+    case ThumbnailRequest::FetchStatus::cache_hit:
+        return "HIT";
+    case ThumbnailRequest::FetchStatus::scaled_from_fullsize:
+        return "FULL-SIZE HIT";
+    case ThumbnailRequest::FetchStatus::cached_failure:
+        return "FAILED PREVIOUSLY";
+    case ThumbnailRequest::FetchStatus::needs_download:
+        return "NEEDS DOWNLOAD";
+    case ThumbnailRequest::FetchStatus::downloaded:
+        return "MISS";
+    case ThumbnailRequest::FetchStatus::not_found:
+        return "NO ARTWORK";
+    case ThumbnailRequest::FetchStatus::no_network:
+        return "NETWORK DOWN";
+    case ThumbnailRequest::FetchStatus::error:
+        return "ERROR";
+    default:
+        abort();  // LCOV_EXCL_LINE  // Impossible.
+    }
+}
+
+}  // namespace service
+
+}  // namespace thumbnailer
+
+}  // namespace unity

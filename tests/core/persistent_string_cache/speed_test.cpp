@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -64,7 +64,7 @@ int random_int(int min, int max)
     return uniform_dist(engine);
 }
 
-int random_size(double mean, double stddev, int min, int max)
+int random_size(double mean, double stddev, int64_t min, int64_t max)
 {
     static auto seed = random_device()();
     static mt19937 engine(seed);
@@ -106,18 +106,18 @@ TEST(PersistentStringCache, basic)
 
     // Adjustable parameters
 
-    int const max_cache_size = 100 * MB;
-    int const record_size = 20 * kB;
+    int64_t const max_cache_size = 100 * MB;
+    int const value_size = 20 * kB;
     double const hit_rate = 0.8;
     int const iterations = 10000;
     int keylen = 60;
-    double const stddev = record_size / 3;
+    double const stddev = value_size / 3.0;
     auto const cost_of_miss = chrono::microseconds(0);
 
     // End adjustable parameters
 
-    int const num_records = max_cache_size / record_size;
-    int const max_key = ((1 - hit_rate) + 1) * num_records;
+    int64_t const num_records = max_cache_size / (keylen + value_size);
+    int const max_key = ((1 - hit_rate) + 1) * num_records - 1;
 
     unlink_db(test_db);
     auto c = PersistentStringCache::open(test_db, max_cache_size, CacheDiscardPolicy::lru_only);
@@ -127,7 +127,7 @@ TEST(PersistentStringCache, basic)
 
     cout << "Cache size:     " << max_cache_size / MB << " MB" << endl;
     cout << "Records:        " << num_records << endl;
-    cout << "Record size:    " << record_size / kB << " kB" << endl;
+    cout << "Record size:    " << value_size / kB << " kB" << endl;
     cout << "Std. deviation: " << stddev << endl;
     cout << "Key length:     " << keylen << endl;
     cout << "Hit rate:       " << hit_rate << endl;
@@ -141,19 +141,19 @@ TEST(PersistentStringCache, basic)
     static Optional<string> val;
 
     auto start = chrono::system_clock::now();
-    for (int i = 0; i <= num_records; ++i)
+    for (int i = 0; i < num_records; ++i)
     {
         static ostringstream s;
         s << setfill('0') << setw(keylen) << i;
         string key = s.str();
         s.clear();
         s.str("");
-        string const& val = random_string(random_size(record_size, stddev, 0, max_cache_size));
+        string const& val = random_string(random_size(value_size, stddev, 0, max_cache_size));
         c->put(key, val);
     }
     auto now = chrono::system_clock::now();
     double secs = chrono::duration_cast<chrono::milliseconds>(now - start).count() / 1000.0;
-    cout << "Cache full, inserted " << (num_records * record_size) / MB << " MB in " << secs << " seconds ("
+    cout << "Cache full, inserted " << (num_records * value_size) / MB << " MB in " << secs << " seconds ("
          << c->size_in_bytes() / MB / secs << " MB/sec)" << endl;
 
     int64_t bytes_read = 0;
@@ -166,7 +166,7 @@ TEST(PersistentStringCache, basic)
         val = c->get(key);
         if (!val)
         {
-            string const& new_val = random_string(random_size(record_size, stddev, 0, max_cache_size));
+            string const& new_val = random_string(random_size(value_size, stddev, 0, max_cache_size));
             this_thread::sleep_for(cost_of_miss);
             c->put(key, new_val);
             bytes_written += new_val.size();
@@ -196,8 +196,9 @@ TEST(PersistentStringCache, basic)
     cout << endl
          << "Compacting cache... " << flush;
     start = chrono::system_clock::now();
-    c.reset();
+    c->compact();
     now = chrono::system_clock::now();
+    c.reset();
     secs = chrono::duration_cast<chrono::milliseconds>(now - start).count() / 1000;
     cout << "done" << endl;
     cout << "Time:          " << secs << " sec" << endl;

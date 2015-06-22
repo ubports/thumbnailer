@@ -1,16 +1,16 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: James Henstridge <james.henstridge@canonical.com>
@@ -455,14 +455,20 @@ Image Image::scale(QSize requested_size) const
     return scaled;
 }
 
-string Image::to_jpeg() const
+string Image::to_jpeg(int quality) const
 {
     assert(pixbuf_);
+
+    if (quality < 0 || quality > 100)
+    {
+        throw invalid_argument("Image::to_jpeg(): quality out of range [0..100]: " + to_string(quality));
+    }
+    string s_qual = to_string(quality);
 
     gchar* buf;
     gsize size;
     GError* err = nullptr;
-    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, "quality", "100", NULL))
+    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, "quality", s_qual.c_str(), NULL))
     {
         // LCOV_EXCL_START
         string msg = string("Image::get_data(): cannot convert to jpeg: ") + err->message;

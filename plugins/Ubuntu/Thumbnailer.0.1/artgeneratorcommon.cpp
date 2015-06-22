@@ -16,16 +16,19 @@
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
  *          James Henstridge <james.henstridge@canonical.com>
  *          Pawel Stolowski <pawel.stolowski@canonical.com>
-*/
+ */
 
 #include "artgeneratorcommon.h"
+
 #include <QFile>
 #include <QImageReader>
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -49,14 +52,21 @@ QImage imageFromFd(int fd, QSize* realSize, const QSize& requestedSize)
         }
         if (imageSize.width() > validRequestedSize.width() || imageSize.height() > validRequestedSize.height())
         {
+            // TODO: Can this case ever arise? It seems that the dbus layer would
+            //       have to be defective for the code to ever get into this branch?
+            // LCOV_EXCL_START
             imageSize.scale(validRequestedSize, Qt::KeepAspectRatio);
             reader.setScaledSize(imageSize);
+            // LCOV_EXCL_STOP
         }
     }
     QImage image = reader.read();
     *realSize = image.size();
     return image;
 }
-}
-}
-}
+
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

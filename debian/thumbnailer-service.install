@@ -1,3 +1,4 @@
+usr/bin/thumbnailer-admin
 usr/lib/*/thumbnailer/thumbnailer-service
 usr/lib/*/thumbnailer/vs-thumb
 usr/share/dbus-1/services/com.canonical.Thumbnailer.service

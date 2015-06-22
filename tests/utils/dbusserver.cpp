@@ -2,36 +2,31 @@
  * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #include "dbusserver.h"
+#include <service/dbus_names.h>
 #include <testsetup.h>
 
 #include <libqtdbustest/DBusTestRunner.h>
 #include <libqtdbustest/QProcessDBusService.h>
 
-namespace
-{
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-
-const char THUMBNAILER_BUS_PATH[] = "/com/canonical/Thumbnailer";
-const char ADMIN_BUS_PATH[] = "/com/canonical/ThumbnailerAdmin";
-}
-
 DBusServer::DBusServer()
 {
+    using namespace unity::thumbnailer::service;
+
     runner_.reset(new QtDBusTest::DBusTestRunner());
     service_.reset(new QtDBusTest::QProcessDBusService(
         BUS_NAME, QDBusConnection::SessionBus,

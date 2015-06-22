@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -1463,13 +1463,15 @@ TEST(PersistentStringCacheImpl, invalidate)
     EXPECT_EQ(0, c.size());
     EXPECT_EQ(0, c.size_in_bytes());
 
-    // For coverage mainly, and to verify that invalidate() indeed compacts the DB.
+    // For coverage mainly, and to verify that compact() indeed compacts the DB.
     c.invalidate();
+    c.compact();
     EXPECT_LT(c.disk_size_in_bytes(), 1000);
 }
 
 TEST(PersistentStringCacheImpl, stats)
 {
+    PersistentCacheStats original_stats;
     {
         unlink_db(TEST_DB);
 
@@ -1620,14 +1622,40 @@ TEST(PersistentStringCacheImpl, stats)
         EXPECT_EQ(P(900, 999), bounds[18]);
         EXPECT_EQ(P(900000000, 999999999), bounds[72]);
         EXPECT_EQ(P(1000000000, numeric_limits<int32_t>::max()), bounds[73]);
+
+        // Generate a few hits and misses.
+        for (auto i = 0; i < 10; ++i)
+        {
+            c.get(to_string(i), val);
+        }
+        s = c.stats();
+        original_stats = s;
+        EXPECT_EQ(1, original_stats.hits());
+        EXPECT_EQ(9, original_stats.misses());
+        EXPECT_EQ(0, original_stats.hits_since_last_miss());
+        EXPECT_EQ(5, original_stats.misses_since_last_hit());
+        EXPECT_EQ(1, original_stats.longest_hit_run());
+        EXPECT_EQ(5, original_stats.longest_miss_run());
+        EXPECT_EQ(0, original_stats.ttl_evictions());
+        EXPECT_EQ(0, original_stats.lru_evictions());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.most_recent_hit_time());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.most_recent_miss_time());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.longest_hit_run_time());
+        EXPECT_NE(chrono::system_clock::time_point(), original_stats.longest_miss_run_time());
     }
 
     {
+        using namespace std::chrono;
+
         // Re-open previous cache.
         PersistentStringCacheImpl c(TEST_DB);
+        auto s = c.stats();
+
+        // size and size_in_bytes must be the same.
+        EXPECT_EQ(1, s.size());
+        EXPECT_EQ(31, s.size_in_bytes());
 
         // Histogram must be re-established when opened.
-        auto s = c.stats();
         auto hist = s.histogram();
         EXPECT_EQ(0, hist[0]);
         EXPECT_EQ(0, hist[1]);
@@ -1637,6 +1665,86 @@ TEST(PersistentStringCacheImpl, stats)
         {
             EXPECT_EQ(0, hist[i]);  // Other bins must still be empty.
         }
+
+        // Ephemeral counters must still be intact.
+        EXPECT_EQ(original_stats.hits(), s.hits());
+        EXPECT_EQ(original_stats.misses(), s.misses());
+        EXPECT_EQ(original_stats.hits_since_last_miss(), s.hits_since_last_miss());
+        EXPECT_EQ(original_stats.misses_since_last_hit(), s.misses_since_last_hit());
+        EXPECT_EQ(original_stats.longest_hit_run(), s.longest_hit_run());
+        EXPECT_EQ(original_stats.longest_miss_run(), s.longest_miss_run());
+        EXPECT_EQ(original_stats.ttl_evictions(), s.ttl_evictions());
+        EXPECT_EQ(original_stats.lru_evictions(), s.lru_evictions());
+
+        // Time stamps must still be intact.
+        auto orig_t = duration_cast<milliseconds>(original_stats.most_recent_hit_time().time_since_epoch()).count();
+        auto s_t = duration_cast<milliseconds>(s.most_recent_hit_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+
+        orig_t = duration_cast<milliseconds>(original_stats.most_recent_miss_time().time_since_epoch()).count();
+        s_t = duration_cast<milliseconds>(s.most_recent_miss_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+
+        orig_t = duration_cast<milliseconds>(original_stats.longest_hit_run_time().time_since_epoch()).count();
+        s_t = duration_cast<milliseconds>(s.longest_hit_run_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+
+        orig_t = duration_cast<milliseconds>(original_stats.longest_miss_run_time().time_since_epoch()).count();
+        s_t = duration_cast<milliseconds>(s.longest_miss_run_time().time_since_epoch()).count();
+        EXPECT_EQ(orig_t, s_t);
+    }
+
+    {
+        // Simulate crash by clearing the dirty flag.
+        unique_ptr<leveldb::DB> db;
+        leveldb::Options options;
+        leveldb::DB* p;
+        auto s = leveldb::DB::Open(options, TEST_DB, &p);
+        ASSERT_TRUE(s.ok());
+        db.reset(p);
+        leveldb::WriteOptions write_options;
+        string val = "1";
+        s = db->Put(write_options, "!DIRTY", val);
+        ASSERT_TRUE(s.ok());
+    };
+
+    {
+        using namespace std::chrono;
+
+        // Re-open previous (now dirty) cache.
+        PersistentStringCacheImpl c(TEST_DB);
+        auto s = c.stats();
+
+        // size and size_in_bytes must be the same.
+        EXPECT_EQ(1, s.size());
+        EXPECT_EQ(31, s.size_in_bytes());
+
+        // Histogram must be re-established when opened.
+        auto hist = s.histogram();
+        EXPECT_EQ(0, hist[0]);
+        EXPECT_EQ(0, hist[1]);
+        EXPECT_EQ(0, hist[2]);
+        EXPECT_EQ(1, hist[3]);
+        for (unsigned i = 4; i < hist.size(); ++i)
+        {
+            EXPECT_EQ(0, hist[i]);  // Other bins must still be empty.
+        }
+
+        // Ephemeral counters must all be zero.
+        EXPECT_EQ(0, s.hits());
+        EXPECT_EQ(0, s.misses());
+        EXPECT_EQ(0, s.hits_since_last_miss());
+        EXPECT_EQ(0, s.misses_since_last_hit());
+        EXPECT_EQ(0, s.longest_hit_run());
+        EXPECT_EQ(0, s.longest_miss_run());
+        EXPECT_EQ(0, s.ttl_evictions());
+        EXPECT_EQ(0, s.lru_evictions());
+
+        // Time stamps must all be at the epoch.
+        EXPECT_EQ(system_clock::time_point(), s.most_recent_hit_time());
+        EXPECT_EQ(system_clock::time_point(), s.most_recent_miss_time());
+        EXPECT_EQ(system_clock::time_point(), s.longest_hit_run_time());
+        EXPECT_EQ(system_clock::time_point(), s.longest_miss_run_time());
     }
 }
 

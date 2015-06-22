@@ -6,5 +6,72 @@
       <summary>API key for dash.ubuntu.com service</summary>
       <description>API key for dash.ubuntu.com service</description>
     </key>
+
+    <key type="i" name="full-size-cache-size">
+      <default>50</default>
+      <summary>Size of the full-size image cache in megabytes</summary>
+      <description>The full-size cache is used to store full-size extracted media artwork and downloaded album art.</description>
+    </key>
+
+    <key type="i" name="thumbnail-cache-size">
+      <default>100</default>
+      <summary>Size of the thumbnail image cache in megabytes</summary>
+      <description>The thumbnail image cache stores scaled thumbnail images.</description>
+    </key>
+
+    <key type="i" name="failure-cache-size">
+      <default>2</default>
+      <summary>Size of the failure cache in megabytes</summary>
+      <description>The failure cache records information about failed downloads or failed thumbnail extractions.</description>
+    </key>
+
+    <key type="i" name="max-thumbnail-size">
+      <default>1920</default>
+      <summary>Maximum size in pixels for a thumbnail</summary>
+      <description>
+        Requests for thumbnails larger than this will automatically reduce the thumbnail to max-thumbnail-size in the larger dimension. An exception are requests for local thumbnails with size 0x0, which are returned in their original size.
+     </description>
+    </key>
+
+    <key type="i" name="retry-not-found-hours">
+      <default>168</default>
+      <summary>Time to wait before re-trying for remote artwork that did not exist</summary>
+      <description>
+        If artwork cannot be retrieved because the remote server authoritavely confirmed that no artwork exists for an artist and album, this parameter defines how long the thumbnailer waits before trying to download the same image again. The default is 168 hours (one week).
+     </description>
+    </key>
+
+    <key type="i" name="retry-error-hours">
+      <default>2</default>
+      <summary>Time to wait before re-trying remote artwork that failed to download</summary>
+      <description>
+        If artwork cannot be retrieved from the remote server due to an unexpected error (such as the server not responding), this parameter defines how long the thumbnailer waits before trying to download the same image again. The default is two hours.
+     </description>
+    </key>
+
+    <key type="i" name="max-downloads">
+      <default>2</default>
+      <summary>Maximum number of concurrent downloads</summary>
+      <description>
+        This parameter sets the maximum number of concurrent downloads for remote artwork.
+     </description>
+    </key>
+
+    <key type="i" name="max-extractions">
+      <default>0</default>
+      <summary>Maximum number of concurrent image extractions</summary>
+      <description>
+        This parameter sets the maximum number of concurrent image extractions from local media files. The default value is zero, which sets the value according to the number of CPU cores.
+     </description>
+    </key>
+
+    <key type="i" name="extraction-timeout">
+      <default>10</default>
+      <summary>Maximum amount of time to wait for an image extraction or download (in seconds)</summary>
+      <description>
+        This parameter sets the amount of time (in seconds) to wait for a remote image download or
+        a thumbnail extraction before giving up.
+     </description>
+    </key>
   </schema>
 </schemalist>

@@ -1,16 +1,16 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Michi Henning <michi.henning@canonical.com>
@@ -54,8 +54,7 @@ string read_file(string const& filename)
     if (fstat(fd_ptr.get(), &st) == -1)
     {
         // LCOV_EXCL_START
-        throw runtime_error("read_file(): cannot fstat \"" + filename + "\": " +
-                            safe_strerror(errno));
+        throw runtime_error("read_file(): cannot fstat \"" + filename + "\": " + safe_strerror(errno));
         // LCOV_EXCL_STOP
     }
 
@@ -66,8 +65,7 @@ string read_file(string const& filename)
     if (rc == -1)
     {
         // LCOV_EXCL_START
-        throw runtime_error("read_file(): cannot read from \"" + filename + "\": " +
-                            safe_strerror(errno));
+        throw runtime_error("read_file(): cannot read from \"" + filename + "\": " + safe_strerror(errno));
         // LCOV_EXCL_STOP
     }
     if (rc != st.st_size)
@@ -113,10 +111,9 @@ void write_file(string const& filename, string const& contents)
         int rc = write(fd_ptr.get(), &contents[0], contents.size());
         if (rc == -1)
         {
-        // LCOV_EXCL_START
-            throw runtime_error("write_file(): cannot write to \"" + filename + "\": " +
-                                safe_strerror(errno));
-        // LCOV_EXCL_STOP
+            // LCOV_EXCL_START
+            throw runtime_error("write_file(): cannot write to \"" + filename + "\": " + safe_strerror(errno));
+            // LCOV_EXCL_STOP
         }
         if (string::size_type(rc) != contents.size())
         {
@@ -133,6 +130,47 @@ void write_file(string const& filename, string const& contents)
         // LCOV_EXCL_STOP
     }
 }
+
+// Write contents of in_fd to out_fd, using current read position of in_fd.
+
+void write_file(int in_fd, int out_fd)
+{
+    char buf[16 * 1024];
+    int bytes_read;
+    do
+    {
+        if ((bytes_read = read(in_fd, buf, sizeof(buf))) == -1)
+        {
+            throw runtime_error("read failed: " + safe_strerror(errno));
+        }
+        int bytes_written = write(out_fd, buf, bytes_read);
+        if (bytes_written == -1)
+        {
+            throw runtime_error("write failed: " + safe_strerror(errno));
+        }
+        // LCOV_EXCL_START
+        else if (bytes_written != bytes_read)
+        {
+            throw runtime_error("short write, requested " + to_string(bytes_read) + " bytes, wrote " +
+                                to_string(bytes_written) + " bytes");
+        }
+        // LCOV_EXCL_STOP
+    } while (bytes_read != 0);
+}
+
+// Write contents of fd to path.
+
+void write_file(int fd, string const& path)
+{
+    FdPtr out_fd(open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0600), do_close);
+    if (out_fd.get() == -1)
+    {
+        throw runtime_error("write_file(): cannot open " + path + ": " + safe_strerror(errno));
+    }
+    write_file(fd, out_fd.get());
+}
+
+// Return a temporary file name in TMPDIR.
 
 string create_tmp_filename()
 {

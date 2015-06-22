@@ -15,31 +15,27 @@
  *
  * Authors: Jussi Pakkanen <jussi.pakkanen@canonical.com>
  *          James Henstridge <james.henstridge@canonical.com>
-*/
+ */
 
 #include "albumartgenerator.h"
-#include "artgeneratorcommon.h"
-#include "thumbnailerimageresponse.h"
 
-#include <stdexcept>
-#include <QDebug>
-#include <QFile>
-#include <QUrlQuery>
-#include <QDBusUnixFileDescriptor>
-#include <QDBusReply>
+#include "artgeneratorcommon.h"
+#include <service/dbus_names.h>
+#include "thumbnailerimageresponse.h"
 
 namespace
 {
+
 const char DEFAULT_ALBUM_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
 
-const char BUS_NAME[] = "com.canonical.Thumbnailer";
-const char BUS_PATH[] = "/com/canonical/Thumbnailer";
-}
+}  // namespace
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -48,24 +44,21 @@ AlbumArtGenerator::AlbumArtGenerator()
 {
 }
 
-
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
     QUrlQuery query(id);
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
-        auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART);
-        qWarning() << "Invalid albumart uri:" << id;
-        response->finish_later_with_default_image();
-        return response;
+        qWarning() << "AlbumArtGenerator::requestImageResponse(): Invalid albumart uri:" << id;
+        return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART);
     }
 
     if (!connection)
     {
-        // Create them here and not them on the constrcutor so they belong to the proper thread
+        // Create connection here and not on the constructor, so it belongs to the proper thread.
         connection.reset(new QDBusConnection(
             QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(BUS_NAME, BUS_PATH, *connection));
+        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
@@ -73,10 +66,13 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
 
     // perform dbus call
     auto reply = iface->GetAlbumArt(artist, album, requestedSize);
-    auto watcher = new QDBusPendingCallWatcher(reply);
-    auto response = new ThumbnailerImageResponse(id, requestedSize, DEFAULT_ALBUM_ART, watcher);
-    return response;
+    std::unique_ptr<QDBusPendingCallWatcher> watcher(
+        new QDBusPendingCallWatcher(reply));
+    return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART, std::move(watcher));
 }
-}
-}
-}
+
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

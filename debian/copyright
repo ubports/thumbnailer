@@ -3,7 +3,27 @@ Upstream-Name: thumbnailer
 Source: https://launchpad.net/thumbnailer
 
 Files: *
-Copyright: 2013 Canonical ltd
+Copyright: 2015 Canonical Ltd.
+License: GPL-3
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License version 3 as
+ published by the Free Software Foundation.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On Debian/Ubuntu systems, the full text of the GPL v3 can be found in
+ `/usr/share/common-licenses/GPL-3'
+
+Files: plugins/*
+       src/core/*
+       include/core/*
+       tests/core/* include/internal/gobj_memory.h
+       include/internal/safe_strerror.h
+       src/safe_strerror.cpp
+Copyright: 2015 Canonical ltd
 License: LGPL-3
  This program is free software: you can redistribute it and/or modify
  it under the terms of version 3 of the GNU Lesser General Public
@@ -12,7 +32,7 @@ License: LGPL-3
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+ GNU Lesser General Public License for more details.
  .
  On Debian systems, the full text of the GNU Lesser General Public
  License version 3 can be found in the file

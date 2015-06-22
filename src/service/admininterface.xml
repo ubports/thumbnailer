@@ -14,7 +14,28 @@
       <arg direction="out" type="(suxxxxxxxxxxxttttau)(suxxxxxxxxxxxttttau)(suxxxxxxxxxxxttttau)" name="stats" />
       <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="unity::thumbnailer::service::AllStats"/>
     </method>
+    <method name="Clear">
+      <!--
+        Clears the selected cache (0 = all, 1 = image cache, 2 = thumbnail cache, 3 = failure cache).
+      -->
+      <arg direction="in" type="i" name="cache_id" />
+    </method>
+    <method name="ClearStats">
+      <!--
+        Clears statistics for the selected cache (0 = all, 1 = image cache, 2 = thumbnail cache, 3 = failure cache).
+      -->
+      <arg direction="in" type="i" name="cache_id" />
+    </method>
+    <method name="Compact">
+      <!--
+        Compacts the selected cache to consume minimal disk space (0 = all, 1 = image cache, 2 = thumbnail cache, 3 = failure cache).
+      -->
+      <arg direction="in" type="i" name="cache_id" />
+    </method>
     <method name="Shutdown">
+      <!--
+        Shuts down the thumbnailer service.
+      -->
     </method>
   </interface>
 </node>

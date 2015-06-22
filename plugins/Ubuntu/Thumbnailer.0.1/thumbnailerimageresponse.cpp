@@ -14,19 +14,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Xavi Garcia <xavi.garcia.mena@canonical.com>
-*/
+ */
 
 #include <thumbnailerimageresponse.h>
 #include <artgeneratorcommon.h>
 
-#include <QCoreApplication>
-#include <QDBusPendingReply>
-#include <QDBusPendingCallWatcher>
-#include <QDBusUnixFileDescriptor>
 #include <QDBusReply>
-#include <QEvent>
+#include <QDBusUnixFileDescriptor>
 #include <QDebug>
-#include <QMimeDatabase>
 
 namespace unity
 {
@@ -37,52 +32,57 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& id,
-                                                   QSize const& requested_size,
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image,
-                                                   QDBusPendingCallWatcher *watcher)
-    : id_(id)
-    , requested_size_(requested_size)
-    , texture_(nullptr)
+                                                   std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
+    : requested_size_(requested_size)
     , default_image_(default_image)
-    , watcher_(watcher)
+    , watcher_(std::move(watcher))
 {
-    if (watcher_)
-    {
-        connect(watcher, &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbus_call_finished);
-    }
-    char const* c_default_image = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
-    if (c_default_image)
-    {
-        default_image_ = QString(c_default_image);
-    }
+    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
 }
+
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
+                                                   QString const& default_image)
+    : requested_size_(requested_size)
+    , default_image_(default_image)
+{
+    loadDefaultImage();
+    // Queue the signal emission so there is time for the caller to connect.
+    QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
+}
+
+ThumbnailerImageResponse::~ThumbnailerImageResponse() = default;
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
     return texture_;
 }
 
-void ThumbnailerImageResponse::set_default_image()
+void ThumbnailerImageResponse::cancel()
 {
+    // Deleting the pending call watcher (which should hold the only
+    // reference to the pending call at this point) tells Qt that we
+    // are no longer interested in the reply.  The destruction will
+    // also clear up the signal connections.
+    watcher_.reset();
+}
+
+void ThumbnailerImageResponse::loadDefaultImage()
+{
+    char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
     QImage result;
-    result.load(default_image_);
+    result.load(env_default ? QString(env_default) : default_image_);
     texture_ = QQuickTextureFactory::textureFactoryForImage(result);
 }
 
-void ThumbnailerImageResponse::finish_later_with_default_image()
+void ThumbnailerImageResponse::dbusCallFinished()
 {
-    set_default_image();
-    QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
-}
-
-void ThumbnailerImageResponse::dbus_call_finished(QDBusPendingCallWatcher* watcher)
-{
-    QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher;
+    QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        qWarning() << "D-Bus error: " << reply.error().message();
-        set_default_image();
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << reply.error().message();
+        loadDefaultImage();
         Q_EMIT finished();
         return;
     }
@@ -95,17 +95,19 @@ void ThumbnailerImageResponse::dbus_call_finished(QDBusPendingCallWatcher* watch
         Q_EMIT finished();
         return;
     }
+    // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        qWarning() << "Album art loader failed: " << e.what();
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): Album art loader failed: " << e.what();
     }
     catch (...)
     {
-        qWarning() << "Unknown error when generating image.";
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): unknown exception";
     }
 
-    set_default_image();
+    loadDefaultImage();
     Q_EMIT finished();
+    // LCOV_EXCL_STOP
 }
 
 }  // namespace qml

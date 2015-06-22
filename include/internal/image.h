@@ -2,18 +2,18 @@
  * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: MichiHenning <michi@canonical.com>
+ * Authored by: Michi Henning <michi@canonical.com>
  */
 
 #pragma once
@@ -66,13 +66,10 @@ public:
     // requested size.
     Image scale(QSize requested_size) const;
 
-    // Returns image as JPEG data.
-    std::string to_jpeg() const;
+    // Returns image as JPEG data (quality must be in the range 0-100).
+    std::string to_jpeg(int quality = 75) const;
 
 private:
-    //typedef struct ::_GdkPixbuf GdkPixbuf;
-    //typedef gobj_ptr<GdkPixbuf> PixbufPtr;
-
     void load(Reader& reader, QSize requested_size);
 
     gobj_ptr<struct _GdkPixbuf> pixbuf_;

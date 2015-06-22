@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version 3 as
@@ -196,7 +196,7 @@ public:
     /**
     \brief Returns a histogram for the entries in the cache.
     */
-    Histogram const& histogram() const;
+    Histogram const& histogram() const noexcept;
 
     /**
     \brief Returns the bounds for each bin a histogram.
@@ -206,7 +206,7 @@ public:
     histogram for display. The returned pairs use inclusive ranges,
     that is, `pair.second` is the largest possible size of the bin.
     */
-    static HistogramBounds const& histogram_bounds();
+    static HistogramBounds const& histogram_bounds() noexcept;
 
     //@}
 

@@ -2,7 +2,10 @@ project(thumbnailer C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-cmake_minimum_required(VERSION 2.8.10)
+cmake_minimum_required(VERSION 2.8.11)
+
+# Suppress complaints by cmake about COMPILE_DEFINITIONS_<Config> caused by qt5 cmake macros.
+cmake_policy(SET CMP0043 OLD)
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower) # Build types should always be lower case
 
@@ -90,14 +93,18 @@ find_package(Qt5DBus REQUIRED)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_DEPS REQUIRED gstreamer-1.0 gstreamer-plugins-base-1.0 gstreamer-tag-1.0)
+pkg_check_modules(GOBJ_DEPS REQUIRED gobject-2.0)
 pkg_check_modules(GIO_DEPS REQUIRED gio-2.0 gio-unix-2.0)
 pkg_check_modules(IMG_DEPS REQUIRED gdk-pixbuf-2.0 libexif)
 pkg_check_modules(UNITY_API_DEPS REQUIRED libunity-api)
+pkg_check_modules(APPARMOR_DEPS REQUIRED libapparmor)
 
 include_directories(${GST_DEPS_INCLUDE_DIRS})
+include_directories(${GOBJ_DEPS_INCLUDE_DIRS})
 include_directories(${GIO_DEPS_INCLUDE_DIRS})
 include_directories(${IMG_DEPS_INCLUDE_DIRS})
 include_directories(${UNITY_API_DEPS_INCLUDE_DIRS})
+include_directories(${APPARMOR_DEPS_INCLUDE_DIRS})
 include_directories(include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -105,14 +112,12 @@ add_subdirectory(src)
 add_subdirectory(data)
 add_subdirectory(plugins/Ubuntu/Thumbnailer.0.1)
 add_subdirectory(tests)
-add_subdirectory(tools)
 add_subdirectory(include)
 
-# TODO: generate the list of test targets rather than enumerating them here.
-#       We'll do this when we sort out the test subtree.
 enable_coverage_report(
     TARGETS
         thumbnailer
+        thumbnailer-admin
         thumbnailer-service
         thumbnailer-qml
         vs-thumb
@@ -120,18 +125,7 @@ enable_coverage_report(
     FILTER
         ${CMAKE_SOURCE_DIR}/include/core/*
         ${CMAKE_SOURCE_DIR}/tests/*
-        ${CMAKE_SOURCE_DIR}/tools/*
         ${CMAKE_BINARY_DIR}/*
     TESTS
-        cachetool
-        downloaderstest
-        downloadtest
-        file_io
-        gobj_ptr
-        image
-        safe_strerror_test
-        test_dbus
-        test_qml
-        test_vsthumb
-        thumbnailer_test
+        ${UNIT_TEST_TARGETS}
 )
