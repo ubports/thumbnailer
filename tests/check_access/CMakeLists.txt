@@ -1,3 +1,4 @@
 add_executable(check_access_test check_access_test.cpp)
-target_link_libraries(check_access_test thumbnailer gtest)
+qt5_use_modules(check_access_test Network)
+target_link_libraries(check_access_test thumbnailer Qt5::Network gtest)
 add_test(check_access check_access_test)
