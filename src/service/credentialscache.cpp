@@ -83,10 +83,14 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     try
     {
         Credentials& credentials = old_cache_.at(peer);
+        // No real way to get coverage here because we'd
+        // need more than 50 peers with different credentials.
+        // LCOV_EXCL_START
         cache_.emplace(peer, std::move(credentials));
         old_cache_.erase(peer);
         callback(cache_.at(peer));
         return;
+        // LCOV_EXCL_STOP
     }
     catch (std::out_of_range const &)
     {
@@ -123,9 +127,11 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
     Credentials credentials;
     if (reply.isError())
     {
+        // LCOV_EXCL_START
         qWarning() << "CredentialsCache::received_credentials(): "
             "error retrieving credentials for" << peer <<
             ":" << reply.error().message();
+        // LCOV_EXCL_STOP
     }
     else
     {
@@ -144,7 +150,7 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
                 int pos = label.lastIndexOf(' ');
                 if (pos > 0 && label.endsWith(')') && label[pos+1] == '(')
                 {
-                    label.truncate(pos);
+                    label.truncate(pos);  // LCOV_EXCL_LINE
                 }
                 credentials.label = string(label.constData(), label.size());
             }
@@ -152,15 +158,17 @@ void CredentialsCache::received_credentials(QString const& peer, QDBusPendingRep
         else
         {
             // If AppArmor is not enabled, treat peer as unconfined.
-            credentials.label = "unconfined";
+            credentials.label = "unconfined";  // LCOV_EXCL_LINE
         }
     }
 
     // If we've hit our maximum cache size, start a new generation.
     if (cache_.size() >= MAX_CACHE_SIZE)
     {
+        // LCOV_EXCL_START
         old_cache_ = std::move(cache_);
         cache_.clear();
+        // LCOV_EXCL_STOP
     }
     cache_.emplace(peer, credentials);
 
