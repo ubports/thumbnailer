@@ -132,7 +132,12 @@ void ImageExtractor::processFinished()
             }
             break;
         case QProcess::CrashExit:
-            error_ = exe_path_.toStdString() + " crashed";
+            if (error_.empty())
+            {
+                // Conditional because, if get a timeout and send a kill,
+                // we don't want to overwrite the message set by timeout().
+                error_ = exe_path_.toStdString() + " crashed";
+            }
             break;
         default:
             abort();  // LCOV_EXCL_LINE  // Impossible
@@ -147,7 +152,6 @@ void ImageExtractor::timeout()
         process_.kill();
     }
     error_ = exe_path_.toStdString() + " did not return after " + to_string(timeout_ms_) + " milliseconds";
-    Q_EMIT finished();
 }
 
 void ImageExtractor::error()

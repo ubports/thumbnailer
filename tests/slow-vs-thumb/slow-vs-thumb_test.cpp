@@ -33,13 +33,6 @@ TEST(ThumbnailerTest, slow_vs_thumb)
 {
     Thumbnailer tn;
 
-    // Run fake vs-thumb that does nothing for 20 seconds.
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
-
-    setenv("TN_UTILDIR", TESTSRCDIR "/slow-vs-thumb/slow", true);
-
     auto request = tn.get_thumbnail(TEST_SONG, QSize());
     EXPECT_EQ("", request->thumbnail());
 
@@ -57,14 +50,14 @@ TEST(ThumbnailerTest, slow_vs_thumb)
         string msg = e.what();
         EXPECT_NE(string::npos, msg.find("did not return after 10000 milliseconds")) << msg;
     }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/slow-vs-thumb", true);
+
+    // Run fake vs-thumb that does nothing for 20 seconds.
+    setenv("TN_UTILDIR", TESTSRCDIR "/slow-vs-thumb/slow", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
