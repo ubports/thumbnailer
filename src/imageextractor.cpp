@@ -76,9 +76,8 @@ ImageExtractor::~ImageExtractor()
         process_.kill();
         if (!process_.waitForFinished(timeout_ms_))
         {
-            string msg = "~ImageExtractor(): " + exe_path_.toStdString() + " (pid " + to_string(process_.pid()) +
-                         ") did not exit after " + to_string(timeout_ms_) + " milliseconds";
-            qWarning() << QString::fromStdString(msg);
+            qWarning().nospace() << "~ImageExtractor(): " << exe_path_ << " (pid" << process_.pid()
+                       << ") did not exit after " << timeout_ms_ << " milliseconds";
         }
     }
 }
