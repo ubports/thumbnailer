@@ -1,3 +1,27 @@
+thumbnailer (2.1-0ubuntu1) UNRELEASED; urgency=medium
+
+  [ James Henstridge ]
+  * Expose more settings for the thumbnailer daemon via GSettings.
+  * Change the security policy implementation to use aa_query_label()
+    for file access checks rather than relying on file descriptor
+    passing.  This avoids the file descriptor exhaustion bugs with the
+    previous implementation. (LP: #1381713)
+
+  [ Michi Henning ]
+  * Add thumbnailer-admin tool, which can be used to check the status
+    of the cache and generate thumbnails via the command line.
+  * Add time stamps to log messages.
+  * Reduce the memory footprint of small caches, which in turn reduces
+    the footprint of thumbnailer-service.
+  * Don't implicitly compact the cache on service shutdown, as this
+    can take some time.
+  * Persist the cache stats over restarts of thumbnailer-service.
+  * Don't save JPEG thumbnails at quality=100, since the quality
+    improvement isn't justified by the extra storage.
+  * Don't retry downloads when we have a hit from the failure cache.
+
+ -- James Henstridge <james.henstridge@canonical.com>  Mon, 22 Jun 2015 17:31:39 +0800
+
 thumbnailer (2.0+15.10.20150527-0ubuntu2) wily; urgency=medium
 
   * Switch to unversioned Conflicts/Replaces on libthumbnailer0 to force
