@@ -38,7 +38,7 @@ ImageExtractor::ImageExtractor(int fd, chrono::milliseconds timeout)
 {
     if (fd_.get() < 0)
     {
-        throw runtime_error("ImageExtractor(): could not duplicate fd: " + safe_strerror(errno));
+        throw runtime_error("ImageExtractor(): could not duplicate fd: " + safe_strerror(errno));  // LCOV_EXCL_LINE
     }
 
     // We don't allow thumbnailing from anything but a regular file,
@@ -46,18 +46,18 @@ ImageExtractor::ImageExtractor(int fd, chrono::milliseconds timeout)
     struct stat st;
     if (fstat(fd_.get(), &st) == -1)
     {
-        throw runtime_error("VideoScreenshotter(): fstat(): " + safe_strerror(errno));
+        throw runtime_error("ImageExtractor(): fstat(): " + safe_strerror(errno));  // LCOV_EXCL_LINE
     }
     if (!(st.st_mode & S_IFREG))
     {
-        throw runtime_error("VideoScreenshotter(): fd does not refer to regular file");
+        throw runtime_error("ImageExtractor(): fd does not refer to regular file");
     }
     // TODO: Work-around for bug in gstreamer:
     //       http://cgit.freedesktop.org/gstreamer/gstreamer/commit/?id=91f537edf2946cbb5085782693b6c5111333db5f
     //       Pipeline hangs for empty input file. Remove this once the gstreamer fix makes into the archives.
     if (st.st_size == 0)
     {
-        throw runtime_error("VideoScreenshotter(): fd refers to empty file");
+        throw runtime_error("ImageExtractor(): fd refers to empty file");
     }
 
     process_.setStandardInputFile(QProcess::nullDevice());
@@ -73,12 +73,14 @@ ImageExtractor::~ImageExtractor()
 {
     if (process_.state() != QProcess::NotRunning)
     {
+        // LCOV_EXCL_START
         process_.kill();
         if (!process_.waitForFinished(timeout_ms_))
         {
             qWarning().nospace() << "~ImageExtractor(): " << exe_path_ << " (pid" << process_.pid()
                        << ") did not exit after " << timeout_ms_ << " milliseconds";
         }
+        // LCOV_EXCL_STOP
     }
 }
 
@@ -92,7 +94,7 @@ void ImageExtractor::extract()
 
     if (!tmpfile_.open())
     {
-        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileTemplate().toStdString());
+        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileTemplate().toStdString());  // LCOV_EXCL_LINE
     }
     /* Our duplicated file descriptor does not have the FD_CLOEXEC flag set */
     process_.start(exe_path_, {QString("fd://%1").arg(fd_.get()), tmpfile_.fileName()});
@@ -134,7 +136,12 @@ void ImageExtractor::processFinished()
             }
             break;
         case QProcess::CrashExit:
-            error_ = exe_path_.toStdString() + " crashed";
+            if (error_.empty())
+            {
+                // Conditional because, if get a timeout and send a kill,
+                // we don't want to overwrite the message set by timeout().
+                error_ = exe_path_.toStdString() + " crashed";
+            }
             break;
         default:
             abort();  // LCOV_EXCL_LINE  // Impossible
