@@ -570,6 +570,38 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_99)
     setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
+TEST_F(ThumbnailerTest, vs_thumb_crash)
+{
+    Thumbnailer tn;
+
+    // Run fake vs-thumb that kills itself with SIGTERM
+    char const* tn_util = getenv("TN_UTILDIR");
+    ASSERT_TRUE(tn_util && *tn_util != '\0');
+    string old_env = tn_util;
+
+    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-crash", true);
+
+    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("vs-thumb crashed")) << msg;
+    }
+
+    setenv("TN_UTILDIR", old_env.c_str(), true);
+}
+
 TEST_F(ThumbnailerTest, not_regular_file)
 {
     Thumbnailer tn;

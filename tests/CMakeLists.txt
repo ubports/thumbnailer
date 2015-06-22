@@ -17,7 +17,6 @@ set(unit_test_dirs
     qml
     safe_strerror
     settings
-    slow-vs-thumb
     thumbnailer
     thumbnailer-admin
     vs-thumb
@@ -34,6 +33,7 @@ add_subdirectory(copyright)
 add_subdirectory(whitespace)
 
 if (${slowtests})
+    add_subdirectory(slow-vs-thumb)
     add_subdirectory(headers)
 endif()
 

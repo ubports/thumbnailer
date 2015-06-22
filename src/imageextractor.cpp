@@ -73,11 +73,13 @@ ImageExtractor::~ImageExtractor()
 {
     if (process_.state() != QProcess::NotRunning)
     {
+        // LCOV_EXCL_START
         process_.kill();
         if (!process_.waitForFinished(timeout_ms_))
         {
             qWarning() << "ImageExtractor::~ImageExtractor(): subprocess did not exit";  // LCOV_EXCL_LINE
         }
+        // LCOV_EXCL_STOP
     }
 }
 
