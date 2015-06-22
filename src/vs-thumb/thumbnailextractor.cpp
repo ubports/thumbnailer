@@ -409,9 +409,12 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         }
     }
 
-    fprintf(stderr, "Saving pixbuf to jpeg\n");
+    // Saving as PNG here to avoid artefacts due to converting to jpg twice.
+    // (The main thumbnailer saves as jpg.) By staying lossless here, we
+    // keep all the policy decisions about image quality in the main thumbnailer.
+    fprintf(stderr, "Saving pixbuf to png\n");
     GError* error = nullptr;
-    if (!gdk_pixbuf_save(image.get(), filename.c_str(), "jpeg", &error, nullptr))
+    if (!gdk_pixbuf_save(image.get(), filename.c_str(), "png", &error, nullptr))
     {
         throw_error("save_screenshot(): saving image", error);
     }
