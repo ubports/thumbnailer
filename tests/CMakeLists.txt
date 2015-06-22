@@ -23,19 +23,22 @@ set(unit_test_dirs
 )
 
 set(UNIT_TEST_TARGETS "")
+
+if (${slowtests})
+    add_subdirectory(slow-vs-thumb)
+    list(APPEND UNIT_TEST_TARGETS slow-vs-thumb_test)
+    add_subdirectory(headers)
+endif()
+
 foreach(dir ${unit_test_dirs})
     add_subdirectory(${dir})
     list(APPEND UNIT_TEST_TARGETS "${dir}_test")
 endforeach()
+
 set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
 
 add_subdirectory(copyright)
 add_subdirectory(whitespace)
-
-if (${slowtests})
-    add_subdirectory(slow-vs-thumb)
-    add_subdirectory(headers)
-endif()
 
 add_subdirectory(core)
 
