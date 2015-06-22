@@ -77,7 +77,8 @@ ImageExtractor::~ImageExtractor()
         process_.kill();
         if (!process_.waitForFinished(timeout_ms_))
         {
-            qWarning() << "ImageExtractor::~ImageExtractor(): subprocess did not exit";  // LCOV_EXCL_LINE
+            qWarning().nospace() << "~ImageExtractor(): " << exe_path_ << " (pid" << process_.pid()
+                       << ") did not exit after " << timeout_ms_ << " milliseconds";
         }
         // LCOV_EXCL_STOP
     }
@@ -98,6 +99,7 @@ void ImageExtractor::extract()
     /* Our duplicated file descriptor does not have the FD_CLOEXEC flag set */
     process_.start(exe_path_, {QString("fd://%1").arg(fd_.get()), tmpfile_.fileName()});
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
+    timer_.setSingleShot(true);
     timer_.start(timeout_ms_);
 }
 
@@ -153,7 +155,8 @@ void ImageExtractor::timeout()
     {
         process_.kill();
     }
-    error_ = exe_path_.toStdString() + " did not return after " + to_string(timeout_ms_) + " milliseconds";
+    error_ = exe_path_.toStdString() + " (pid " + to_string(process_.pid()) + ") did not return after " +
+             to_string(timeout_ms_) + " milliseconds";
 }
 
 void ImageExtractor::error()

@@ -29,13 +29,14 @@ add_library(thumbnailer STATIC
     ${CMAKE_SOURCE_DIR}/include/internal/thumbnailer.h
     ${CMAKE_SOURCE_DIR}/include/internal/ubuntuserverdownloader.h
 )
-qt5_use_modules(thumbnailer Core)
 
 qt5_use_modules(thumbnailer Core Network)
 set_target_properties(thumbnailer PROPERTIES AUTOMOC TRUE)
 
 target_link_libraries(thumbnailer
     core
+    Qt5::Core
+    Qt5::Network
     ${Boost_LIBRARIES}
     ${GLIB_DEPS_LDFLAGS}
     ${GIO_DEPS_LDFLAGS}
