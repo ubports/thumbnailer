@@ -248,8 +248,6 @@ QDBusUnixFileDescriptor Handler::check()
 
 void Handler::checkFinished()
 {
-    p->finish_time = chrono::system_clock::now();     // Set finish_time in case something below throws.
-
     if (p->cancelled)
     {
         return;
@@ -274,8 +272,6 @@ void Handler::checkFinished()
     if (fd_error.fd.isValid())
     {
         sendThumbnail(fd_error.fd);
-        // Set time again, because sending the thumbnail could take a while.
-        p->finish_time = chrono::system_clock::now();
         return;
     }
 
@@ -289,13 +285,11 @@ void Handler::checkFinished()
         }
         catch (std::exception const& e)
         {
-            p->finish_time = chrono::system_clock::now();
             sendError(e.what());
         }
         return;
     }
 
-    p->finish_time = chrono::system_clock::now();
     sendError("Handler::check_finished(): no artwork for " + details() + ": " + status());
 }
 
@@ -341,8 +335,6 @@ QDBusUnixFileDescriptor Handler::create()
 
 void Handler::createFinished()
 {
-    // Set finish_time in case something below throws.
-    p->finish_time = chrono::system_clock::now();
     if (p->cancelled)
     {
         return;
@@ -371,12 +363,12 @@ void Handler::createFinished()
     {
         sendError("Handler::create(): invalid file descriptor for " + details());
     }
-    p->finish_time = chrono::system_clock::now();
 }
 
 void Handler::sendThumbnail(QDBusUnixFileDescriptor const& unix_fd)
 {
     p->bus.send(p->message.createReply(QVariant::fromValue(unix_fd)));
+    p->finish_time = chrono::system_clock::now();
     Q_EMIT finished();
 }
 
@@ -387,6 +379,7 @@ void Handler::sendError(QString const& error)
         qWarning() << error;
     }
     p->bus.send(p->message.createErrorReply(ART_ERROR, error));
+    p->finish_time = chrono::system_clock::now();
     Q_EMIT finished();
 }
 
