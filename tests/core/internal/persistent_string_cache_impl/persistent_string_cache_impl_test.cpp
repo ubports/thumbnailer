@@ -1575,6 +1575,9 @@ TEST(PersistentStringCacheImpl, stats)
         c.put("new key", string(1, 'k'));
         s = c.stats();
         EXPECT_EQ(3, s.size());
+        c.get("new key", val);
+        s = c.stats();
+        EXPECT_EQ(1, s.hits());
         c.invalidate();
         s = c.stats();
         hist = s.histogram();
@@ -1582,7 +1585,7 @@ TEST(PersistentStringCacheImpl, stats)
         {
             EXPECT_EQ(0, hist[i]);  // Histogram must have been emptied.
         }
-        EXPECT_EQ(0, s.size());  // invalidate() also clears the ephemeral stats.
+        EXPECT_EQ(0, s.hits());  // invalidate() also clears the ephemeral stats.
 
         c.put("1", string(1, 'k'));   // First bin
         c.put("2", string(10, 'k'));  // Second bin
