@@ -19,6 +19,7 @@ thumbnailer (2.1-0ubuntu1) UNRELEASED; urgency=medium
   * Don't save JPEG thumbnails at quality=100, since the quality
     improvement isn't justified by the extra storage.
   * Don't retry downloads when we have a hit from the failure cache.
+  * Warn if an app requests an unsized thumbnail.
 
  -- James Henstridge <james.henstridge@canonical.com>  Mon, 22 Jun 2015 17:31:39 +0800
 
