@@ -30,8 +30,8 @@ namespace
 
 enum class Access
 {
-    write = 1,
-    read = 2
+    write = (1 << 1),
+    read = (1 << 2)
 };
 
 char const AA_CLASS_FILE = 2;
