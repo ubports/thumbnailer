@@ -639,6 +639,25 @@ TEST_F(ThumbnailerTest, check_client_access)
     }
 }
 
+TEST_F(ThumbnailerTest, empty_file)
+{
+    Thumbnailer tn;
+
+    auto request = tn.get_thumbnail(TESTSRCDIR "/thumbnailer/empty.mp3", QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    try
+    {
+        request->download();
+        FAIL();
+    }
+    catch (runtime_error const& e)
+    {
+        EXPECT_STREQ("ImageExtractor(): fd refers to empty file", e.what()) << e.what();
+    }
+}
+
 class RemoteServer : public ThumbnailerTest
 {
 protected:
@@ -871,26 +890,6 @@ TEST_F(DeadServer, errors)
 
     EXPECT_EQ("", request->thumbnail());
 }
-
-TEST_F(ThumbnailerTest, empty_file)
-{
-    Thumbnailer tn;
-
-    auto request = tn.get_thumbnail(TESTSRCDIR "/thumbnailer/empty.mp3", QSize());
-    EXPECT_EQ("", request->thumbnail());
-
-    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-    try
-    {
-        request->download();
-        FAIL();
-    }
-    catch (runtime_error const& e)
-    {
-        EXPECT_STREQ("ImageExtractor(): fd refers to empty file", e.what()) << e.what();
-    }
-}
-
 
 int main(int argc, char** argv)
 {
