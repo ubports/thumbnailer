@@ -197,19 +197,23 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 {
     if (!credentials.valid)
     {
-        sendError("gotCredentials(): " + details() + ": could not retrieve peer credentials");
+        // LCOV_EXCL_START
+        sendError("Handler::gotCredentials(): " + details() + ": could not retrieve peer credentials");
         return;
+        // LCOV_EXCL_STOP
     }
     try
     {
         p->request->check_client_credentials(
             credentials.user, credentials.label);
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        sendError("gotCredentials(): " + details() + ": " + e.what());
+        sendError("Handler::gotCredentials(): " + details() + ": " + e.what());
         return;
     }
+    // LCOV_EXCL_STOP
 
     auto do_check = [this]() -> FdOrError
     {
@@ -260,16 +264,19 @@ void Handler::checkFinished()
     {
         fd_error = p->checkWatcher.result();
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        sendError("checkFinished(): " + details() + ": " + e.what());
+        sendError("Handler::checkFinished(): result error: " + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isNull())
     {
-        sendError("checkFinished(): " + details() + ": " + fd_error.error);
+        sendError("Handler::checkFinished(): result error: " + details() + ": " + fd_error.error);
         return;
     }
+    // LCOV_EXCL_STOP
+
     // Did we find a valid thumbnail in the cache or generated it locally from an image file?
     if (fd_error.fd.isValid())
     {
@@ -287,11 +294,13 @@ void Handler::checkFinished()
             p->schedule_start_time = chrono::system_clock::now();
             p->limiter.schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
         }
+        // LCOV_EXCL_START
         catch (std::exception const& e)
         {
             p->finish_time = chrono::system_clock::now();
-            sendError(e.what());
+            sendError("Handler::checkFinished(): download error: " + details() + e.what());
         }
+        // LCOV_EXCL_STOP
         return;
     }
 
@@ -353,23 +362,25 @@ void Handler::createFinished()
     {
         fd_error = p->createWatcher.result();
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        sendError(QString("Handler::create_finished(): ") + details() + ": " + e.what());
+        sendError(QString("Handler::createFinished(): ") + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isEmpty())
     {
-        sendError("Handler::create_finished(): " + fd_error.error);
+        sendError("Handler::createFinished(): " + fd_error.error);
         return;
     }
+    // LCOV_EXCL_STOP
     if (fd_error.fd.isValid())
     {
         sendThumbnail(fd_error.fd);
     }
     else
     {
-        sendError("Handler::create(): invalid file descriptor for " + details());
+        sendError("Handler::createFinished(): invalid file descriptor for " + details());  // LCOV_EXCL_LINE
     }
     p->finish_time = chrono::system_clock::now();
 }
@@ -429,15 +440,15 @@ QString Handler::status() const
     case ThumbnailRequest::FetchStatus::cached_failure:
         return "FAILED PREVIOUSLY";
     case ThumbnailRequest::FetchStatus::needs_download:
-        return "NEEDS DOWNLOAD";
+        return "NEEDS DOWNLOAD";  // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::downloaded:
         return "MISS";
     case ThumbnailRequest::FetchStatus::not_found:
         return "NO ARTWORK";
     case ThumbnailRequest::FetchStatus::no_network:
-        return "NETWORK DOWN";
+        return "NETWORK DOWN";  // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::error:
-        return "ERROR";
+        return "ERROR";  // LCOV_EXCL_LINE
     default:
         abort();  // LCOV_EXCL_LINE  // Impossible.
     }
