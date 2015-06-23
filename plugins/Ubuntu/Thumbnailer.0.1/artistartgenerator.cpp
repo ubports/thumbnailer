@@ -47,6 +47,13 @@ ArtistArtGenerator::ArtistArtGenerator()
 
 QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
+    // TODO: Turn this into an error soonish.
+    if (!requestedSize.isValid())
+    {
+        qWarning().nospace() << "ArtistArtGenerator::requestImageResponse(): deprecated invalid QSize: "
+                             << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
+    }
+
     QUrlQuery query(id);
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
