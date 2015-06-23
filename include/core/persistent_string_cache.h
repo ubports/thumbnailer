@@ -594,6 +594,10 @@ public:
 
     /**
     \brief Deletes all entries from the cache.
+
+    This operation completely empties the cache.
+    \note Clearing the cache also resets the statistics counters.
+    \see clear_stats()
     */
     void invalidate();
 
