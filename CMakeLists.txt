@@ -75,9 +75,7 @@ endif()
 include(CTest)
 enable_testing()
 
-# TODO: replace this with include(EnableCoverageReport) once the updated module makes it into the archives.
-#       See https://code.launchpad.net/~michihenning/cmake-extras/cmake-extras-coverage/+merge/258021
-include(XEnableCoverageReport)
+include(EnableCoverageReport)
 
 include(cmake/UseGSettings.cmake)
 

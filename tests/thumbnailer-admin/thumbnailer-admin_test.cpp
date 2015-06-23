@@ -601,7 +601,7 @@ TEST_F(RemoteServer, get_error)
 {
     AdminRunner ar;
     EXPECT_EQ(1, ar.run(QStringList{"get_album", "foo", "bar", "--size=48"}));
-    EXPECT_EQ("thumbnailer-admin: Handler::create_finished(): could not get thumbnail for album: foo/bar (48,48): "
+    EXPECT_EQ("thumbnailer-admin: Handler::createFinished(): could not get thumbnail for album: foo/bar (48,48): "
               "NO ARTWORK\n", ar.stderr()) << ar.stderr();
 }
 

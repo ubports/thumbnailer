@@ -30,8 +30,8 @@ namespace
 
 enum class Access
 {
-    write = 1,
-    read = 2
+    write = (1 << 1),
+    read = (1 << 2)
 };
 
 char const AA_CLASS_FILE = 2;
@@ -42,7 +42,7 @@ bool query_file(Access access, string const& label, string const& path)
     if (!enabled)
     {
         // If AppArmor is not enabled, assume access is granted.
-        return true;
+        return true;  // LCOV_EXCL_LINE
     }
 
     string query(AA_QUERY_CMD_LABEL, AA_QUERY_CMD_LABEL_SIZE);
@@ -55,7 +55,7 @@ bool query_file(Access access, string const& label, string const& path)
     if (aa_query_label(static_cast<uint32_t>(access), const_cast<char*>(query.data()), query.size(), &allowed, &audited) < 0)
     {
         using namespace unity::thumbnailer::internal;
-        throw runtime_error("query_file(): Could not query AppArmor access: " + safe_strerror(errno));
+        throw runtime_error("query_file(): Could not query AppArmor access: " + safe_strerror(errno));  // LCOV_EXCL_LINE
     }
     return allowed;
 }
