@@ -18,7 +18,11 @@
 
 #include "dbusinterface.h"
 
+#include <internal/file_io.h>
 #include <internal/trace.h>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
 
 #include <thread>
 
@@ -39,6 +43,83 @@ namespace thumbnailer
 namespace service
 {
 
+namespace
+{
+
+// Return a string identifying hardware for which we need to
+// set max-extractions to some special value.
+// Be careful when making modifications here. We need
+// to find a string in cpuinfo that is unique to the specific
+// hardwares we care about. For example, the output from
+// /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
+
+#ifdef __arm__
+
+string hardware()
+{
+    string hw;
+
+    string const pattern = R"del([Pp]rocessor[ \t]*:(.*))del";
+    boost::regex r(pattern);
+
+    string cpuinfo;
+    try
+    {
+        cpuinfo = read_file("/proc/cpuinfo");
+    }
+    // LCOV_EXCL_START
+    catch (runtime_error const& e)
+    {
+        qDebug() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
+        return "";
+    }
+    // LCOV_EXCL_STOP
+
+    vector<string> lines;
+    boost::split(lines, cpuinfo, boost::is_any_of("\n"));
+    for (auto const& line : lines)
+    {
+        boost::smatch hw_match;
+        if (boost::regex_match(line, hw_match, r))
+        {
+            hw = hw_match[1];
+            boost::trim(hw);
+            break;
+        }
+    }
+    return hw;
+}
+
+// TODO: Hack to work around gstreamer problems.
+//       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
+
+int adjusted_limit(int limit)
+{
+    int new_limit = limit;
+
+    // Only adjust if max-extractions is at its default of 0.
+    // That allows us to still set it to something else for testing.
+    if (limit == 0)
+    {
+        string hw = hardware();
+        // On BQ (MT6582), we can handle only one vs-thumb at a time.
+        new_limit = hw == "MT6582" ? 1 : 2;
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+    }
+    return new_limit;
+}
+
+#else
+
+int adjusted_limit(int limit)
+{
+    return limit;
+}
+
+#endif
+
+}
+
 DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject* parent)
     : QObject(parent)
     , thumbnailer_(thumbnailer)
@@ -47,6 +128,11 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
     , download_limiter_(settings_.max_downloads())
 {
     auto limit = settings_.max_extractions();
+
+    // TODO: Hack to deal with gstreamer problems on (at least) Mako and BQ.
+    //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
+    limit = adjusted_limit(limit);
+
     if (limit == 0)
     {
         limit = std::thread::hardware_concurrency();
@@ -57,14 +143,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
             limit = 1;  // LCOV_EXCL_LINE
         }
     }
-#ifdef __arm__
-    // TODO: Hack to deal with gstreamer problems on (at least) Mako.
-    //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
-    if (limit > 2)
-    {
-        limit = 2;
-    }
-#endif
+
     extraction_limiter_.reset(new RateLimiter(limit));
 }
 
