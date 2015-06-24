@@ -59,7 +59,7 @@ string hardware()
 {
     string hw;
 
-    string const pattern = R"del([Pp]rocessor[ \t]*:(.*))del";
+    string const pattern = R"del([Hh]ardware[ \t]*:(.*))del";
     boost::regex r(pattern);
 
     string cpuinfo;
