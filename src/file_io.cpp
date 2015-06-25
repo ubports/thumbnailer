@@ -26,7 +26,6 @@
 #include <cstring>
 
 #include <fcntl.h>
-#include <sys/stat.h>
 
 using namespace std;
 
@@ -50,29 +49,19 @@ string read_file(string const& filename)
     }
     FdPtr fd_ptr(fd, do_close);
 
-    struct stat st;
-    if (fstat(fd_ptr.get(), &st) == -1)
-    {
-        // LCOV_EXCL_START
-        throw runtime_error("read_file(): cannot fstat \"" + filename + "\": " + safe_strerror(errno));
-        // LCOV_EXCL_STOP
-    }
-
     string contents;
-    contents.reserve(st.st_size);
-    contents.resize(st.st_size);
-    int rc = read(fd_ptr.get(), &contents[0], st.st_size);
-    if (rc == -1)
+    char buf[4096];
+    int rc;
+    while ((rc = read(fd_ptr.get(), buf, sizeof(buf))) != 0)
     {
-        // LCOV_EXCL_START
-        throw runtime_error("read_file(): cannot read from \"" + filename + "\": " + safe_strerror(errno));
-        // LCOV_EXCL_STOP
+        if (rc == -1)
+        {
+            // LCOV_EXCL_START
+            throw runtime_error("read_file(): cannot read from \"" + filename + "\": " + safe_strerror(errno));
+            // LCOV_EXCL_STOP
+        }
+        contents.append(buf, rc);
     }
-    if (rc != st.st_size)
-    {
-        throw runtime_error("read_file(): short read for \"" + filename + "\"");  // LCOV_EXCL_LINE
-    }
-
     return contents;
 }
 
