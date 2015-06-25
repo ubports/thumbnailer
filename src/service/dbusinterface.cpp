@@ -101,10 +101,10 @@ int adjusted_limit(int limit)
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
+        string hw = hardware();
 #if 0
         // TODO: Disabled for now until we can figure out in more
         //       detail how to deal with the gstreamer problems.
-        string hw = hardware();
         // On BQ (MT6582), we can handle only one vs-thumb at a time.
         new_limit = hw == "MT6582" ? 1 : 2;
 #else
