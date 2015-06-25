@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
         if (!bus.registerService(BUS_NAME))
         {
-            throw runtime_error(string("thumbnailer-service: could not aqcquire DBus name ") + BUS_NAME);
+            throw runtime_error(string("thumbnailer-service: could not acquire DBus name ") + BUS_NAME);
         }
 
         new InactivityHandler(server);
