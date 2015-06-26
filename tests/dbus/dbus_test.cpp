@@ -176,6 +176,16 @@ TEST_F(DBusTest, thumbnail_no_such_file)
     EXPECT_TRUE(boost::contains(message, " No such file or directory: ")) << message;
 }
 
+TEST_F(DBusTest, server_error)
+{
+    QDBusReply<QDBusUnixFileDescriptor> reply =
+        dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+    EXPECT_FALSE(reply.isValid());
+    auto message = reply.error().message().toStdString();
+    // TODO: That's a seriously poor error message.
+    EXPECT_TRUE(boost::contains(message, "fetch() failed")) << message;
+}
+
 TEST_F(DBusTest, duplicate_requests)
 {
     int const N_REQUESTS = 10;
@@ -222,7 +232,7 @@ TEST_F(DBusTest, rate_limit_requests)
         replies[i].waitForFinished();
         EXPECT_FALSE(replies[i].isValid());
         string message = replies[i].error().message().toStdString();
-        EXPECT_TRUE(boost::contains(message, "Handler::create_finished(): could not get thumbnail for ")) << message;
+        EXPECT_TRUE(boost::contains(message, "Handler::createFinished(): could not get thumbnail for ")) << message;
     }
 }
 
@@ -515,7 +525,7 @@ TEST_F(DBusTest, stats)
     {
         CacheStats s = reply.value().failure_stats;
         EXPECT_EQ(1, s.size);
-        EXPECT_EQ(2, s.hits);
+        EXPECT_EQ(1, s.hits);
         EXPECT_EQ(4, s.misses);
     }
 

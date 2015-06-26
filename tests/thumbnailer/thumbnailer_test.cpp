@@ -474,6 +474,153 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
     }
 }
 
+TEST_F(ThumbnailerTest, vs_thumb_exit_1)
+{
+    Thumbnailer tn;
+
+    // Run fake vs-thumb that exits with status 1
+    char const* tn_util = getenv("TN_UTILDIR");
+    ASSERT_TRUE(tn_util && *tn_util != '\0');
+    string old_env = tn_util;
+
+    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-1", true);
+
+    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("could not extract screenshot")) << msg;
+    }
+
+    setenv("TN_UTILDIR", old_env.c_str(), true);
+}
+
+TEST_F(ThumbnailerTest, vs_thumb_exit_2)
+{
+    Thumbnailer tn;
+
+    // Run fake vs-thumb that exits with status 2
+    char const* tn_util = getenv("TN_UTILDIR");
+    ASSERT_TRUE(tn_util && *tn_util != '\0');
+    string old_env = tn_util;
+
+    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-2", true);
+
+    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
+    }
+
+    setenv("TN_UTILDIR", old_env.c_str(), true);
+}
+
+TEST_F(ThumbnailerTest, vs_thumb_exit_99)
+{
+    Thumbnailer tn;
+
+    // Run fake vs-thumb that exits with status 99
+    char const* tn_util = getenv("TN_UTILDIR");
+    ASSERT_TRUE(tn_util && *tn_util != '\0');
+    string old_env = tn_util;
+
+    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-99", true);
+
+    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("unknown exit status 99 from ")) << msg;
+    }
+
+    setenv("TN_UTILDIR", old_env.c_str(), true);
+}
+
+TEST_F(ThumbnailerTest, vs_thumb_crash)
+{
+    Thumbnailer tn;
+
+    // Run fake vs-thumb that kills itself with SIGTERM
+    char const* tn_util = getenv("TN_UTILDIR");
+    ASSERT_TRUE(tn_util && *tn_util != '\0');
+    string old_env = tn_util;
+
+    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-crash", true);
+
+    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("vs-thumb crashed")) << msg;
+    }
+
+    setenv("TN_UTILDIR", old_env.c_str(), true);
+}
+
+TEST_F(ThumbnailerTest, not_regular_file)
+{
+    Thumbnailer tn;
+
+    auto request = tn.get_thumbnail("/dev/null", QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    try
+    {
+        request->download();
+        FAIL();
+    }
+    catch (runtime_error const& e)
+    {
+        EXPECT_STREQ("ImageExtractor(): fd does not refer to regular file", e.what()) << e.what();
+    }
+}
+
 TEST_F(ThumbnailerTest, check_client_access)
 {
     Thumbnailer tn;
@@ -489,6 +636,25 @@ TEST_F(ThumbnailerTest, check_client_access)
     catch (std::exception const& e)
     {
         EXPECT_TRUE(boost::contains(e.what(), "Request comes from a different user ID")) << e.what();
+    }
+}
+
+TEST_F(ThumbnailerTest, empty_file)
+{
+    Thumbnailer tn;
+
+    auto request = tn.get_thumbnail(TESTSRCDIR "/thumbnailer/empty.mp3", QSize());
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    try
+    {
+        request->download();
+        FAIL();
+    }
+    catch (runtime_error const& e)
+    {
+        EXPECT_STREQ("ImageExtractor(): fd refers to empty file", e.what()) << e.what();
     }
 }
 

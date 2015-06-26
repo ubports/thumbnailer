@@ -72,7 +72,7 @@ class RequestBase : public ThumbnailRequest
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
-    FetchStatus status() const;
+    FetchStatus status() const override;
     string const& key() const override
     {
         return key_;

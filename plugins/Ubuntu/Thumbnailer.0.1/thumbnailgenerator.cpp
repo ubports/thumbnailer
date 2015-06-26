@@ -62,6 +62,13 @@ ThumbnailGenerator::ThumbnailGenerator()
 
 QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
+    // TODO: Turn this into an error soonish.
+    if (!requestedSize.isValid())
+    {
+        qWarning().nospace() << "ThumbnailGenerator::requestImageResponse(): deprecated invalid QSize: "
+                             << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
+    }
+
     /* Allow appending a query string (e.g. ?something=timestamp)
      * to the id and then ignore it.
      * This is workaround to force reloading a thumbnail when it has

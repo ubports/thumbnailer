@@ -1085,6 +1085,9 @@ void PersistentStringCacheImpl::invalidate()
     stats_->num_entries_ = 0;
     stats_->hist_clear();
     stats_->cache_size_ = 0;
+    // Clear ephemeral stats too.
+    stats_->clear();
+    write_stats();
 }
 
 bool PersistentStringCacheImpl::touch(string const& key, chrono::time_point<chrono::system_clock> expiry_time)

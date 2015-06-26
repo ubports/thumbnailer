@@ -17,25 +17,35 @@ set(unit_test_dirs
     qml
     safe_strerror
     settings
-    stress
     thumbnailer
     thumbnailer-admin
     vs-thumb
 )
 
+set(slow_test_dirs
+    slow-vs-thumb
+    stress
+)
+
 set(UNIT_TEST_TARGETS "")
+
+if (${slowtests})
+    foreach(dir ${slow_test_dirs})
+        add_subdirectory(${dir})
+        list(APPEND UNIT_TEST_TARGETS "${dir}_test")
+    endforeach()
+    add_subdirectory(headers)
+endif()
+
 foreach(dir ${unit_test_dirs})
     add_subdirectory(${dir})
     list(APPEND UNIT_TEST_TARGETS "${dir}_test")
 endforeach()
+
 set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
 
 add_subdirectory(copyright)
 add_subdirectory(whitespace)
-
-if (${slowtests})
-    add_subdirectory(headers)
-endif()
 
 add_subdirectory(core)
 
