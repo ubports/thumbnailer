@@ -17,6 +17,7 @@ set(unit_test_dirs
     qml
     safe_strerror
     settings
+    stress
     thumbnailer
     thumbnailer-admin
     vs-thumb
