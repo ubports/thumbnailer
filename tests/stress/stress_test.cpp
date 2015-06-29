@@ -48,11 +48,10 @@ protected:
 
         // start dbus service
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
-        setenv("XDG_CACHE_HOME", "/tmp/cache", true);
-        //setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
+        setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 10 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "10000", true);
+        // set 30 seconds as max idle time
+        setenv("THUMBNAILER_MAX_IDLE", "30000", true);
 
         dbus_.reset(new DBusServer());
 
@@ -67,11 +66,11 @@ protected:
         return tempdir->path().toStdString();
     }
 
-    unique_ptr<QDBusPendingCallWatcher> get_thumbnail(string const& rel_path,
+    unique_ptr<QDBusPendingCallWatcher> get_thumbnail(string const& target_path,
                                                       int size,
                                                       std::function<void()> finished = []{})
     {
-        QString path = QString::fromStdString(temp_dir()) + "/" + QString::fromStdString(rel_path);
+        QString path = QString::fromStdString(target_path);
         unique_ptr<QDBusPendingCallWatcher> watcher(
             new QDBusPendingCallWatcher(dbus_->thumbnailer_->GetThumbnail(path, QSize(size, size))));
         QObject::connect(watcher.get(), &QDBusPendingCallWatcher::finished, finished);
@@ -83,11 +82,10 @@ protected:
                                                       int size,
                                                       std::function<void()> finished = []{})
     {
-        unique_ptr<QDBusPendingCallWatcher> watcher(
-            new QDBusPendingCallWatcher(
-                dbus_->thumbnailer_->GetAlbumArt(QString::fromStdString(artist),
-                                                 QString::fromStdString(album),
-                                                 QSize(size, size))));
+        auto reply = dbus_->thumbnailer_->GetAlbumArt(QString::fromStdString(artist),
+                                                      QString::fromStdString(album),
+                                                      QSize(size, size));
+        unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
         QObject::connect(watcher.get(), &QDBusPendingCallWatcher::finished, finished);
         return move(watcher);
     }
@@ -145,7 +143,7 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
     using namespace boost::filesystem;
 
     assert(num_copies > 0);
-    assert(num_copies <= 10000);  // Probably not good to put more files than this into one directory
+    assert(num_copies <= 2000);  // Probably not good to put more files than this into one directory
 
     string filename = path(source_path).filename().native();
     string new_name = "0" + filename;
@@ -165,22 +163,23 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
 
 TEST_F(StressTest, photo)
 {
-    int const N_REQUESTS = 4000;
+    int const N_REQUESTS = 400;
 
     string source = "Photo-with-exif.jpg";
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    std::unique_ptr<QDBusPendingCallWatcher> watchers[N_REQUESTS];
+    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers[i] = get_thumbnail("Pictures/" + to_string(i) + source, 512);
+        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
     }
-    for (int i = 0; i < N_REQUESTS; i++)
+    for (auto const& w : watchers)
     {
-        watchers[i]->waitForFinished();
+        w->waitForFinished();
+        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
     }
     auto finish = chrono::system_clock::now();
 
@@ -195,16 +194,17 @@ TEST_F(StressTest, photo_no_exif)
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    std::unique_ptr<QDBusPendingCallWatcher> watchers[N_REQUESTS];
+    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers[i] = get_thumbnail("Pictures/" + to_string(i) + source, 512);
+        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
     }
-    for (int i = 0; i < N_REQUESTS; i++)
+    for (auto const& w : watchers)
     {
-        watchers[i]->waitForFinished();
+        w->waitForFinished();
+        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
     }
     auto finish = chrono::system_clock::now();
 
@@ -213,22 +213,23 @@ TEST_F(StressTest, photo_no_exif)
 
 TEST_F(StressTest, mp3)
 {
-    int const N_REQUESTS = 500;
+    int const N_REQUESTS = 300;
 
     string source = "short-track.mp3";
     string target_dir = temp_dir() + "/Music";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    std::unique_ptr<QDBusPendingCallWatcher> watchers[N_REQUESTS];
+    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers[i] = get_thumbnail("Music/" + to_string(i) + source, 512);
+        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
     }
-    for (int i = 0; i < N_REQUESTS; i++)
+    for (auto const& w : watchers)
     {
-        watchers[i]->waitForFinished();
+        w->waitForFinished();
+        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
     }
     auto finish = chrono::system_clock::now();
 
@@ -237,22 +238,23 @@ TEST_F(StressTest, mp3)
 
 TEST_F(StressTest, video)
 {
-    int const N_REQUESTS = 200;
+    int const N_REQUESTS = 50;
 
     string source = "testvideo.mp4";
     string target_dir = temp_dir() + "/Videos";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    std::unique_ptr<QDBusPendingCallWatcher> watchers[N_REQUESTS];
+    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers[i] = get_thumbnail("Videos/" + to_string(i) + source, 512);
+        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
     }
-    for (int i = 0; i < N_REQUESTS; i++)
+    for (auto const& w : watchers)
     {
-        watchers[i]->waitForFinished();
+        w->waitForFinished();
+        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
     }
     auto finish = chrono::system_clock::now();
 
@@ -261,18 +263,19 @@ TEST_F(StressTest, video)
 
 TEST_F(StressTest, album_art)
 {
-    int const N_REQUESTS = 500;
+    int const N_REQUESTS = 400;
 
-    std::unique_ptr<QDBusPendingCallWatcher> watchers[N_REQUESTS];
+    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers[i] = get_album_art("generate", to_string(i), 512);
+        watchers.emplace_back(get_album_art("generate", to_string(i), 512));
     }
-    for (int i = 0; i < N_REQUESTS; i++)
+    for (auto const& w : watchers)
     {
-        watchers[i]->waitForFinished();
+        w->waitForFinished();
+        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
     }
     auto finish = chrono::system_clock::now();
 
