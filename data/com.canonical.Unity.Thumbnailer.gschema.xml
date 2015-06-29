@@ -69,8 +69,7 @@
       <default>10</default>
       <summary>Maximum amount of time to wait for an image extraction or download (in seconds)</summary>
       <description>
-        This parameter sets the amount of time (in seconds) to wait for a remote image download or
-        a thumbnail extraction before giving up.
+        This parameter sets the amount of time (in seconds) to wait for a remote image download or a thumbnail extraction before giving up.
      </description>
     </key>
   </schema>

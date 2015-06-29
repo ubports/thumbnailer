@@ -27,7 +27,6 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
-
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
@@ -211,7 +210,9 @@ TEST_F(StressTest, photo_no_exif)
     add_stats(N_REQUESTS, start, finish);
 }
 
-TEST_F(StressTest, mp3)
+// TODO: Disabled for now because we don't have the codecs on Jenkins.
+
+TEST_F(StressTest, DISABLED_mp3)
 {
     int const N_REQUESTS = 300;
 
@@ -236,7 +237,9 @@ TEST_F(StressTest, mp3)
     add_stats(N_REQUESTS, start, finish);
 }
 
-TEST_F(StressTest, video)
+// TODO: Disabled for now because we don't have the codecs on Jenkins.
+
+TEST_F(StressTest, DISABLED_video)
 {
     int const N_REQUESTS = 50;
 
