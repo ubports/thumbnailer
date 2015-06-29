@@ -51,13 +51,10 @@ private Q_SLOTS:
     void dbusCallFinished();
 
 private:
-    void setError(QString const& error);
-
-    QString id_;
     QSize requested_size_;
+    std::unique_ptr<QDBusPendingCallWatcher> watcher_;
     QQuickTextureFactory * texture_ = nullptr;
     QString error_message_;
-    std::unique_ptr<QDBusPendingCallWatcher> watcher_;
 };
 
 }  // namespace qml
