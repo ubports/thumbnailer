@@ -51,7 +51,7 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
         qWarning() << "ArtistArtGenerator::requestImageResponse(): Invalid artistart uri:" << id;
-        return new ThumbnailerImageResponse("Invalid artistart uri");
+        return new ThumbnailerImageResponse("Invalid artistart ID: " + id);
     }
 
     if (!connection)

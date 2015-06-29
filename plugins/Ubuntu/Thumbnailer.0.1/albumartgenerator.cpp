@@ -50,7 +50,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
         qWarning() << "AlbumArtGenerator::requestImageResponse(): Invalid albumart uri:" << id;
-        return new ThumbnailerImageResponse("Invalid albumart uri");
+        return new ThumbnailerImageResponse("Invalid albumart ID: " + id);
     }
 
     if (!connection)
