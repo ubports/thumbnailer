@@ -72,5 +72,13 @@
         This parameter sets the amount of time (in seconds) to wait for a remote image download or a thumbnail extraction before giving up.
      </description>
     </key>
+
+    <key type="i" name="max-pending-requests">
+      <default>200</default>
+      <summary>Maximum number of pending DBus requests before a call blocks the caller</summary>
+      <description>
+        This parameter limits the number of pending DBus requests on the thumbnailer service. If there are more requests than this currently in progress, the caller is suspended until the number of pending requests drops below the limit again.
+     </description>
+    </key>
   </schema>
 </schemalist>

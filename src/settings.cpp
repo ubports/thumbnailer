@@ -113,6 +113,11 @@ int Settings::extraction_timeout() const
     return get_positive_int("extraction-timeout", EXTRACTION_TIMEOUT_DEFAULT);
 }
 
+int Settings::max_pending_requests() const
+{
+    return get_positive_int("max-pending-requests", MAX_PENDING_REQUESTS_DEFAULT);
+}
+
 string Settings::get_string(char const* key, string const& default_value) const
 {
     if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))

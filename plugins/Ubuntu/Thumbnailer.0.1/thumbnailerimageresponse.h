@@ -20,6 +20,7 @@
 
 #include <QQuickImageProvider>
 #include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 
 #include <memory>
 
@@ -42,6 +43,9 @@ public:
                              QString const& default_image,
                              std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
     ThumbnailerImageResponse(QSize const& requested_size,
+                             QString const& default_image,
+                             std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> reply);
+    ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();
 
@@ -56,6 +60,7 @@ private:
 
     QString id_;
     QSize requested_size_;
+    std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
     QQuickTextureFactory * texture_ = nullptr;
     QString default_image_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
