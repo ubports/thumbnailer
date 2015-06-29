@@ -39,25 +39,24 @@ public:
     Q_DISABLE_COPY(ThumbnailerImageResponse)
 
     ThumbnailerImageResponse(QSize const& requested_size,
-                             QString const& default_image,
                              std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
-    ThumbnailerImageResponse(QSize const& requested_size,
-                             QString const& default_image);
+    ThumbnailerImageResponse(QString const& error_message);
     ~ThumbnailerImageResponse();
 
     QQuickTextureFactory* textureFactory() const override;
+    QString errorString() const override;
     void cancel() override;
 
 private Q_SLOTS:
     void dbusCallFinished();
 
 private:
-    void loadDefaultImage();
+    void setError(QString const& error);
 
     QString id_;
     QSize requested_size_;
     QQuickTextureFactory * texture_ = nullptr;
-    QString default_image_;
+    QString error_message_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
 };
 

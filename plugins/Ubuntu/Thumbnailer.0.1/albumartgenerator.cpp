@@ -23,13 +23,6 @@
 #include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
 
-namespace
-{
-
-const char DEFAULT_ALBUM_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
-
-}  // namespace
-
 namespace unity
 {
 
@@ -57,7 +50,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
     {
         qWarning() << "AlbumArtGenerator::requestImageResponse(): Invalid albumart uri:" << id;
-        return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART);
+        return new ThumbnailerImageResponse("Invalid albumart uri");
     }
 
     if (!connection)
@@ -75,7 +68,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     auto reply = iface->GetAlbumArt(artist, album, requestedSize);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART, std::move(watcher));
+    return new ThumbnailerImageResponse(requestedSize, std::move(watcher));
 }
 
 }  // namespace qml

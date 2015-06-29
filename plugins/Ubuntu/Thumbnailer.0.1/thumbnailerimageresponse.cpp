@@ -33,21 +33,16 @@ namespace qml
 {
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
-                                                   QString const& default_image,
                                                    std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
     : requested_size_(requested_size)
-    , default_image_(default_image)
     , watcher_(std::move(watcher))
 {
     connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
 }
 
-ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
-                                                   QString const& default_image)
-    : requested_size_(requested_size)
-    , default_image_(default_image)
+ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& error_message)
 {
-    loadDefaultImage();
+    setError(error_message);
     // Queue the signal emission so there is time for the caller to connect.
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
@@ -59,6 +54,11 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
     return texture_;
 }
 
+QString ThumbnailerImageResponse::errorString() const
+{
+    return error_message_;
+}
+
 void ThumbnailerImageResponse::cancel()
 {
     // Deleting the pending call watcher (which should hold the only
@@ -68,12 +68,10 @@ void ThumbnailerImageResponse::cancel()
     watcher_.reset();
 }
 
-void ThumbnailerImageResponse::loadDefaultImage()
+void ThumbnailerImageResponse::setError(QString const& error)
 {
-    char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
-    QImage result;
-    result.load(env_default ? QString(env_default) : default_image_);
-    texture_ = QQuickTextureFactory::textureFactoryForImage(result);
+    error_message_ = error;
+    //texture_ = QQuickTextureFactory::textureFactoryForImage(QImage());
 }
 
 void ThumbnailerImageResponse::dbusCallFinished()
@@ -81,8 +79,8 @@ void ThumbnailerImageResponse::dbusCallFinished()
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << reply.error().message();
-        loadDefaultImage();
+        setError(reply.error().message());
+        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << error_message_;
         Q_EMIT finished();
         return;
     }
@@ -99,13 +97,14 @@ void ThumbnailerImageResponse::dbusCallFinished()
     catch (const std::exception& e)
     {
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): Album art loader failed: " << e.what();
+        setError(e.what());
     }
     catch (...)
     {
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): unknown exception";
+        setError("unknown error");
     }
 
-    loadDefaultImage();
     Q_EMIT finished();
     // LCOV_EXCL_STOP
 }
