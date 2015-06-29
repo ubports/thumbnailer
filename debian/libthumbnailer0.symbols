@@ -1,6 +1,0 @@
-libthumbnailer.so.0 libthumbnailer0 #MINVER#
- (c++)"Thumbnailer::get_thumbnail(std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, ThumbnailSize)@Base" 1.0
- (c++)"Thumbnailer::get_thumbnail(std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, ThumbnailSize, ThumbnailPolicy)@Base" 1.0
- (c++)"Thumbnailer::get_album_art(std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, ThumbnailSize, ThumbnailPolicy)@Base" 1.0
- (c++)"Thumbnailer::Thumbnailer()@Base" 1.0
- (c++)"Thumbnailer::~Thumbnailer()@Base" 1.0

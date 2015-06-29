@@ -2,30 +2,42 @@
  * Copyright (C) 2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3 as
+ * it under the terms of the GNU General Public License version 3 as
  * published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Jussi Pakkanen <jussi.pakkanen@canonical.com>
  */
 
-#ifndef HTTPDOWNLOADER_H
-#define HTTPDOWNLOADER_H
+#pragma once
 
-#include<string>
+#include <string>
 
-class HttpDownloader {
+namespace unity
+{
+
+namespace thumbnailer
+{
+
+namespace internal
+{
+
+class HttpDownloader
+{
 public:
-    virtual std::string download(const std::string &url) = 0;
-    virtual ~HttpDownloader() {};
+    virtual std::string download(const std::string& url) = 0;
+    virtual ~HttpDownloader(){};
 };
 
+}  // namespace internal
 
-#endif
+}  // namespace thumbnailer
+
+}  // namespace unity

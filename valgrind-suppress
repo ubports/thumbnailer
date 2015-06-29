@@ -1,0 +1,133 @@
+{
+    g_settings_new
+    Memcheck:Leak
+    match-leak-kinds: definite
+    ...
+    fun:g_settings_backend_get_default
+    ...
+    fun:g_object_new_valist
+}
+
+{
+   g_file_new_for_path
+   Memcheck:Leak
+   match-leak-kinds: definite
+    ...
+   fun:g_type_create_instance
+   ...
+   fun:g_object_newv
+   fun:g_object_new
+   fun:g_io_module_new
+   fun:g_io_modules_scan_all_in_directory_with_scope
+   ...
+   fun:g_file_new_for_path
+   fun:_Z15filename_to_uriRKSs
+}
+
+{
+    glib_main_loop
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:malloc
+    ...
+    fun:start_thread
+    fun:clone
+}
+
+{
+    glib_main_loop2
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:calloc
+    ...
+    fun:start_thread
+    fun:clone
+}
+
+{
+    QNetworkConfigurationManager
+    Memcheck:Leak
+    match-leak-kinds: definite
+    ...
+    fun:_ZN35QNetworkConfigurationManagerPrivate10initializeEv
+    fun:_Z35qNetworkConfigurationManagerPrivatev
+    fun:_ZN28QNetworkConfigurationManagerC1EP7QObject
+}
+
+{
+    QCoreApplication
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:calloc
+    ...
+    fun:_ZN7QObject5eventEP6QEvent
+    fun:_ZN16QCoreApplication14notifyInternalEP7QObjectP6QEvent
+    fun:_ZN23QCoreApplicationPrivate16sendPostedEventsEP7QObjectiP11QThreadData
+}
+
+{
+    QCoreApplication2
+    Memcheck:Param
+    writev(vector[...])
+    ...
+    fun:xcb_wait_for_reply
+    ...
+    fun:_ZN7QObject5eventEP6QEvent
+    fun:_ZN16QCoreApplication6notifyEP7QObjectP6QEvent
+    fun:_ZN16QCoreApplication14notifyInternalEP7QObjectP6QEvent
+    fun:_ZN23QCoreApplicationPrivate16sendPostedEventsEP7QObjectiP11QThreadData
+    ...
+    fun:g_main_context_dispatch
+    ...
+    fun:g_main_context_iteration
+    fun:_ZN20QEventDispatcherGlib13processEventsE6QFlagsIN10QEventLoop17ProcessEventsFlagEE
+    fun:_ZN16QCoreApplication13processEventsE6QFlagsIN10QEventLoop17ProcessEventsFlagEEi
+}
+
+{
+    QProcess
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:malloc
+    ...
+    fun:_ZN10QEventLoop4execE6QFlagsINS_17ProcessEventsFlagEE
+    fun:_ZN7QThread4execEv
+}
+
+{
+   QThread
+   Memcheck:Leak
+   match-leak-kinds: definite
+    ...
+   fun:_ZN10QEventLoopC1EP7QObject
+   fun:_ZN7QThread4execEv
+   ...
+   fun:start_thread
+   fun:clone
+}
+
+{
+    QNetworkAccessManager
+    Memcheck:Leak
+    match-leak-kinds: definite
+    ...
+    fun:_ZN21QNetworkAccessManager13createRequestENS_9OperationERK15QNetworkRequestP9QIODevice
+    fun:_ZN21QNetworkAccessManager3getERK15QNetworkRequest
+    fun:_ZN5unity11thumbnailer8internal22UbuntuServerDownloader12download_urlERK4QUrlNSt6chrono8durationIlSt5ratioILl1ELl1000EEEE
+}
+
+{
+    gst_plugin_load_file
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:malloc
+    fun:dl_open_worker
+    fun:_dl_catch_error
+    fun:_dl_open
+    fun:dlopen_doit
+    fun:_dl_catch_error
+    fun:_dlerror_run
+    ...
+    fun:g_module_open
+    fun:gst_plugin_load_file
+}

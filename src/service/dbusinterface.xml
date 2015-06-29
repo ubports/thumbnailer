@@ -1,0 +1,27 @@
+<node>
+  <interface name="com.canonical.Thumbnailer">
+    <method name="GetAlbumArt">
+      <arg direction="in" type="s" name="artist" />
+      <arg direction="in" type="s" name="album" />
+      <arg direction="in" type="(ii)" name="requestedSize" />
+      <arg direction="out" type="h" name="fd" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.In2" value="QSize" />
+      <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
+    </method>
+    <method name="GetArtistArt">
+      <arg direction="in" type="s" name="artist" />
+      <arg direction="in" type="s" name="album" />
+      <arg direction="in" type="(ii)" name="requestedSize" />
+      <arg direction="out" type="h" name="fd" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.In2" value="QSize" />
+      <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
+    </method>
+    <method name="GetThumbnail">
+      <arg direction="in" type="s" name="filename" />
+      <arg direction="in" type="(ii)" name="requestedSize" />
+      <arg direction="out" type="h" name="fd" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.In1" value="QSize" />
+      <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
+    </method>
+  </interface>
+</node>

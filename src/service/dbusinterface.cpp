@@ -1,168 +1,344 @@
 /*
- * Copyright (C) 2014 Canonical, Ltd.
+ * Copyright (C) 2014 Canonical Ltd.
  *
- * Authors:
- *    James Henstridge <james.henstridge@canonical.com>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of version 3 of the GNU General Public License as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #include "dbusinterface.h"
 
-#include <cstdio>
-#include <cstring>
-#include <memory>
-#include <stdexcept>
-#include <string>
+#include <internal/file_io.h>
+#include <internal/trace.h>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/regex.hpp>
+
 #include <thread>
-#include <fcntl.h>
-#include <unistd.h>
-
-#include <glib.h>
-#include <glib-object.h>
-#include <gio/gio.h>
-#include <gio/gunixfdlist.h>
-#include <thumbnailer.h>
-
-#include <internal/gobj_memory.h>
-#include "dbus-generated.h"
 
 using namespace std;
+using namespace unity::thumbnailer::internal;
 
-static const char BUS_NAME[] = "com.canonical.MediaScanner2";
-static const char ART_ERROR[] = "com.canonical.MediaScanner2.Error.Failed";
-
-static const char MISSING_ALBUM_ART[] = "/usr/share/unity/icons/album_missing.png";
-
-struct DBusInterfacePrivate {
-    const std::string bus_path;
-    unique_gobj<GDBusConnection> bus;
-    unique_gobj<TNThumbnailer> iface;
-    unsigned int handler_id;
-    std::shared_ptr<Thumbnailer> thumbnailer;
-
-    DBusInterfacePrivate(GDBusConnection *g_bus, const std::string& bus_path)
-        : bus_path(bus_path),
-          bus(static_cast<GDBusConnection*>(g_object_ref(g_bus))),
-          iface(tn_thumbnailer_skeleton_new()),
-          handler_id(0),
-          thumbnailer(std::make_shared<Thumbnailer>()) {
-        handler_id = g_signal_connect(
-            iface.get(), "handle-get-album-art",
-            G_CALLBACK(&DBusInterfacePrivate::handleGetAlbumArt), this);
-
-        GError *error = nullptr;
-        if (!g_dbus_interface_skeleton_export(
-                G_DBUS_INTERFACE_SKELETON(iface.get()), bus.get(),
-                bus_path.c_str(), &error)) {
-            string errortxt(error->message);
-            g_error_free(error);
-
-            string msg = "Failed to export interface: ";
-            msg += errortxt;
-            throw runtime_error(msg);
-        }
-    }
-
-    ~DBusInterfacePrivate() {
-        g_dbus_interface_skeleton_unexport(
-            G_DBUS_INTERFACE_SKELETON(iface.get()));
-        g_signal_handler_disconnect(iface.get(), handler_id);
-    }
-
-    static gboolean handleGetAlbumArt(TNThumbnailer *iface, GDBusMethodInvocation *invocation, GUnixFDList *, const char *artist, const char *album, const char *size, void *user_data) {
-        auto p = static_cast<DBusInterfacePrivate*>(user_data);
-        fprintf(stderr, "Look up cover art for %s/%s at size %s\n", artist, album, size);
-
-        ThumbnailSize desiredSize;
-        if (!strcmp(size, "small")) {
-            desiredSize = TN_SIZE_SMALL;
-        } else if (!strcmp(size, "large")) {
-            desiredSize = TN_SIZE_LARGE;
-        } else if (!strcmp(size, "xlarge")) {
-            desiredSize = TN_SIZE_XLARGE;
-        } else if (!strcmp(size, "original")) {
-            desiredSize = TN_SIZE_ORIGINAL;
-        } else {
-            std::string error("Unknown size: ");
-            error += size;
-            g_dbus_method_invocation_return_dbus_error(
-                invocation, ART_ERROR, error.c_str());
-            return TRUE;
-        }
-
-        try {
-            std::thread t(&getAlbumArt,
-                          unique_gobj<TNThumbnailer>(static_cast<TNThumbnailer*>(g_object_ref(iface))),
-                          unique_gobj<GDBusMethodInvocation>(static_cast<GDBusMethodInvocation*>(g_object_ref(invocation))),
-                          p->thumbnailer,
-                          std::string(artist), std::string(album), desiredSize);
-            t.detach();
-        } catch (const std::exception &e) {
-            g_dbus_method_invocation_return_dbus_error(
-                invocation, ART_ERROR, e.what());
-        }
-        return TRUE;
-    }
-
-    static void getAlbumArt(unique_gobj<TNThumbnailer> iface,
-                            unique_gobj<GDBusMethodInvocation> invocation,
-                            std::shared_ptr<Thumbnailer> thumbnailer,
-                            const std::string artist, const std::string album,
-                            ThumbnailSize desiredSize) {
-        std::string art;
-        try {
-            art = thumbnailer->get_album_art(
-                artist, album, desiredSize, TN_REMOTE);
-        } catch (const std::exception &e) {
-            g_dbus_method_invocation_return_dbus_error(
-                invocation.get(), ART_ERROR, e.what());
-            return;
-        }
-
-        if (art.empty()) {
-            g_dbus_method_invocation_return_dbus_error(
-                invocation.get(), ART_ERROR, "Could not get thumbnail");
-            return;
-        }
-        int fd = open(art.c_str(), O_RDONLY);
-        if (fd < 0) {
-            g_dbus_method_invocation_return_dbus_error(
-                invocation.get(), ART_ERROR, strerror(errno));
-            return;
-        }
-
-        unique_gobj<GUnixFDList> fd_list(g_unix_fd_list_new());
-        GError *error = nullptr;
-        g_unix_fd_list_append(fd_list.get(), fd, &error);
-        close(fd);
-        if (error != nullptr) {
-            g_dbus_method_invocation_return_dbus_error(
-                invocation.get(), ART_ERROR, error->message);
-            g_error_free(error);
-            return;
-        }
-
-        tn_thumbnailer_complete_get_album_art(
-            iface.get(), invocation.get(), fd_list.get(), g_variant_new_handle(0));
-    }
-
-};
-
-DBusInterface::DBusInterface(GDBusConnection *bus, const std::string& bus_path)
-    : p(new DBusInterfacePrivate(bus, bus_path)) {
+namespace
+{
+char const ART_ERROR[] = "com.canonical.Thumbnailer.Error.Failed";
 }
 
-DBusInterface::~DBusInterface() {
-    delete p;
+namespace unity
+{
+
+namespace thumbnailer
+{
+
+namespace service
+{
+
+namespace
+{
+
+// Return a string identifying hardware for which we need to
+// set max-extractions to some special value.
+// Be careful when making modifications here. We need
+// to find a string in cpuinfo that is unique to the specific
+// hardwares we care about. For example, the output from
+// /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
+
+#ifdef __arm__
+
+string hardware()
+{
+    string hw;
+
+    string const pattern = R"del([Hh]ardware[ \t]*:(.*))del";
+    boost::regex r(pattern);
+
+    string cpuinfo;
+    try
+    {
+        cpuinfo = read_file("/proc/cpuinfo");
+    }
+    // LCOV_EXCL_START
+    catch (runtime_error const& e)
+    {
+        qDebug() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
+        return "";
+    }
+    // LCOV_EXCL_STOP
+
+    vector<string> lines;
+    boost::split(lines, cpuinfo, boost::is_any_of("\n"));
+    for (auto const& line : lines)
+    {
+        boost::smatch hw_match;
+        if (boost::regex_match(line, hw_match, r))
+        {
+            hw = hw_match[1];
+            boost::trim(hw);
+            break;
+        }
+    }
+    return hw;
 }
+
+// TODO: Hack to work around gstreamer problems.
+//       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
+
+int adjusted_limit(int limit)
+{
+    int new_limit = limit;
+
+    // Only adjust if max-extractions is at its default of 0.
+    // That allows us to still set it to something else for testing.
+    if (limit == 0)
+    {
+        string hw = hardware();
+#if 0
+        // TODO: Disabled for now until we can figure out in more
+        //       detail how to deal with the gstreamer problems.
+        // On BQ (MT6582), we can handle only one vs-thumb at a time.
+        new_limit = hw == "MT6582" ? 1 : 2;
+#else
+        new_limit = 1;
+#endif
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+    }
+    return new_limit;
+}
+
+#else
+
+// Not on Arm, leave as is.
+
+int adjusted_limit(int limit)
+{
+    return limit;
+}
+
+#endif
+
+}
+
+DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject* parent)
+    : QObject(parent)
+    , thumbnailer_(thumbnailer)
+    , check_thread_pool_(make_shared<QThreadPool>())
+    , create_thread_pool_(make_shared<QThreadPool>())
+    , download_limiter_(settings_.max_downloads())
+{
+    auto limit = settings_.max_extractions();
+
+    // TODO: Hack to deal with gstreamer problems on (at least) Mako and BQ.
+    //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
+    limit = adjusted_limit(limit);
+
+    if (limit == 0)
+    {
+        limit = std::thread::hardware_concurrency();
+        if (limit == 0)
+        {
+            // If the platform can't tell us how many
+            // cores we have, we assume 1.
+            limit = 1;  // LCOV_EXCL_LINE
+        }
+    }
+
+    extraction_limiter_.reset(new RateLimiter(limit));
+}
+
+DBusInterface::~DBusInterface()
+{
+}
+
+CredentialsCache& DBusInterface::credentials()
+{
+    if (!credentials_)
+    {
+        credentials_.reset(new CredentialsCache(connection()));
+    }
+    return *credentials_.get();
+}
+
+QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
+                                                   QString const& album,
+                                                   QSize const& requestedSize)
+{
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, credentials(),
+                                 std::move(request), details));
+    }
+    // LCOV_EXCL_START
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, e.what());
+    }
+    // LCOV_EXCL_STOP
+    return QDBusUnixFileDescriptor();
+}
+
+QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
+                                                    QString const& album,
+                                                    QSize const& requestedSize)
+{
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 download_limiter_, credentials(),
+                                 std::move(request), details));
+    }
+    // LCOV_EXCL_START
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, msg);
+    }
+    // LCOV_EXCL_STOP
+    return QDBusUnixFileDescriptor();
+}
+
+QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
+                                                    QSize const& requestedSize)
+{
+    std::unique_ptr<ThumbnailRequest> request;
+
+    try
+    {
+        QString details;
+        QTextStream s(&details);
+        s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
+        queueRequest(new Handler(connection(), message(),
+                                 check_thread_pool_, create_thread_pool_,
+                                 *extraction_limiter_, credentials(),
+                                 std::move(request), details));
+    }
+    catch (exception const& e)
+    {
+        QString msg = "DBusInterface::GetThumbnail(): " + filename + ": " + e.what();
+        qWarning() << msg;
+        sendErrorReply(ART_ERROR, msg);
+    }
+    return QDBusUnixFileDescriptor();
+}
+
+void DBusInterface::queueRequest(Handler* handler)
+{
+    requests_.emplace(handler, std::unique_ptr<Handler>(handler));
+    Q_EMIT endInactivity();
+    connect(handler, &Handler::finished, this, &DBusInterface::requestFinished);
+    setDelayedReply(true);
+
+    std::vector<Handler*> &requests_for_key = request_keys_[handler->key()];
+    if (requests_for_key.size() == 0)
+    {
+        /* There are no other concurrent requests for this item, so
+         * begin immediately. */
+        handler->begin();
+    }
+    else
+    {
+        /* There are other requests for this item, so chain this
+         * request to wait for them to complete first.  This way we
+         * can take advantage of any cached downloads or failures. */
+        // TODO: should record tiem spent in queue
+        connect(requests_for_key.back(), &Handler::finished,
+                handler, &Handler::begin);
+    }
+    requests_for_key.push_back(handler);
+}
+
+void DBusInterface::requestFinished()
+{
+    Handler* handler = static_cast<Handler*>(sender());
+    try
+    {
+        auto& h = requests_.at(handler);
+        h.release();
+        requests_.erase(handler);
+    }
+    // LCOV_EXCL_START
+    catch (std::out_of_range const& e)
+    {
+        qWarning() << "finished() called on unknown handler" << handler;
+    }
+    // LCOV_EXCL_STOP
+
+    // Remove ourselves from the chain of requests
+    std::vector<Handler*> &requests_for_key = request_keys_[handler->key()];
+    requests_for_key.erase(
+        std::remove(requests_for_key.begin(), requests_for_key.end(), handler),
+        requests_for_key.end());
+    if (requests_for_key.size() == 0)
+    {
+        request_keys_.erase(handler->key());
+    }
+
+    if (requests_.empty())
+    {
+        Q_EMIT startInactivity();
+    }
+    // Queue deletion of handler when we re-enter the event loop.
+    handler->deleteLater();
+
+    QString msg;
+    QTextStream s(&msg);
+    s.setRealNumberNotation(QTextStream::FixedNotation);
+    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000;
+
+    auto queued_time = double(handler->queued_time().count()) / 1000000;
+    auto download_time = double(handler->download_time().count()) / 1000000;
+
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << " [";
+    }
+    if (queued_time > 0)
+    {
+        s << "q: " << queued_time;
+        if (download_time > 0)
+        {
+            s << ", ";
+        }
+    }
+    if (download_time > 0)
+    {
+        s << "d: " << download_time;
+    }
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << "]";
+    }
+
+    s << " sec (" << handler->status() << ")";
+    qDebug() << msg;
+}
+
+}  // namespace service
+
+}  // namespace thumbnailer
+
+}  // namespace unity

@@ -1,3 +1,174 @@
+thumbnailer (1.4-0ubuntu0) UNRELEASED; urgency=medium
+
+  * Switch to new cache implementation
+  * Remove the libthumbnailer0 and libthumbnailer-dev packages, since 
+    that code is now statically linked into the D-Bus service.
+
+ -- James Henstridge <james.henstridge@canonical.com>  Tue, 21 Apr 2015 14:17:52 +0800
+
+thumbnailer (1.3+15.04.20150312-0ubuntu1) vivid; urgency=medium
+
+  [ Albert Astals Cid ]
+  * Use own QDBusConnection (LP: #1410260)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 12 Mar 2015 08:38:44 +0000
+
+thumbnailer (1.3+15.04.20150122-0ubuntu1) vivid; urgency=low
+
+  [ Florian Boucault ]
+  * Keeps track of failed thumbnails and do not try to regenerate them.
+    (LP: #1389678)
+  * QML thumbnail provider: make sure sourceSize (aka requestedSize) is
+    respected by downscaling at loading time if necessary. Makes
+    TN_SIZE_ORIGINAL case much faster. (LP: #1391368)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 22 Jan 2015 08:56:16 +0000
+
+thumbnailer (1.3+15.04.20150106-0ubuntu1) vivid; urgency=low
+
+  [ Jussi Pakkanen ]
+  * Fix a few potential memory corruptions. (LP: #1403906)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 06 Jan 2015 18:50:46 +0000
+
+thumbnailer (1.3+15.04.20141202-0ubuntu1) vivid; urgency=low
+
+  [ Alfonso Sanchez-Beato ]
+  * [ Alfonso Sanchez-Beato ] Workaround for files with very few intra
+    frames (LP: #1393834)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 02 Dec 2014 14:10:09 +0000
+
+thumbnailer (1.3+15.04.20141106-0ubuntu1) vivid; urgency=low
+
+  [ Jussi Pakkanen ]
+  * Fix memory leak.
+  * Use videoflip to fix orientation. (LP: #1191934)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 06 Nov 2014 05:38:14 +0000
+
+thumbnailer (1.3+15.04.20141105-0ubuntu1) vivid; urgency=low
+
+  [ Ricardo Salveti de Araujo ]
+  * Enabling exif thumbnails again, as we now got the proper fix at
+    qtubuntu-camera
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 05 Nov 2014 04:05:25 +0000
+
+thumbnailer (1.3+14.10.20141002-0ubuntu1) utopic; urgency=low
+
+  [ Jussi Pakkanen ]
+  * Disable exif thumbnails temporarily to work around a regression.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 02 Oct 2014 19:20:24 +0000
+
+thumbnailer (1.3+14.10.20140926-0ubuntu1) utopic; urgency=medium
+
+  [ Pawel Stolowski ]
+  * Added gsettings schema with API key used for accessing dash.ubuntu.com service.
+    - Pass the key with artist/album requests.
+  * Install album_missing icon (taken from libunitycore package).
+
+  [ Jussi Pakkanen ]
+  * Use exif thumbnail if one is available.
+  * A few simple fixes for issues found compiling against libc++.
+  * Prevent apport from sending vs-thumb stacktraces.
+
+  [ Pete Woods ]
+  * There is a new thumbnailer-common package to hold default icons.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 26 Sep 2014 11:25:18 +0000
+
+thumbnailer (1.2+14.10.20140916-0ubuntu1) utopic; urgency=low
+
+  [ Jussi Pakkanen ]
+  * Make a few classes more resistant to copying.
+  * Clean up warnings as reported by gcc and shiny new clang.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 16 Sep 2014 08:14:04 +0000
+
+thumbnailer (1.2+14.10.20140904-0ubuntu1) utopic; urgency=low
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+  [ Jussi Pakkanen ]
+  * Move embedded thumbnail extraction to a helper binary to avoid
+    linking main library with gstreamer. (LP: #1363314)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 04 Sep 2014 07:43:24 +0000
+
+thumbnailer (1.2+14.10.20140901.is.1.2+14.10.20140814-0ubuntu2) utopic; urgency=medium
+
+  * Reintroduce the pthread linkage fix from 1.2+14.10.20140827.1-0ubuntu1,
+    required for the package to build.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Tue, 02 Sep 2014 13:26:28 -0700
+
+thumbnailer (1.2+14.10.20140901.is.1.2+14.10.20140814-0ubuntu1) utopic; urgency=medium
+
+  * Revert the last two landings. The 1.2+14.10.20140827.1 version
+    introduced a serious regression breaking many projects, indirectly
+    caused by thumbnailer using gst.  LP: #1363314.
+
+ -- Łukasz 'sil2100' Zemczak <lukasz.zemczak@canonical.com>  Tue, 02 Sep 2014 21:50:08 +0200
+
+thumbnailer (1.2+14.10.20140901-0ubuntu1) utopic; urgency=medium
+
+  [ Pawel Stolowski ]
+  * Changed requested images sizes to better match sizes supported by the web server.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 01 Sep 2014 07:32:23 +0000
+
+thumbnailer (1.2+14.10.20140827.1-0ubuntu1) utopic; urgency=low
+
+  [ Jussi Pakkanen ]
+  * Re-enable embedded album art.
+  * Link against thread library explicitly.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 27 Aug 2014 15:55:17 +0000
+
+thumbnailer (1.2+14.10.20140814-0ubuntu1) utopic; urgency=low
+
+  [ Jussi Pakkanen ]
+  * Print log message when errors happen.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 14 Aug 2014 13:41:35 +0000
+
+thumbnailer (1.2+14.10.20140812-0ubuntu1) utopic; urgency=medium
+
+  [ Pawel Stolowski ]
+  * Use Ubuntu webservice for album art and provide artist art API.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 12 Aug 2014 16:57:24 +0000
+
+thumbnailer (1.1+14.10.20140811-0ubuntu1) utopic; urgency=low
+
+  [ Ubuntu daily release ]
+  * debian/libthumbnailer0.symbols: auto-update to released version
+
+  [ Arthur Mello ]
+  * Work with file names with non-european characters by not writing
+    metadata chunks when they can't be represented in ISO-8859-1. (LP:
+    #1319698)
+
+  [ Jussi Pakkanen ]
+  * Work with file names with non-european characters by not writing
+    metadata chunks when they can't be represented in ISO-8859-1. (LP:
+    #1319698)
+
+  [ Pawel Stolowski ]
+  * Request images of size 400 instead of 200 from ubuntu server.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 11 Aug 2014 14:20:34 +0000
+
+thumbnailer (1.1+14.04.20140401.1-0ubuntu3) utopic; urgency=medium
+
+  * No-change rebuild to get dbgsyms for all binaries onto
+    ddebs.ubuntu.com
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 24 Jul 2014 14:14:15 -0700
+
 thumbnailer (1.1+14.04.20140401.1-0ubuntu2) utopic; urgency=medium
 
   * No-change rebuild for shlib changes in qtbase and qtdeclarative.

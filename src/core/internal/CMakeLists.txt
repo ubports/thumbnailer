@@ -1,0 +1,5 @@
+set(CACHE_INTERNAL_SRC
+    ${CMAKE_CURRENT_SOURCE_DIR}/persistent_string_cache_impl.cpp
+)
+
+set(CORE_SRC ${CORE_SRC} ${CACHE_INTERNAL_SRC} PARENT_SCOPE)

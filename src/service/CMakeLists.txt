@@ -1,28 +1,31 @@
-add_definitions(${THUMBNAILER_CFLAGS})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+qt5_add_dbus_adaptor(adaptor_files dbusinterface.xml dbusinterface.h unity::thumbnailer::service::DBusInterface)
+qt5_add_dbus_adaptor(adaptor_files admininterface.xml admininterface.h unity::thumbnailer::service::AdminInterface)
+
+set_source_files_properties(bus.xml PROPERTIES
+  CLASSNAME BusInterface)
+qt5_add_dbus_interface(interface_files bus.xml businterface)
 
 add_executable(thumbnailer-service
-  main.cpp
+  admininterface.cpp
+  credentialscache.cpp
   dbusinterface.cpp
-  dbus-generated.c
-)
+  handler.cpp
+  inactivityhandler.cpp
+  main.cpp
+  ratelimiter.cpp
+  stats.cpp
+  ${adaptor_files}
+  ${interface_files}
+  )
 
-target_link_libraries(thumbnailer-service thumbnailer)
+qt5_use_modules(thumbnailer-service DBus Concurrent)
+target_link_libraries(thumbnailer-service thumbnailer Qt5::DBus Qt5::Concurrent)
+set_target_properties(thumbnailer-service PROPERTIES AUTOMOC TRUE)
+add_dependencies(thumbnailer-service vs-thumb)
 
 install(
   TARGETS thumbnailer-service
   RUNTIME DESTINATION ${SHARE_PRIV_DIR}
-)
-
-find_program(gdbus_codegen gdbus-codegen)
-if(NOT gdbus_codegen)
-  msg(FATAL_ERROR "Could not locate gdbus-codegen")
-endif()
-
-add_custom_command(
-  OUTPUT dbus-generated.c dbus-generated.h
-  COMMAND ${gdbus_codegen} --interface-prefix=com.canonical. --generate-c-code dbus-generated --c-namespace TN ${CMAKE_CURRENT_SOURCE_DIR}/dbus-interface.xml
-  MAIN_DEPENDENCY dbus-interface.xml
 )
 
 # Install the service file.

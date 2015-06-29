@@ -4,49 +4,34 @@ Priority: optional
 Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Standards-Version: 3.9.4
 Build-Depends: cmake,
+               cmake-extras (>= 0.4),
                debhelper (>= 9),
                gstreamer1.0-plugins-good,
+               libapparmor-dev,
+               libboost-filesystem-dev,
+               libboost-regex-dev,
                libexif-dev,
                libgdk-pixbuf2.0-dev,
                libgstreamer1.0-dev,
                libgstreamer-plugins-base1.0-dev,
                libgtest-dev,
-               libsoup2.4-dev,
-               libxml2-dev,
+               libleveldb-dev,
+               libqtdbustest1-dev,
+               libunity-api-dev,
+               python3-tornado,
+               qml-module-qtquick2,
+               qml-module-qttest,
                qt5-default,
                qtbase5-dev,
                qtbase5-dev-tools,
                qtdeclarative5-dev,
                shared-mime-info,
+               xvfb,
 Homepage: https://launchpad.net/thumbnailer
 # if you don't have have commit access to this branch but would like to upload
 # directly to Ubuntu, don't worry: your changes will be merged back into the
 # upstream branch
 Vcs-Bzr: lp:thumbnailer
-
-Package: libthumbnailer0
-Architecture: any
-Multi-Arch: same
-Pre-Depends: ${misc:Pre-Depends},
-Depends: ${misc:Depends},
-         ${shlibs:Depends},
-Description: generate thumbnails from files
- Thumbnailer is a shared library that generates
- thumbnail images for multiple file types such
- as video and audio files.
-
-Package: libthumbnailer-dev
-Architecture: any
-Multi-Arch: same
-Pre-Depends: ${misc:Pre-Depends},
-Depends: ${misc:Depends},
-         ${shlibs:Depends},
-         gstreamer1.0-plugins-base,
-         gstreamer1.0-plugins-good,
-         libthumbnailer0 (= ${binary:Version}),
-Description: development files for thumbnailer
- This package contains development files
- for the thumbnailer package.
 
 Package: thumbnailer-service
 Architecture: any
@@ -54,7 +39,8 @@ Multi-Arch: foreign
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         libthumbnailer0 (= ${binary:Version}),
+Breaks: libthumbnailer0 (<< 1.4~)
+Replaces: libthumbnailer0 (<< 1.4~)
 Description: D-Bus service for out of process thumbnailing
  This package provides a D-Bus service that can provide thumbnails on
  behalf of another process.
@@ -65,10 +51,19 @@ Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         libthumbnailer0 (= ${binary:Version}),
+         thumbnailer-common (= ${binary:Version}),
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
 Recommends: thumbnailer-service (= ${binary:Version}),
 Description: QML interface for the thumbnailer.
  This package provides image providers that allow access to the
  thumbnailer from Qt Quick 2 / QML applications.
+
+Package: thumbnailer-common
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+Description: Common files for the thumbnailer service.
+ This package provides common files for the thumbnailer service, such
+ as default icons.
+
