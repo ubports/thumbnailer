@@ -68,7 +68,7 @@ bool network_is_connected()
     struct addrinfo *result;
     if (getaddrinfo(SERVER_DOMAIN_NAME, "80", &hints, &result) != 0)
     {
-        return false;
+        return false;  // LCOV_EXCL_LINE
     }
     freeaddrinfo(result);
     return true;
@@ -103,6 +103,7 @@ class UbuntuServerArtReply : public ArtReply
 public:
     Q_DISABLE_COPY(UbuntuServerArtReply)
 
+    // LCOV_EXCL_START
     UbuntuServerArtReply(QString const& url,
                          QObject* parent = nullptr)
         : ArtReply(parent)
@@ -115,6 +116,7 @@ public:
         , reply_(nullptr)
     {
     }
+    // LCOV_EXCL_STOP
 
     UbuntuServerArtReply(QString const& url,
                          QNetworkReply* reply,
@@ -184,7 +186,7 @@ public Q_SLOTS:
         //       reply_ is nullptr only if the network is down.
         if (!reply_)
         {
-            Q_EMIT finished();
+            Q_EMIT finished();  // LCOV_EXCL_LINE
             return;
         }
 
@@ -305,8 +307,10 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chron
     }
     else
     {
+        // LCOV_EXCL_START
         art_reply = make_shared<UbuntuServerArtReply>(url.toString());
         QMetaObject::invokeMethod(art_reply.get(), "download_finished", Qt::QueuedConnection);
+        // LCOV_EXCL_STOP
     }
     return art_reply;
 }
