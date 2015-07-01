@@ -73,6 +73,7 @@ bool network_is_connected()
         qDebug() << "getaddrinfo failed:" << errno;
         return false;
     }
+    return true;
     for (auto r = result; r != nullptr; r = r->ai_next)
     {
         qDebug() << "ai_family:" << r->ai_family;
