@@ -70,13 +70,16 @@ bool network_is_connected()
     struct addrinfo *result;
     if (getaddrinfo(SERVER_DOMAIN_NAME, "80", &hints, &result) != 0)
     {
+        qDebug() << "getaddrinfo failed:" << errno;
         return false;
     }
     for (auto r = result; r != nullptr; r = r->ai_next)
     {
+        qDebug() << "ai_family:" << r->ai_family;
         int sfd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         if (sfd == -1)
         {
+            qDebug() << "couldn't create socket:" << errno;
             continue;
         }
         if (connect(sfd, r->ai_addr, r->ai_addrlen) != -1)
@@ -87,6 +90,7 @@ bool network_is_connected()
         }
     }
     freeaddrinfo(result);
+    qDebug() << "network up:" << connected;
     return connected;
 }
 
