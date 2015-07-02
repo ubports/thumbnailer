@@ -57,8 +57,8 @@ ActionMap const valid_actions =
     { "stats",       { &create_action<ShowStats>,          "Show statistics" } },
     { "clear-stats", { &create_action<Clear>,              "Clear statistics" } },
     { "get",         { &create_action<GetLocalThumbnail>,  "Get thumbnail from local file" } },
-    { "get_artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
-    { "get_album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },
+    { "get-artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
+    { "get-album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },
     { "clear",       { &create_action<Clear>,              "Clear caches" } },
     { "compact",     { &create_action<Clear>,              "Compact caches" } },
     { "shutdown",    { &create_action<Shutdown>,           "Shut down thumbnailer service" } }

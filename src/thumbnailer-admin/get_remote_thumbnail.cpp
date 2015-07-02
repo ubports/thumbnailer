@@ -46,8 +46,8 @@ GetRemoteThumbnail::GetRemoteThumbnail(QCommandLineParser& parser)
     : Action(parser)
     , size_(0, 0)
 {
-    assert(command_ == "get_artist" || command_ == "get_album");
-    QString kind = command_ == "get_artist" ? "artist" : "album";
+    assert(command_ == "get-artist" || command_ == "get-album");
+    QString kind = command_ == "get-artist" ? "artist" : "album";
 
     parser.addPositionalArgument(command_, "Get " + kind + " thumbnail from remote server", command_);
     parser.addPositionalArgument("artist", "Artist name", "artist");
@@ -97,7 +97,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
     try
     {
         auto method =
-            command_ == "get_artist" ? &ThumbnailerInterface::GetArtistArt : &ThumbnailerInterface::GetAlbumArt;
+            command_ == "get-artist" ? &ThumbnailerInterface::GetArtistArt : &ThumbnailerInterface::GetAlbumArt;
         auto reply = (conn.thumbnailer().*method)(artist_, album_, size_);
         reply.waitForFinished();
         if (!reply.isValid())
@@ -106,7 +106,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
         }
         QDBusUnixFileDescriptor thumbnail_fd = reply.value();
 
-        string suffix = command_ == "get_artist" ? "artist" : "album";
+        string suffix = command_ == "get-artist" ? "artist" : "album";
         string inpath = (artist_ + "_" + album_).toStdString() + "_" + suffix;
         // Just in case some artist or album has a slash in its name.
         replace(inpath.begin(), inpath.end(), '/', '-');
