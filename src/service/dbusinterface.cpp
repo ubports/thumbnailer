@@ -202,7 +202,7 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
     {
         QString details;
         QTextStream s(&details);
-        s << "album: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+        s << "artist: " << artist << "/" << album << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
