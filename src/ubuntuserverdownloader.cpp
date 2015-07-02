@@ -104,9 +104,8 @@ public:
     Q_DISABLE_COPY(UbuntuServerArtReply)
 
     // LCOV_EXCL_START
-    UbuntuServerArtReply(QString const& url,
-                         QObject* parent = nullptr)
-        : ArtReply(parent)
+    UbuntuServerArtReply(QString const& url)
+        : ArtReply(nullptr)
         , is_running_(false)
         , error_string_("network down")
         , error_(QNetworkReply::TemporaryNetworkFailureError)
@@ -120,9 +119,8 @@ public:
 
     UbuntuServerArtReply(QString const& url,
                          QNetworkReply* reply,
-                         chrono::milliseconds timeout,
-                         QObject* parent = nullptr)
-        : ArtReply(parent)
+                         chrono::milliseconds timeout)
+        : ArtReply(nullptr)
         , is_running_(false)
         , error_(QNetworkReply::NoError)
         , url_string_(url)
@@ -302,7 +300,7 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chron
     if (network_is_connected())
     {
         QNetworkReply* reply = network_manager_->get(QNetworkRequest(url));
-        art_reply = make_shared<UbuntuServerArtReply>(url.toString(), reply, timeout, this);
+        art_reply = make_shared<UbuntuServerArtReply>(url.toString(), reply, timeout);
         connect(reply, &QNetworkReply::finished, art_reply.get(), &UbuntuServerArtReply::download_finished);
     }
     else
