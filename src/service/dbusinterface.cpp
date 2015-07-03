@@ -19,7 +19,6 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
-#include <internal/trace.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>

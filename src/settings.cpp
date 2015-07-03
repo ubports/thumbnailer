@@ -25,6 +25,7 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #include <gio/gio.h>
 #pragma GCC diagnostic pop
+#include <QDebug>
 
 #include <memory>
 
@@ -50,6 +51,10 @@ Settings::Settings(string const& schema_name)
     if (schema_)
     {
         settings_.reset(g_settings_new(schema_name.c_str()));
+    }
+    else
+    {
+        qCritical() << "The schema" << schema_name.c_str() << "is missing";
     }
 }
 

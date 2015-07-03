@@ -24,7 +24,8 @@
 #include <internal/file_io.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
-#include <internal/trace.h>
+
+#include <QDebug>
 
 #include <sys/stat.h>
 #include <unistd.h>
