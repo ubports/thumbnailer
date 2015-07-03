@@ -14,17 +14,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: James Henstridge <james.henstridge@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #include "ratelimiter.h"
+
+using namespace std;
 
 namespace unity
 {
 
 namespace thumbnailer
-{
-
-namespace service
 {
 
 RateLimiter::RateLimiter(int concurrency)
@@ -35,17 +35,29 @@ RateLimiter::RateLimiter(int concurrency)
 
 RateLimiter::~RateLimiter() = default;
 
-void RateLimiter::schedule(std::function<void()> job)
+function<void()> RateLimiter::schedule(function<void()> job)
 {
     if (running_ < concurrency_)
     {
         running_++;
         job();
+        return []{};  // Wasn't queued, so cancel does nothing.
     }
-    else
+
+    shared_ptr<function<void()>> job_p(new function<void()>(move(job)));
+    queue_.emplace(job_p);
+
+    // Returned function clears job when called, provided the job is still in the queue.
+    // done() removes any cleared jobs from the queue without calling them.
+    weak_ptr<function<void()>> weak_p(job_p);
+    return [weak_p]
     {
-        queue_.push(job);
-    }
+        auto job_p = weak_p.lock();
+        if (job_p)
+        {
+            *job_p = nullptr;
+        }
+    };
 }
 
 void RateLimiter::done()
@@ -53,16 +65,24 @@ void RateLimiter::done()
     if (queue_.empty())
     {
         running_--;
+        return;
     }
-    else
+
+    // Discard any cancelled jobs.
+    shared_ptr<function<void()>> job_p;
+    do
     {
-        auto job = queue_.front();
+        job_p = queue_.front();
         queue_.pop();
-        job();
+    }
+    while (*job_p == nullptr && !queue_.empty());
+
+    // If we found an uncancelled job, call it.
+    if (*job_p)
+    {
+        (*job_p)();
     }
 }
-
-}  // namespace service
 
 }  // namespace thumbnailer
 

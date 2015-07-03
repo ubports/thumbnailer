@@ -19,8 +19,8 @@
 #pragma once
 
 #include "credentialscache.h"
-#include "ratelimiter.h"
 #include <internal/thumbnailer.h>
+#include <ratelimiter.h>
 
 #include <memory>
 #include <string>

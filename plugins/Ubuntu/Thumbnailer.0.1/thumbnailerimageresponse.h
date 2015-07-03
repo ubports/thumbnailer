@@ -18,8 +18,11 @@
 
 #pragma once
 
+#include <ratelimiter.h>
+
 #include <QQuickImageProvider>
 #include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 
 #include <memory>
 
@@ -40,7 +43,8 @@ public:
 
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image,
-                             std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
+                             unity::thumbnailer::RateLimiter* rate_limiter,
+                             std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> reply);
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();
@@ -54,11 +58,13 @@ private Q_SLOTS:
 private:
     void loadDefaultImage();
 
-    QString id_;
     QSize requested_size_;
+    unity::thumbnailer::RateLimiter* backlog_limiter_ = nullptr;
+    std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
     QQuickTextureFactory * texture_ = nullptr;
     QString default_image_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
+    std::function<void()> cancel_func_;
 };
 
 }  // namespace qml

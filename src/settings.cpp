@@ -16,10 +16,9 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <internal/settings.h>
-#include "settings-defaults.h"
+#include <settings.h>
 
-#include <internal/trace.h>
+#include "settings-defaults.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -37,9 +36,6 @@ namespace unity
 namespace thumbnailer
 {
 
-namespace internal
-{
-
 Settings::Settings()
     : Settings("com.canonical.Unity.Thumbnailer")
 {
@@ -54,10 +50,6 @@ Settings::Settings(string const& schema_name)
     if (schema_)
     {
         settings_.reset(g_settings_new(schema_name.c_str()));
-    }
-    else
-    {
-        qCritical() << "The schema" << schema_name.c_str() << "is missing";
     }
 }
 
@@ -113,6 +105,11 @@ int Settings::extraction_timeout() const
     return get_positive_int("extraction-timeout", EXTRACTION_TIMEOUT_DEFAULT);
 }
 
+int Settings::max_backlog() const
+{
+    return get_positive_int("max-backlog", MAX_BACKLOG_DEFAULT);
+}
+
 string Settings::get_string(char const* key, string const& default_value) const
 {
     if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))
@@ -162,8 +159,6 @@ int Settings::get_int(char const* key, int default_value) const
     return g_settings_get_int(settings_.get(), key);
 }
 
-
-}  // namespace internal
 
 }  // namespace thumbnailer
 

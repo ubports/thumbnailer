@@ -20,6 +20,7 @@
 
 #include "artgeneratorcommon.h"
 #include <service/dbus_names.h>
+#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace
@@ -57,6 +58,7 @@ namespace qml
 
 ThumbnailGenerator::ThumbnailGenerator()
     : QQuickAsyncImageProvider()
+    , backlog_limiter(Settings().max_backlog())
 {
 }
 
@@ -88,10 +90,12 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
         iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
-    auto reply = iface->GetThumbnail(src_path, requestedSize);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(
-        new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));
+    // Schedule dbus call
+    auto job = [this, src_path, requestedSize]
+    {
+        return iface->GetThumbnail(src_path, requestedSize);
+    };
+    return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), &backlog_limiter, job);
 }
 
 }  // namespace qml
