@@ -78,7 +78,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     auto reply = iface->GetAlbumArt(artist, album, size);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART, std::move(watcher));
+    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, std::move(watcher));
 }
 
 }  // namespace qml
