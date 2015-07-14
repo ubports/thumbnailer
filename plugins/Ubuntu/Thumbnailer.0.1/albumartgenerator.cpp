@@ -46,11 +46,14 @@ AlbumArtGenerator::AlbumArtGenerator()
 
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
+    QSize size = requestedSize;
     // TODO: Turn this into an error soonish.
     if (!requestedSize.isValid())
     {
         qWarning().nospace() << "AlbumArtGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
+        size.setWidth(128);
+        size.setHeight(128);
     }
 
     QUrlQuery query(id);
@@ -72,10 +75,10 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
 
     // perform dbus call
-    auto reply = iface->GetAlbumArt(artist, album, requestedSize);
+    auto reply = iface->GetAlbumArt(artist, album, size);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART, std::move(watcher));
+    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, std::move(watcher));
 }
 
 }  // namespace qml
