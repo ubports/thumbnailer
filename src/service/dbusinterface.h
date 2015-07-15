@@ -1,40 +1,84 @@
 /*
- * Copyright (C) 2014 Canonical, Ltd.
+ * Copyright (C) 2014 Canonical Ltd.
  *
- * Authors:
- *    James Henstridge <james.henstridge@canonical.com>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of version 3 of the GNU General Public License as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#ifndef DBUSINTERFACE_H
-#define DBUSINTERFACE_H
+#pragma once
 
-#include <string>
+#include "credentialscache.h"
+#include "handler.h"
+#include "ratelimiter.h"
 
-struct DBusInterfacePrivate;
-typedef struct _GDBusConnection GDBusConnection;
+#include <internal/settings.h>
 
-class DBusInterface final {
+#include <QDBusContext>
+#include <QThreadPool>
+
+namespace unity
+{
+
+namespace thumbnailer
+{
+
+namespace service
+{
+
+class DBusInterface : public QObject, protected QDBusContext
+{
+    Q_OBJECT
 public:
-    DBusInterface(GDBusConnection *bus, const std::string& bus_path);
+    DBusInterface(std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer,
+                  QObject* parent = nullptr);
     ~DBusInterface();
 
-    DBusInterface(const DBusInterface&) = delete;
+    DBusInterface(DBusInterface const&) = delete;
     DBusInterface& operator=(DBusInterface&) = delete;
 
+public Q_SLOTS:
+    QDBusUnixFileDescriptor GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QDBusUnixFileDescriptor GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QDBusUnixFileDescriptor GetThumbnail(QString const& filename,
+                                         QSize const& requestedSize);
+
 private:
-    DBusInterfacePrivate *p;
+    void queueRequest(Handler* handler);
+
+private Q_SLOTS:
+    void requestFinished();
+
+Q_SIGNALS:
+    void endInactivity();
+    void startInactivity();
+
+private:
+    CredentialsCache& credentials();
+
+    std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
+    std::shared_ptr<QThreadPool> check_thread_pool_;
+    std::shared_ptr<QThreadPool> create_thread_pool_;
+    std::unique_ptr<CredentialsCache> credentials_;
+    std::map<Handler*, std::unique_ptr<Handler>> requests_;
+    std::map<std::string, std::vector<Handler*>> request_keys_;
+    unity::thumbnailer::internal::Settings settings_;
+    RateLimiter download_limiter_;
+    std::unique_ptr<RateLimiter> extraction_limiter_;
 };
 
-#endif
+}  // namespace service
+
+}  // namespace thumbnailer
+
+}  // namespace unity

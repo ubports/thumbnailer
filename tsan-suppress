@@ -1,0 +1,2 @@
+# Add suppressions for address sanitizer below.
+# See http://clang.llvm.org/docs/SanitizerSpecialCaseList.html

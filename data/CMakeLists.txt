@@ -22,4 +22,3 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/thumbnailer"
   DESTINATION "${CMAKE_INSTALL_SYSCONFDIR}/apport/blacklist.d"
 )
-
