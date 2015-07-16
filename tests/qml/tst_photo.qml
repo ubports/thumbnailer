@@ -3,12 +3,12 @@ Fixture {
 
     function test_photo() {
         loadThumbnail("orientation-1.jpg");
-        compare(size.width, 640);
-        compare(size.height, 480);
-        comparePixel(0, 0, "#FE0000");
-        comparePixel(639, 0, "#FFFF00");
-        comparePixel(0, 479, "#0000FE");
-        comparePixel(639, 479, "#00FF01");
+        compare(size.width, 128); // was 640
+        compare(size.height, 96); // was 480
+        comparePixel(0, 0, "#FE8081");
+        comparePixel(127, 0, "#FFFF80");
+        comparePixel(0, 95, "#807FFE");
+        comparePixel(127, 95, "#81FF81");
     }
 
     function test_scaled() {
@@ -34,12 +34,12 @@ Fixture {
 
     function test_rotation() {
         loadThumbnail("orientation-8.jpg");
-        compare(size.width, 640);
-        compare(size.height, 480);
-        comparePixel(0, 0, "#FE0000");
-        comparePixel(639, 0, "#FFFF00");
-        comparePixel(0, 479, "#0000FE");
-        comparePixel(639, 479, "#00FF01");
+        compare(size.width, 128); // was 640
+        compare(size.height, 96); // was 480
+        comparePixel(0, 0, "#FE8081");
+        comparePixel(127, 0, "#FFFF80");
+        comparePixel(0, 95, "#807FFE");
+        comparePixel(127, 95, "#81FF81");
     }
 
     function test_rotation_scaled() {

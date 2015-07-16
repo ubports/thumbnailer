@@ -18,22 +18,28 @@
  */
 
 #include <internal/ubuntuserverdownloader.h>
+
 #include <internal/artreply.h>
 #include <internal/settings.h>
 
 #include <QNetworkReply>
-#include <QThread>
 #include <QTimer>
 #include <QUrlQuery>
 
 #include <cassert>
+
+#include <netdb.h>
+#include <unistd.h>
 
 using namespace std;
 
 // const strings
 namespace
 {
-constexpr const char UBUNTU_SERVER_BASE_URL[] = "https://dash.ubuntu.com";
+
+#define SERVER_DOMAIN_NAME "dash.ubuntu.com"
+
+constexpr const char UBUNTU_SERVER_BASE_URL[] = "https://" SERVER_DOMAIN_NAME;
 constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
 constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
 }
@@ -46,6 +52,29 @@ namespace thumbnailer
 
 namespace internal
 {
+
+namespace
+{
+
+// TODO: Hack to work around QNetworkAccessManager problems when the device is in flight mode.
+
+bool network_is_connected()
+{
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    struct addrinfo *result;
+    if (getaddrinfo(SERVER_DOMAIN_NAME, "80", &hints, &result) != 0)
+    {
+        return false;  // LCOV_EXCL_LINE
+    }
+    freeaddrinfo(result);
+    return true;
+}
+
+}
 
 bool network_down_error(QNetworkReply::NetworkError error)
 {
@@ -74,11 +103,24 @@ class UbuntuServerArtReply : public ArtReply
 public:
     Q_DISABLE_COPY(UbuntuServerArtReply)
 
+    // LCOV_EXCL_START
+    UbuntuServerArtReply(QString const& url)
+        : ArtReply(nullptr)
+        , is_running_(false)
+        , error_string_("network down")
+        , error_(QNetworkReply::TemporaryNetworkFailureError)
+        , url_string_(url)
+        , succeeded_(false)
+        , network_down_error_(true)
+        , reply_(nullptr)
+    {
+    }
+    // LCOV_EXCL_STOP
+
     UbuntuServerArtReply(QString const& url,
                          QNetworkReply* reply,
-                         chrono::milliseconds timeout,
-                         QObject* parent = nullptr)
-        : ArtReply(parent)
+                         chrono::milliseconds timeout)
+        : ArtReply(nullptr)
         , is_running_(false)
         , error_(QNetworkReply::NoError)
         , url_string_(url)
@@ -138,6 +180,14 @@ public:
 public Q_SLOTS:
     void download_finished()
     {
+        // TODO: Hack two work around QNetworkAccessManager problems when device is in flight mode.
+        //       reply_ is nullptr only if the network is down.
+        if (!reply_)
+        {
+            Q_EMIT finished();  // LCOV_EXCL_LINE
+            return;
+        }
+
         timer_.stop();
 
         QNetworkReply* reply = static_cast<QNetworkReply*>(sender());
@@ -209,7 +259,7 @@ QUrl get_artist_art_url(QString const& artist, QString const& album, QString con
 
 UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
     : ArtDownloader(parent)
-    , network_manager_(new QNetworkAccessManager(this))
+    , network_manager_(make_shared<QNetworkAccessManager>(this))
 {
     set_api_key();
 }
@@ -244,10 +294,22 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_artist(QString const& arti
 shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chrono::milliseconds timeout)
 {
     assert_valid_url(url);
-    QNetworkReply* reply = network_manager_->get(QNetworkRequest(url));
-    std::shared_ptr<UbuntuServerArtReply> art_reply(new UbuntuServerArtReply(url.toString(), reply, timeout, this));
-    connect(reply, &QNetworkReply::finished, art_reply.get(), &UbuntuServerArtReply::download_finished);
 
+    // TODO: Hack to work around QNetworkAccessManager problems when in flight mode.
+    shared_ptr<UbuntuServerArtReply> art_reply;
+    if (network_is_connected())
+    {
+        QNetworkReply* reply = network_manager_->get(QNetworkRequest(url));
+        art_reply = make_shared<UbuntuServerArtReply>(url.toString(), reply, timeout);
+        connect(reply, &QNetworkReply::finished, art_reply.get(), &UbuntuServerArtReply::download_finished);
+    }
+    else
+    {
+        // LCOV_EXCL_START
+        art_reply = make_shared<UbuntuServerArtReply>(url.toString());
+        QMetaObject::invokeMethod(art_reply.get(), "download_finished", Qt::QueuedConnection);
+        // LCOV_EXCL_STOP
+    }
     return art_reply;
 }
 
