@@ -60,16 +60,6 @@ TestCase {
                    encodeURIComponent(album));
     }
 
-    function loadBadAlbumUrl(artist) {
-        load("image://albumart/artist=" +
-                   encodeURIComponent(artist));
-    }
-
-    function loadBadArtistUrl(album) {
-        load("image://artistart/album=" +
-                   encodeURIComponent(album));
-    }
-
     function load(url) {
         image.source = url;
         while (image.status === Image.Loading) {
@@ -84,6 +74,14 @@ TestCase {
         while (!canvas.paintFinished) {
             wait(50);
         }
+    }
+
+    function expectLoadError(url) {
+        image.source = url;
+        while (image.status === Image.Loading) {
+            spy.wait();
+        }
+        compare(image.status, Image.Error);
     }
 
     function pixel(x, y) {
