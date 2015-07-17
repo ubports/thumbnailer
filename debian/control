@@ -39,8 +39,8 @@ Multi-Arch: foreign
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Breaks: libthumbnailer0 (<< 1.4~)
-Replaces: libthumbnailer0 (<< 1.4~)
+Conflicts: libthumbnailer0, thumbnailer-common
+Replaces: libthumbnailer0, thumbnailer-common
 Description: D-Bus service for out of process thumbnailing
  This package provides a D-Bus service that can provide thumbnails on
  behalf of another process.
@@ -58,12 +58,4 @@ Recommends: thumbnailer-service (= ${binary:Version}),
 Description: QML interface for the thumbnailer.
  This package provides image providers that allow access to the
  thumbnailer from Qt Quick 2 / QML applications.
-
-Package: thumbnailer-common
-Architecture: all
-Multi-Arch: foreign
-Depends: ${misc:Depends},
-Description: Common files for the thumbnailer service.
- This package provides common files for the thumbnailer service, such
- as default icons.
 
