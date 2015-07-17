@@ -40,7 +40,6 @@ ArtServer::ArtServer()
     auto port = QString::fromUtf8(server_.readAllStandardOutput()).trimmed();
     apiroot_ = "http://127.0.0.1:" + port.toStdString();
     setenv("THUMBNAILER_UBUNTU_APIROOT", apiroot_.c_str(), true);
-    setenv("THUMBNAILER_TEST_DEFAULT_IMAGE", THUMBNAILER_TEST_DEFAULT_IMAGE, true);
 }
 
 ArtServer::~ArtServer()
