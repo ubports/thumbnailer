@@ -92,7 +92,7 @@ TEST(PersistentStringCache, basic)
         EXPECT_TRUE(c->put_metadata("x", "z"));
         EXPECT_TRUE(c->put_metadata("x", "z", 1));
         data = c->take_data("x");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("y", data->value);
         EXPECT_EQ("z", data->metadata);
         PersistentStringCache::Data data2;
@@ -178,7 +178,7 @@ TEST(PersistentStringCache, stats)
         auto now = chrono::system_clock::now();
         c->put("x", "y");
         EXPECT_FALSE(c->get("y"));
-        EXPECT_TRUE(c->get("x"));
+        EXPECT_TRUE(bool(c->get("x")));
 
         s = c->stats();
         EXPECT_EQ(test_db, s.cache_path());                  // Must not have changed.
@@ -210,8 +210,8 @@ TEST(PersistentStringCache, stats)
 
         // Two more hits.
         now = chrono::system_clock::now();
-        EXPECT_TRUE(c->get("x"));
-        EXPECT_TRUE(c->get("x"));
+        EXPECT_TRUE(bool(c->get("x")));
+        EXPECT_TRUE(bool(c->get("x")));
 
         s = c->stats();
         EXPECT_EQ(3, s.hits());
@@ -260,7 +260,7 @@ TEST(PersistentStringCache, stats)
 
         // One more hit
         now = chrono::system_clock::now();
-        EXPECT_TRUE(c->get("x"));
+        EXPECT_TRUE(bool(c->get("x")));
 
         s = c->stats();
         EXPECT_EQ(4, s.hits());

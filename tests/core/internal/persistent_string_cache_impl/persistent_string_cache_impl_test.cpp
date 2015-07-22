@@ -464,7 +464,7 @@ TEST(PersistentStringCacheImpl, get_or_put)
     EXPECT_EQ(0, s.hits());
 
     throw_std_exception_called = false;
-    EXPECT_TRUE(c->get_or_put("1", throw_std_exception));
+    EXPECT_TRUE(bool(c->get_or_put("1", throw_std_exception)));
     EXPECT_FALSE(throw_std_exception_called);  // Entry exists, loader must not have run.
 
     s = c->stats();
@@ -516,7 +516,7 @@ TEST(PersistentStringCacheImpl, get_or_put)
     load_entry_called = false;
     auto v = c->get_or_put("1", load_entry);
     EXPECT_TRUE(load_entry_called);
-    EXPECT_TRUE(v);
+    EXPECT_TRUE(bool(v));
     EXPECT_EQ("load_entry", *v);
     EXPECT_EQ(0, s.hits());
     EXPECT_EQ(1, s.misses());
@@ -527,7 +527,7 @@ TEST(PersistentStringCacheImpl, get_or_put)
     load_with_metadata_called = false;
     auto data = c->get_or_put_data("1", load_with_metadata);
     EXPECT_TRUE(load_with_metadata_called);
-    EXPECT_TRUE(data);
+    EXPECT_TRUE(bool(data));
     EXPECT_EQ("value", data->value);
     EXPECT_EQ("metadata", data->metadata);
     EXPECT_EQ(0, s.hits());
