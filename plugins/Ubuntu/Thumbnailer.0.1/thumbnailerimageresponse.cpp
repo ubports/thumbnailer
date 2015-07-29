@@ -17,7 +17,7 @@
  */
 
 #include <thumbnailerimageresponse.h>
-#include <artgeneratorcommon.h>
+#include <utils/artgeneratorcommon.h>
 
 #include <QDBusReply>
 #include <QDBusUnixFileDescriptor>
@@ -90,7 +90,7 @@ void ThumbnailerImageResponse::dbusCallFinished()
     try
     {
         QSize realSize;
-        QImage image = imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
+        QImage image = internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         texture_ = QQuickTextureFactory::textureFactoryForImage(image);
         Q_EMIT finished();
         return;

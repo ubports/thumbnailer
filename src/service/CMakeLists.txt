@@ -19,7 +19,7 @@ add_executable(thumbnailer-service
   )
 
 qt5_use_modules(thumbnailer-service DBus Concurrent)
-target_link_libraries(thumbnailer-service thumbnailer Qt5::DBus Qt5::Concurrent)
+target_link_libraries(thumbnailer-service thumbnailer-static Qt5::DBus Qt5::Concurrent)
 set_target_properties(thumbnailer-service PROPERTIES AUTOMOC TRUE)
 add_dependencies(thumbnailer-service vs-thumb)
 

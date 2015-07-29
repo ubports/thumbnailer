@@ -25,10 +25,11 @@ namespace unity
 {
 namespace thumbnailer
 {
-namespace qml
+namespace internal
 {
 
 QImage imageFromFd(int fd, QSize* realSize, const QSize& requestedSize);
+
 }
 }
 }
