@@ -1,0 +1,32 @@
+libthumbnailer.so.1.0.0 libthumbnailer #MINVER#
+ (c++)"unity::thumbnailer::Thumbnailer::GetAlbumArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::GetArtistArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::GetThumbnail(QString const&, QSize const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::Thumbnailer(QDBusConnection const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::Thumbnailer()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::Thumbnailer(QDBusConnection const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::Thumbnailer()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::~Thumbnailer()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::~Thumbnailer()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Thumbnailer::~Thumbnailer()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::qt_metacall(QMetaObject::Call, int, void**)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::qt_metacast(char const*)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::WaitForFinished()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::staticMetaObject@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::finished()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::Request(unity::thumbnailer::internal::RequestImpl*)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::Request(unity::thumbnailer::internal::RequestImpl*)@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::~Request()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::~Request()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::~Request()@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::IsFinished() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::metaObject() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::ErrorMessage() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::FinishedSucessfully() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::Request::Image() const@Base" 0replaceme
+ (c++)"typeinfo for unity::thumbnailer::Thumbnailer@Base" 0replaceme
+ (c++)"typeinfo for unity::thumbnailer::Request@Base" 0replaceme
+ (c++)"typeinfo name for unity::thumbnailer::Thumbnailer@Base" 0replaceme
+ (c++)"typeinfo name for unity::thumbnailer::Request@Base" 0replaceme
+ (c++)"vtable for unity::thumbnailer::Thumbnailer@Base" 0replaceme
+ (c++)"vtable for unity::thumbnailer::Request@Base" 0replaceme

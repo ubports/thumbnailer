@@ -1,0 +1,3 @@
+usr/lib/*/libthumbnailer.so
+usr/include/*
+usr/lib/*/pkgconfig/*

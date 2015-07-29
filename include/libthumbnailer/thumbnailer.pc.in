@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: thumbnailer
+Description: Thumbnail generator for multiple file types.
+Version: @SO_VERSION@
+Libs: -L${libdir} -lthumbnailer
+Cflags: -I${includedir}

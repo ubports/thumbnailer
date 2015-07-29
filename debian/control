@@ -67,3 +67,24 @@ Description: Common files for the thumbnailer service.
  This package provides common files for the thumbnailer service, such
  as default icons.
 
+Package: libthumbnailer
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends},
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         thumbnailer-service,
+Replaces: libthumbnailer0,
+Conflicts: libthumbnailer0,
+Description: Qt/C++ API to obtain thumbnails
+ Library to obtain thumbnails
+
+Package: libthumbnailer-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends},
+Depends: libthumbnailer (= ${binary:Version}),
+         ${misc:Depends},
+Description: Header files for Thumbnailer API
+ Library to obtain thumbnails (dev files)
