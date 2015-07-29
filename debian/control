@@ -88,3 +88,11 @@ Depends: libthumbnailer (= ${binary:Version}),
          ${misc:Depends},
 Description: Header files for Thumbnailer API
  Library to obtain thumbnails (dev files)
+
+Package: libthumbnailer-doc
+Section: doc
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+Description: Documentation for Thumbnailer API
+ Library to obtain thumbnails (documentation)
