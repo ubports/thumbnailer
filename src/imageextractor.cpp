@@ -22,44 +22,16 @@
 
 #include <internal/config.h>
 #include <internal/file_io.h>
-#include <internal/raii.h>
 #include <internal/safe_strerror.h>
 #include <internal/trace.h>
-
-#include <sys/stat.h>
-#include <unistd.h>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
-ImageExtractor::ImageExtractor(int fd, chrono::milliseconds timeout)
-    : fd_(dup(fd), do_close)
+ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds timeout)
+    : filename_(filename)
     , timeout_ms_(timeout.count())
 {
-    if (fd_.get() < 0)
-    {
-        throw runtime_error("ImageExtractor(): could not duplicate fd: " + safe_strerror(errno));  // LCOV_EXCL_LINE
-    }
-
-    // We don't allow thumbnailing from anything but a regular file,
-    // so the caller can't sneak us a pipe or socket.
-    struct stat st;
-    if (fstat(fd_.get(), &st) == -1)
-    {
-        throw runtime_error("ImageExtractor(): fstat(): " + safe_strerror(errno));  // LCOV_EXCL_LINE
-    }
-    if (!(st.st_mode & S_IFREG))
-    {
-        throw runtime_error("ImageExtractor(): fd does not refer to regular file");
-    }
-    // TODO: Work-around for bug in gstreamer:
-    //       http://cgit.freedesktop.org/gstreamer/gstreamer/commit/?id=91f537edf2946cbb5085782693b6c5111333db5f
-    //       Pipeline hangs for empty input file. Remove this once the gstreamer fix makes into the archives.
-    if (st.st_size == 0)
-    {
-        throw runtime_error("ImageExtractor(): fd refers to empty file");
-    }
-
     process_.setStandardInputFile(QProcess::nullDevice());
     process_.setProcessChannelMode(QProcess::ForwardedChannels);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this,
@@ -96,8 +68,7 @@ void ImageExtractor::extract()
     {
         throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileTemplate().toStdString());  // LCOV_EXCL_LINE
     }
-    /* Our duplicated file descriptor does not have the FD_CLOEXEC flag set */
-    process_.start(exe_path_, {QString("fd://%1").arg(fd_.get()), tmpfile_.fileName()});
+    process_.start(exe_path_, {QString::fromStdString(filename_), tmpfile_.fileName()});
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
     timer_.setSingleShot(true);
     timer_.start(timeout_ms_);
