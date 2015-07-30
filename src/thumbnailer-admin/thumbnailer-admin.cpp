@@ -55,7 +55,7 @@ typedef map<char const*, pair<Action::UPtr(*)(QCommandLineParser&), char const*>
 ActionMap const valid_actions =
 {
     { "stats",       { &create_action<ShowStats>,          "Show statistics" } },
-    { "zero-stats",  { &create_action<Clear>,              "Reset statistics" } },
+    { "zero-stats",  { &create_action<Clear>,              "Zero statistics counters" } },
     { "get",         { &create_action<GetLocalThumbnail>,  "Get thumbnail from local file" } },
     { "get-artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
     { "get-album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },

@@ -42,7 +42,7 @@ Clear::Clear(QCommandLineParser& parser)
     }
     else if (command_ == "zero-stats")
     {
-        parser.addPositionalArgument("zero-stats", "Clear statistics", "zero-stats");
+        parser.addPositionalArgument("zero-stats", "Zero statistics counters", "zero-stats");
     }
     else
     {
