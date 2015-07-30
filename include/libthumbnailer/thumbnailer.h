@@ -56,31 +56,31 @@ public:
      At the instantiation of the request this property will be set to false.
      \return true if the request finished, false otherwise
     */
-    bool IsFinished() const;
+    bool isFinished() const;
 
     /**
      \brief Returns the thumbnailer image.
      \return A valid QImage if the request was successful, otherwise it returns an empty QImage.
     */
-    QImage Image() const;
+    QImage image() const;
 
     /**
      \brief Returns the error message after the request finished.
      \return The error string in case of failure, an empty QString otherwise
     */
-    QString ErrorMessage() const;
+    QString errorMessage() const;
 
     /**
      \brief Returns if the request finished successfully.
      \return true if the request finished successfully, false in case of any failure.
     */
-    bool FinishedSucessfully() const;
+    bool finishedSucessfully() const;
 
     /**
      \brief Blocks the calling thread until the request finishes.
      This method is useful for those users who want to follow a synchronous behavior.
     */
-    void WaitForFinished();
+    void waitForFinished();
 
 Q_SIGNALS:
     /**
@@ -117,7 +117,7 @@ public:
      \param requestedSize the size of the thumbnail we want to obtain.
      \return A QSharedPointer to a unity::thumbnailer::Request holding the request state.
     */
-    QSharedPointer<Request> GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QSharedPointer<Request> getAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
 
     /**
      \brief Gets a thumbnail for an artist art.
@@ -126,7 +126,7 @@ public:
      \param requestedSize the size of the thumbnail we want to obtain.
      \return A QSharedPointer to a unity::thumbnailer::Request holding the request state.
     */
-    QSharedPointer<Request> GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QSharedPointer<Request> getArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
 
     /**
      \brief Gets a thumbnail for the given file.
@@ -134,7 +134,7 @@ public:
      \param requestedSize the size of the thumbnail we want to obtain.
      \return A QSharedPointer to a unity::thumbnailer::Request holding the request state.
     */
-    QSharedPointer<Request> GetThumbnail(QString const& filePath, QSize const& requestedSize);
+    QSharedPointer<Request> getThumbnail(QString const& filePath, QSize const& requestedSize);
 
     /// @cond
     // NOTE: this method is provided for testing purposes only.

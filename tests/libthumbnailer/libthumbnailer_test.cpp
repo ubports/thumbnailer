@@ -88,7 +88,7 @@ protected:
 TEST_F(LibThumbnailerTest, get_album_art)
 {
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetAlbumArt("metallica", "load", QSize(48, 48));
+    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
 
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
@@ -96,11 +96,11 @@ TEST_F(LibThumbnailerTest, get_album_art)
     // check that we've got exactly one signal
     ASSERT_EQ(spy.count(), 1);
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(reply->FinishedSucessfully());
-    EXPECT_EQ(reply->ErrorMessage(), QString());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_EQ(reply->errorMessage(), QString());
 
-    QImage image = reply->Image();
+    QImage image = reply->image();
     EXPECT_EQ(48, image.width());
     EXPECT_EQ(48, image.height());
 
@@ -113,15 +113,15 @@ TEST_F(LibThumbnailerTest, get_album_art)
 TEST_F(LibThumbnailerTest, get_album_art_sync)
 {
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetAlbumArt("metallica", "load", QSize(48, 48));
+    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
 
-    reply->WaitForFinished();
+    reply->waitForFinished();
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(reply->FinishedSucessfully());
-    EXPECT_EQ(reply->ErrorMessage(), QString());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_EQ(reply->errorMessage(), QString());
 
-    QImage image = reply->Image();
+    QImage image = reply->image();
     EXPECT_EQ(48, image.width());
     EXPECT_EQ(48, image.height());
 
@@ -138,17 +138,17 @@ TEST_F(LibThumbnailerTest, get_artist_art)
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
-        auto reply = thumbnailer.GetArtistArt("metallica", "load", QSize(48, 48));
+        auto reply = thumbnailer.getArtistArt("metallica", "load", QSize(48, 48));
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
         // check that we've got exactly one signal
         ASSERT_EQ(spy.count(), 1);
 
-        EXPECT_TRUE(reply->IsFinished());
-        EXPECT_TRUE(reply->FinishedSucessfully());
-        EXPECT_EQ(reply->ErrorMessage(), QString());
+        EXPECT_TRUE(reply->isFinished());
+        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_EQ(reply->errorMessage(), QString());
 
-        QImage image = reply->Image();
+        QImage image = reply->image();
         EXPECT_EQ(48, image.width());
         EXPECT_EQ(48, image.height());
 
@@ -165,14 +165,14 @@ TEST_F(LibThumbnailerTest, get_artist_art_sync)
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
-        auto reply = thumbnailer.GetArtistArt("metallica", "load", QSize(48, 48));
-        reply->WaitForFinished();
+        auto reply = thumbnailer.getArtistArt("metallica", "load", QSize(48, 48));
+        reply->waitForFinished();
 
-        EXPECT_TRUE(reply->IsFinished());
-        EXPECT_TRUE(reply->FinishedSucessfully());
-        EXPECT_EQ(reply->ErrorMessage(), QString());
+        EXPECT_TRUE(reply->isFinished());
+        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_EQ(reply->errorMessage(), QString());
 
-        QImage image = reply->Image();
+        QImage image = reply->image();
         EXPECT_EQ(48, image.width());
         EXPECT_EQ(48, image.height());
 
@@ -188,17 +188,17 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
     const char* filename = TESTDATADIR "/orientation-1.jpg";
 
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetThumbnail(filename, QSize(128, 96));
+    auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
     // check that we've got exactly one signal
     ASSERT_EQ(spy.count(), 1);
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(reply->FinishedSucessfully());
-    EXPECT_EQ(reply->ErrorMessage(), QString());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_EQ(reply->errorMessage(), QString());
 
-    QImage image = reply->Image();
+    QImage image = reply->image();
 
     EXPECT_EQ(128, image.width());
     EXPECT_EQ(96, image.height());
@@ -215,14 +215,14 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
     const char* filename = TESTDATADIR "/orientation-1.jpg";
 
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetThumbnail(filename, QSize(128, 96));
-    reply->WaitForFinished();
+    auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
+    reply->waitForFinished();
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(reply->FinishedSucessfully());
-    EXPECT_EQ(reply->ErrorMessage(), QString());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_EQ(reply->errorMessage(), QString());
 
-    QImage image = reply->Image();
+    QImage image = reply->image();
 
     EXPECT_EQ(128, image.width());
     EXPECT_EQ(96, image.height());
@@ -241,17 +241,17 @@ TEST_F(LibThumbnailerTest, song_image)
     for (int i = 0; i < 2; ++i)
     {
         const char* filename = TESTDATADIR "/testsong.ogg";
-        auto reply = thumbnailer.GetThumbnail(filename, QSize(256, 256));
+        auto reply = thumbnailer.getThumbnail(filename, QSize(256, 256));
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
         ASSERT_EQ(spy.count(), 1);
 
-        EXPECT_TRUE(reply->IsFinished());
-        EXPECT_TRUE(reply->FinishedSucessfully());
-        EXPECT_EQ(reply->ErrorMessage(), QString());
+        EXPECT_TRUE(reply->isFinished());
+        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_EQ(reply->errorMessage(), QString());
 
-        QImage image = reply->Image();
+        QImage image = reply->image();
 
         EXPECT_EQ(200, image.width());
         EXPECT_EQ(200, image.height());
@@ -269,14 +269,14 @@ TEST_F(LibThumbnailerTest, song_image_sync)
     for (int i = 0; i < 2; ++i)
     {
         const char* filename = TESTDATADIR "/testsong.ogg";
-        auto reply = thumbnailer.GetThumbnail(filename, QSize(256, 256));
-        reply->WaitForFinished();
+        auto reply = thumbnailer.getThumbnail(filename, QSize(256, 256));
+        reply->waitForFinished();
 
-        EXPECT_TRUE(reply->IsFinished());
-        EXPECT_TRUE(reply->FinishedSucessfully());
-        EXPECT_EQ(reply->ErrorMessage(), QString());
+        EXPECT_TRUE(reply->isFinished());
+        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_EQ(reply->errorMessage(), QString());
 
-        QImage image = reply->Image();
+        QImage image = reply->image();
 
         EXPECT_EQ(200, image.width());
         EXPECT_EQ(200, image.height());
@@ -295,17 +295,17 @@ TEST_F(LibThumbnailerTest, video_image)
     {
         const char* filename = TESTDATADIR "/testvideo.ogg";
 
-        auto reply = thumbnailer.GetThumbnail(filename, QSize(256, 256));
+        auto reply = thumbnailer.getThumbnail(filename, QSize(256, 256));
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
         ASSERT_EQ(spy.count(), 1);
 
-        EXPECT_TRUE(reply->IsFinished());
-        EXPECT_TRUE(reply->FinishedSucessfully());
-        EXPECT_EQ(reply->ErrorMessage(), QString());
+        EXPECT_TRUE(reply->isFinished());
+        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_EQ(reply->errorMessage(), QString());
 
-        QImage image = reply->Image();
+        QImage image = reply->image();
         EXPECT_EQ(256, image.width());
         EXPECT_EQ(144, image.height());
     }
@@ -319,14 +319,14 @@ TEST_F(LibThumbnailerTest, video_image_sync)
     {
         const char* filename = TESTDATADIR "/testvideo.ogg";
 
-        auto reply = thumbnailer.GetThumbnail(filename, QSize(256, 256));
-        reply->WaitForFinished();
+        auto reply = thumbnailer.getThumbnail(filename, QSize(256, 256));
+        reply->waitForFinished();
 
-        EXPECT_TRUE(reply->IsFinished());
-        EXPECT_TRUE(reply->FinishedSucessfully());
-        EXPECT_EQ(reply->ErrorMessage(), QString());
+        EXPECT_TRUE(reply->isFinished());
+        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_EQ(reply->errorMessage(), QString());
 
-        QImage image = reply->Image();
+        QImage image = reply->image();
         EXPECT_EQ(256, image.width());
         EXPECT_EQ(144, image.height());
     }
@@ -337,16 +337,16 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file)
     const char* no_such_file = TESTDATADIR "/no-such-file.jpg";
 
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetThumbnail(no_such_file, QSize(256, 256));
+    auto reply = thumbnailer.getThumbnail(no_such_file, QSize(256, 256));
 
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
     ASSERT_EQ(spy.count(), 1);
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(boost::contains(reply->ErrorMessage(), " No such file or directory: "));
-    EXPECT_FALSE(reply->FinishedSucessfully());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "));
+    EXPECT_FALSE(reply->finishedSucessfully());
 }
 
 
@@ -355,40 +355,40 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
     const char* no_such_file = TESTDATADIR "/no-such-file.jpg";
 
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetThumbnail(no_such_file, QSize(256, 256));
+    auto reply = thumbnailer.getThumbnail(no_such_file, QSize(256, 256));
 
-    reply->WaitForFinished();
+    reply->waitForFinished();
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(boost::contains(reply->ErrorMessage(), " No such file or directory: "));
-    EXPECT_FALSE(reply->FinishedSucessfully());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "));
+    EXPECT_FALSE(reply->finishedSucessfully());
 }
 
 TEST_F(LibThumbnailerTest, server_error)
 {
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetArtistArt("error", "500", QSize(256, 256));
+    auto reply = thumbnailer.getArtistArt("error", "500", QSize(256, 256));
 
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
     ASSERT_EQ(spy.count(), 1);
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(boost::contains(reply->ErrorMessage(), "fetch() failed"));
-    EXPECT_FALSE(reply->FinishedSucessfully());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
+    EXPECT_FALSE(reply->finishedSucessfully());
 }
 
 TEST_F(LibThumbnailerTest, server_error_sync)
 {
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.GetArtistArt("error", "500", QSize(256, 256));
+    auto reply = thumbnailer.getArtistArt("error", "500", QSize(256, 256));
 
-    reply->WaitForFinished();
+    reply->waitForFinished();
 
-    EXPECT_TRUE(reply->IsFinished());
-    EXPECT_TRUE(boost::contains(reply->ErrorMessage(), "fetch() failed"));
-    EXPECT_FALSE(reply->FinishedSucessfully());
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
+    EXPECT_FALSE(reply->finishedSucessfully());
 }
 
 Q_DECLARE_METATYPE(QProcess::ExitStatus)  // Avoid noise from signal spy.
