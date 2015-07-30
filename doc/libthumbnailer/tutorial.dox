@@ -34,7 +34,7 @@ public:
     MyClass();
     ~MyClass() = default;
 
-    void set_artist_thumbnail_async(QString const& artist, QString const& album, QSize const& size);
+    void setArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size);
 
 public slots:
     void requestFinished();
@@ -49,22 +49,22 @@ MyClass::MyClass() : QObject()
 {
 }
 
-void MyClass::set_artist_thumbnail_async(QString const& artist, QString const& album, QSize const& size)
+void MyClass::setArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size)
 {
-    request_ = thumbnailer_.GetArtistArt(artist, album, size);
+    request_ = thumbnailer_.getArtistArt(artist, album, size);
     connect(request_.data(), &unity::thumbnailer::Request::finished, this, &MyClass::requestFinished);
 }
 
 void MyClass::requestFinished()
 {
-    if (request_->FinishedSuccessfully())
+    if (request_->finishedSuccessfully())
     {
         // get the image from the request.
-        image_ = request_->Image();
+        image_ = request_->image();
     }
     else
     {
-        QString errorMessage = request_->ErrorMessage();
+        QString errorMessage = request_->errorMessage();
         // do whatever you need to do to report the error.
     }
 }
@@ -85,7 +85,7 @@ public:
     MyClass();
     ~MyClass() = default;
 
-    void set_album_thumbnail_sync(QString const& artist, QString const& album, QSize const& size);
+    void setAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size);
 
 public slots:
     void requestFinished();
@@ -99,21 +99,21 @@ MyClass::MyClass() : QObject()
 {
 }
 
-void MyClass::set_album_thumbnail_sync(QString const& artist, QString const& album, QSize const& size)
+void MyClass::setAlbumThumbnailSyncc(QString const& artist, QString const& album, QSize const& size)
 {
-    auto request = thumbnailer_.GetAlbumArt(artist, album, size);
+    auto request = thumbnailer_.getAlbumArt(artist, album, size);
 
     // block here waiting for the response
-    request->WaitForFinished();
+    request->waitForFinished();
 
-    if (request->FinishedSuccessfully())
+    if (request->finishedSuccessfully())
     {
         // get the image from the request.
-        image_ = request->Image();
+        image_ = request->image();
     }
     else
     {
-        QString errorMessage = request->ErrorMessage();
+        QString errorMessage = request->errorMessage();
         // do whatever you need to do to report the error.
     }
 }
