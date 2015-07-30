@@ -380,7 +380,7 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     }
 }
 
-TEST_F(ThumbnailerTest, replace_video)
+TEST_F(ThumbnailerTest, DISABLED_replace_video)
 {
     string testfile = tempdir_path() + "/foo.ogv";
     ASSERT_EQ(0, link(TEST_VIDEO, testfile.c_str())) << strerror(errno);
@@ -605,19 +605,14 @@ TEST_F(ThumbnailerTest, vs_thumb_crash)
 TEST_F(ThumbnailerTest, not_regular_file)
 {
     Thumbnailer tn;
-
-    auto request = tn.get_thumbnail("/dev/null", QSize());
-    EXPECT_EQ("", request->thumbnail());
-
-    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     try
     {
-        request->download();
+        auto request = tn.get_thumbnail("/dev/null", QSize());
         FAIL();
     }
-    catch (runtime_error const& e)
+    catch (std::exception const& e)
     {
-        EXPECT_STREQ("ImageExtractor(): fd does not refer to regular file", e.what()) << e.what();
+        EXPECT_TRUE(boost::contains(e.what(), "LocalThumbnailRequest(): '/dev/null' is not a regular file")) << e.what();
     }
 }
 
@@ -647,14 +642,18 @@ TEST_F(ThumbnailerTest, empty_file)
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
     try
     {
-        request->download();
+        request->thumbnail();
         FAIL();
     }
-    catch (runtime_error const& e)
+    catch (unity::ResourceException const& e)
     {
-        EXPECT_STREQ("ImageExtractor(): fd refers to empty file", e.what()) << e.what();
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
     }
 }
 
