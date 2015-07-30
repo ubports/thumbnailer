@@ -1,4 +1,4 @@
-libthumbnailer.so.1.0.0 libthumbnailer #MINVER#
+libthumbnailer.so.1 libthumbnailer1.0 #MINVER#
  (c++)"unity::thumbnailer::Thumbnailer::getAlbumArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
  (c++)"unity::thumbnailer::Thumbnailer::getArtistArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
  (c++)"unity::thumbnailer::Thumbnailer::getThumbnail(QString const&, QSize const&)@Base" 0replaceme

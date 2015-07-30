@@ -7,7 +7,7 @@ set(SO_VERSION_MAJOR "1")
 set(SO_VERSION_MINOR "0")
 set(SO_VERSION_MICRO "0")
 
-set(SO_VERSION "${SO_VERSION_MAJOR}.${SO_VERSION_MINOR}.${SO_VERSION_MICRO}")
+set(SO_VERSION "1")
 
 
 add_library(thumbnailer SHARED
