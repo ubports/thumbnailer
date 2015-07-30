@@ -11,7 +11,7 @@ PROPERTIES HEADER_FILE_ONLY TRUE)
 set_source_files_properties(settings.cpp PROPERTIES
 OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
 
-add_library(thumbnailer STATIC
+add_library(thumbnailer-static STATIC
     artdownloader.cpp
     check_access.cpp
     file_io.cpp
@@ -30,10 +30,10 @@ add_library(thumbnailer STATIC
     ${CMAKE_SOURCE_DIR}/include/internal/ubuntuserverdownloader.h
 )
 
-qt5_use_modules(thumbnailer Core Network)
-set_target_properties(thumbnailer PROPERTIES AUTOMOC TRUE)
+qt5_use_modules(thumbnailer-static Core Network)
+set_target_properties(thumbnailer-static PROPERTIES AUTOMOC TRUE)
 
-target_link_libraries(thumbnailer
+target_link_libraries(thumbnailer-static
     core
     Qt5::Core
     Qt5::Network

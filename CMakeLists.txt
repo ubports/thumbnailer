@@ -120,7 +120,7 @@ add_subdirectory(include)
 
 enable_coverage_report(
     TARGETS
-        thumbnailer
+        thumbnailer-static
         thumbnailer-admin
         thumbnailer-service
         thumbnailer-qml
