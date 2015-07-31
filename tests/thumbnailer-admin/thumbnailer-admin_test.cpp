@@ -219,19 +219,19 @@ TEST_F(AdminTest, clear_stats_parsing)
     AdminRunner ar;
 
     // Too many args
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "i", "t"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "i", "t"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: too many arguments")) << ar.stderr();
 
     // Second arg wrong
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "foo"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "foo"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: invalid cache_id: foo")) << ar.stderr();
 
     // Bad option
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "foo", "-x"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "foo", "-x"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'x'.")) << ar.stderr();
 
     // Help option
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "-h"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "-h"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 }
 
@@ -339,7 +339,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     // Clear thumbnail stats only and check that only thumbnail stats were cleared.
 
-    EXPECT_EQ(0, ar.run(QStringList{"clear-stats", "t"}));
+    EXPECT_EQ(0, ar.run(QStringList{"zero-stats", "t"}));
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
@@ -355,7 +355,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     // Clear all stats and check that all stats were cleared.
 
-    EXPECT_EQ(0, ar.run(QStringList{"clear-stats"}));
+    EXPECT_EQ(0, ar.run(QStringList{"zero-stats"}));
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
@@ -555,19 +555,19 @@ TEST_F(RemoteServer, get_artist_album_parsing)
 {
     AdminRunner ar;
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "artist", "album", "dir", "something else"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "artist", "album", "dir", "something else"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "--invalid"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "--invalid"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'invalid'.")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "--help"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "--help"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "--size=abc", "artist", "album"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "--size=abc", "artist", "album"}));
     EXPECT_EQ("thumbnailer-admin: GetRemoteThumbnail(): invalid size: abc\n", ar.stderr()) << ar.stderr();
 }
 
@@ -578,7 +578,7 @@ TEST_F(RemoteServer, get_artist)
     auto filename = temp_dir() + "/metallica_load_artist_0x0.jpg";
 
     AdminRunner ar;
-    EXPECT_EQ(0, ar.run(QStringList{"get_artist", "metallica", "load"})) << ar.stderr();
+    EXPECT_EQ(0, ar.run(QStringList{"get-artist", "metallica", "load"})) << ar.stderr();
 
     string cmd = "/usr/bin/test -s " + filename + " || exit 1";
     int rc = system(cmd.c_str());
@@ -590,7 +590,7 @@ TEST_F(RemoteServer, get_album)
     auto filename = temp_dir() + "/metallica_load_album_48x48.jpg";
 
     AdminRunner ar;
-    EXPECT_EQ(0, ar.run(QStringList{"get_album", "metallica", "load", "--size=48"})) << ar.stderr();
+    EXPECT_EQ(0, ar.run(QStringList{"get-album", "metallica", "load", "--size=48"})) << ar.stderr();
 
     string cmd = "/usr/bin/test -s " + filename + " || exit 1";
     int rc = system(cmd.c_str());
@@ -600,7 +600,7 @@ TEST_F(RemoteServer, get_album)
 TEST_F(RemoteServer, get_error)
 {
     AdminRunner ar;
-    EXPECT_EQ(1, ar.run(QStringList{"get_album", "foo", "bar", "--size=48"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-album", "foo", "bar", "--size=48"}));
     EXPECT_EQ("thumbnailer-admin: Handler::createFinished(): could not get thumbnail for album: foo/bar (48,48): "
               "NO ARTWORK\n", ar.stderr()) << ar.stderr();
 }
