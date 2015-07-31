@@ -196,13 +196,13 @@ TEST(PersistentCache, IDCCache)
 
         EXPECT_TRUE(c->put(1, 2.0));
         data = c->take_data(1);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(2.0, data->value);
         EXPECT_EQ('\0', data->metadata);
 
         EXPECT_TRUE(c->put(2, 3, '4'));
         data = c->take_data(2);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(3, data->value);
         EXPECT_EQ('4', data->metadata);
 
@@ -286,13 +286,13 @@ TEST(PersistentCache, IDCCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put(3, loader));
+        EXPECT_TRUE(bool(c->get_or_put(3, loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data(4, loader));
+        EXPECT_TRUE(bool(c->get_or_put_data(4, loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data(99, loader));
+        EXPECT_FALSE(bool(c->get_or_put_data(99, loader)));
     }
 }
 
@@ -362,13 +362,13 @@ TEST(PersistentCache, SDCCache)
 
         EXPECT_TRUE(c->put("1", 2.0));
         data = c->take_data("1");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(2.0, data->value);
         EXPECT_EQ('\0', data->metadata);
 
         EXPECT_TRUE(c->put("2", 3, '4'));
         data = c->take_data("2");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(3, data->value);
         EXPECT_EQ('4', data->metadata);
 
@@ -434,13 +434,13 @@ TEST(PersistentCache, SDCCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put("3", loader));
+        EXPECT_TRUE(bool(c->get_or_put("3", loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data("4", loader));
+        EXPECT_TRUE(bool(c->get_or_put_data("4", loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data("99", loader));
+        EXPECT_FALSE(bool(c->get_or_put_data("99", loader)));
     }
 }
 
@@ -507,13 +507,13 @@ TEST(PersistentCache, ISCCache)
 
         EXPECT_TRUE(c->put(1, "2.0"));
         data = c->take_data(1);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("2.0", data->value);
         EXPECT_EQ('\0', data->metadata);
 
         EXPECT_TRUE(c->put(2, string("3"), '4'));
         data = c->take_data(2);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("3", data->value);
         EXPECT_EQ('4', data->metadata);
 
@@ -579,13 +579,13 @@ TEST(PersistentCache, ISCCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put(3, loader));
+        EXPECT_TRUE(bool(c->get_or_put(3, loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data(4, loader));
+        EXPECT_TRUE(bool(c->get_or_put_data(4, loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data(99, loader));
+        EXPECT_FALSE(bool(c->get_or_put_data(99, loader)));
 
         // Extra put() overloads
         c->invalidate();
@@ -666,13 +666,13 @@ TEST(PersistentCache, IDSCache)
 
         EXPECT_TRUE(c->put(1, 2.0));
         data = c->take_data(1);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(2.0, data->value);
         EXPECT_EQ("\0", data->metadata);
 
         EXPECT_TRUE(c->put(2, 3, "4"));
         data = c->take_data(2);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(3, data->value);
         EXPECT_EQ("4", data->metadata);
 
@@ -737,13 +737,13 @@ TEST(PersistentCache, IDSCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put(3, loader));
+        EXPECT_TRUE(bool(c->get_or_put(3, loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data(4, loader));
+        EXPECT_TRUE(bool(c->get_or_put_data(4, loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data(99, loader));
+        EXPECT_FALSE(bool(c->get_or_put_data(99, loader)));
 
         // Extra put() overload
         c->invalidate();
@@ -825,13 +825,13 @@ TEST(PersistentCache, SSCCache)
 
         EXPECT_TRUE(c->put("1", "2.0"));
         data = c->take_data("1");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("2.0", data->value);
         EXPECT_EQ('\0', data->metadata);
 
         EXPECT_TRUE(c->put("2", string("3"), '4'));
         data = c->take_data("2");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("3", data->value);
         EXPECT_EQ('4', data->metadata);
 
@@ -897,13 +897,13 @@ TEST(PersistentCache, SSCCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put("3", loader));
+        EXPECT_TRUE(bool(c->get_or_put("3", loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data("4", loader));
+        EXPECT_TRUE(bool(c->get_or_put_data("4", loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data("99", loader));
+        EXPECT_FALSE(bool(c->get_or_put_data("99", loader)));
 
         // Extra put() overloads
         c->invalidate();
@@ -984,13 +984,13 @@ TEST(PersistentCache, SDSCache)
 
         EXPECT_TRUE(c->put("1", 2.0));
         data = c->take_data("1");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(2.0, data->value);
         EXPECT_EQ("", data->metadata);
 
         EXPECT_TRUE(c->put("2", 3, "4"));
         data = c->take_data("2");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ(3, data->value);
         EXPECT_EQ("4", data->metadata);
 
@@ -1056,13 +1056,13 @@ TEST(PersistentCache, SDSCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put("3", loader));
+        EXPECT_TRUE(bool(c->get_or_put("3", loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data("4", loader));
+        EXPECT_TRUE(bool(c->get_or_put_data("4", loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data("99", loader));
+        EXPECT_FALSE(bool(c->get_or_put_data("99", loader)));
 
         // Extra put() overload
         c->invalidate();
@@ -1143,13 +1143,13 @@ TEST(PersistentCache, ISSCache)
 
         EXPECT_TRUE(c->put(1, "2.0"));
         data = c->take_data(1);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("2.0", data->value);
         EXPECT_EQ("\0", data->metadata);
 
         EXPECT_TRUE(c->put(2, string("3"), "4"));
         data = c->take_data(2);
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("3", data->value);
         EXPECT_EQ("4", data->metadata);
 
@@ -1215,13 +1215,13 @@ TEST(PersistentCache, ISSCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put(3, loader));
+        EXPECT_TRUE(bool(c->get_or_put(3, loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data(4, loader));
+        EXPECT_TRUE(bool(c->get_or_put_data(4, loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data(99, loader));
+        EXPECT_FALSE(bool(c->get_or_put_data(99, loader)));
 
         // Extra put() overloads
         c->invalidate();
@@ -1309,13 +1309,13 @@ TEST(PersistentCache, SSSCache)
 
         EXPECT_TRUE(c->put("1", "2.0"));
         data = c->take_data("1");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("2.0", data->value);
         EXPECT_EQ("", data->metadata);
 
         EXPECT_TRUE(c->put("2", string("3"), "4"));
         data = c->take_data("2");
-        EXPECT_TRUE(data);
+        EXPECT_TRUE(bool(data));
         EXPECT_EQ("3", data->value);
         EXPECT_EQ("4", data->metadata);
 
@@ -1381,13 +1381,13 @@ TEST(PersistentCache, SSSCache)
         };
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put("3", loader));
+        EXPECT_TRUE(bool(c->get_or_put("3", loader)));
 
         loader_called = false;
-        EXPECT_TRUE(c->get_or_put_data("4", loader));
+        EXPECT_TRUE(bool(c->get_or_put_data("4", loader)));
 
         loader_called = false;
-        EXPECT_FALSE(c->get_or_put_data("99", loader));
+        EXPECT_FALSE(bool(c->get_or_put_data("99", loader)));
 
         // Extra put() overloads
         c->invalidate();

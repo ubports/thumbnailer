@@ -1,10 +1,54 @@
-thumbnailer (1.4-0ubuntu0) UNRELEASED; urgency=medium
+thumbnailer (2.1+15.10.20150715-0ubuntu1) wily; urgency=medium
 
-  * Switch to new cache implementation
-  * Remove the libthumbnailer0 and libthumbnailer-dev packages, since 
-    that code is now statically linked into the D-Bus service.
+  [ James Henstridge ]
+  * Expose more settings for the thumbnailer daemon via GSettings.
+  * Change the security policy implementation to use aa_query_label()
+    for file access checks rather than relying on file descriptor
+    passing.  This avoids the file descriptor exhaustion bugs with the
+    previous implementation. (LP: #1381713)
 
- -- James Henstridge <james.henstridge@canonical.com>  Tue, 21 Apr 2015 14:17:52 +0800
+  [ Michi Henning ]
+  * Add thumbnailer-admin tool, which can be used to check the status
+    of the cache and generate thumbnails via the command line.
+  * Add time stamps to log messages.
+  * Reduce the memory footprint of small caches, which in turn reduces
+    the footprint of thumbnailer-service.
+  * Don't implicitly compact the cache on service shutdown, as this
+    can take some time.
+  * Persist the cache stats over restarts of thumbnailer-service.
+  * Don't save JPEG thumbnails at quality=100, since the quality
+    improvement isn't justified by the extra storage.
+  * Don't retry downloads when we have a hit from the failure cache.
+  * Warn if an app requests an unsized thumbnail.
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Wed, 15 Jul 2015 02:03:28 +0000
+
+thumbnailer (2.0+15.10.20150527-0ubuntu2) wily; urgency=medium
+
+  * Switch to unversioned Conflicts/Replaces on libthumbnailer0 to force
+    removal of the obsolete package on upgrade from the previous version.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Wed, 17 Jun 2015 05:15:54 -0600
+
+thumbnailer (2.0+15.10.20150527-0ubuntu1) wily; urgency=medium
+
+  [ James Henstridge ]
+  * New upstream version with many changes:
+    - Switch to new cache implementation based on leveldb.
+    - Move local file thumbnailing to the central D-Bus daemon,
+      allowing for the cache to be shared between apps and its size
+      kept under control.
+    - The libthumbnailer library has been removed, since all clients
+      of the cache rely on the D-Bus interface now.
+    - The QML plugin now uses the QQuickAsyncImageProvider interface,
+      enabling multiple thumbnails to be loaded simultaneously.
+    - Improved test coverage.
+  * Remove the libthumbnailer0 and libthumbnailer-dev binary packages.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Wed, 27 May 2015 05:36:31 +0000
 
 thumbnailer (1.3+15.04.20150312-0ubuntu1) vivid; urgency=medium
 

@@ -642,8 +642,8 @@ public:
     \brief Expires entries.
 
     Expires entries using the cache's expiration policy until the cache size falls to or below
-    `used_size_in_bytes`. If `used_size_in_bytes` is less than the current cache size, this
-    operation is a no-op.
+    `used_size_in_bytes`. If `used_size_in_bytes` is equal to or greater than the current cache size,
+    this operation is a no-op.
 
     \throws invalid_argument `used_size_in_bytes` is &lt; 0
     \throws logic_error `used_size_in_bytes` is &gt; max_size_in_bytes().

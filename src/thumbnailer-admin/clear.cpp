@@ -35,14 +35,14 @@ Clear::Clear(QCommandLineParser& parser)
     : Action(parser)
     , cache_id_(0)
 {
-    assert(command_ == "clear" || command_ == "clear-stats" || command_ == "compact");
+    assert(command_ == "clear" || command_ == "zero-stats" || command_ == "compact");
     if (command_ == "clear")
     {
         parser.addPositionalArgument("clear", "Clear caches", "clear");
     }
-    else if (command_ == "clear-stats")
+    else if (command_ == "zero-stats")
     {
-        parser.addPositionalArgument("clear-stats", "Clear statistics", "clear-stats");
+        parser.addPositionalArgument("zero-stats", "Zero statistics counters", "zero-stats");
     }
     else
     {
@@ -92,7 +92,7 @@ void Clear::run(DBusConnection& conn)
     {
         method = &AdminInterface::Clear;
     }
-    else if (command_ == "clear-stats")
+    else if (command_ == "zero-stats")
     {
         method = &AdminInterface::ClearStats;
     }
