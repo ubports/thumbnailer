@@ -138,7 +138,7 @@ public:
 
     /// @cond
     // NOTE: this method is provided for testing purposes only.
-    Thumbnailer(QDBusConnection const& connection);
+    void setDbusConnection(QDBusConnection const& connection);
     /// @endcond
 
 private:

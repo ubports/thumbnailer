@@ -87,7 +87,9 @@ protected:
 
 TEST_F(LibThumbnailerTest, get_album_art)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
+
     auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
 
     QSignalSpy spy(reply.data(), &Request::finished);
@@ -112,7 +114,8 @@ TEST_F(LibThumbnailerTest, get_album_art)
 
 TEST_F(LibThumbnailerTest, get_album_art_sync)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
 
     reply->waitForFinished();
@@ -134,7 +137,8 @@ TEST_F(LibThumbnailerTest, get_album_art_sync)
 
 TEST_F(LibThumbnailerTest, get_artist_art)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
@@ -161,7 +165,8 @@ TEST_F(LibThumbnailerTest, get_artist_art)
 
 TEST_F(LibThumbnailerTest, get_artist_art_sync)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
@@ -187,7 +192,8 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
 {
     const char* filename = TESTDATADIR "/orientation-1.jpg";
 
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
@@ -214,7 +220,8 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
 {
     const char* filename = TESTDATADIR "/orientation-1.jpg";
 
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
     reply->waitForFinished();
 
@@ -236,7 +243,8 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
 
 TEST_F(LibThumbnailerTest, song_image)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
@@ -264,7 +272,8 @@ TEST_F(LibThumbnailerTest, song_image)
 
 TEST_F(LibThumbnailerTest, song_image_sync)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
@@ -289,7 +298,8 @@ TEST_F(LibThumbnailerTest, song_image_sync)
 
 TEST_F(LibThumbnailerTest, video_image)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
@@ -313,7 +323,8 @@ TEST_F(LibThumbnailerTest, video_image)
 
 TEST_F(LibThumbnailerTest, video_image_sync)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
@@ -336,7 +347,8 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file)
 {
     const char* no_such_file = TESTDATADIR "/no-such-file.jpg";
 
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getThumbnail(no_such_file, QSize(256, 256));
 
     QSignalSpy spy(reply.data(), &Request::finished);
@@ -354,7 +366,8 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
 {
     const char* no_such_file = TESTDATADIR "/no-such-file.jpg";
 
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getThumbnail(no_such_file, QSize(256, 256));
 
     reply->waitForFinished();
@@ -366,7 +379,8 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
 
 TEST_F(LibThumbnailerTest, server_error)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getArtistArt("error", "500", QSize(256, 256));
 
     QSignalSpy spy(reply.data(), &Request::finished);
@@ -381,7 +395,8 @@ TEST_F(LibThumbnailerTest, server_error)
 
 TEST_F(LibThumbnailerTest, server_error_sync)
 {
-    Thumbnailer thumbnailer(dbus_->connection());
+    Thumbnailer thumbnailer;
+    thumbnailer.setDbusConnection(dbus_->connection());
     auto reply = thumbnailer.getArtistArt("error", "500", QSize(256, 256));
 
     reply->waitForFinished();

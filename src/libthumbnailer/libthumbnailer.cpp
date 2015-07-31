@@ -91,7 +91,6 @@ class ThumbnailerImpl : public QObject
 public:
     Q_DISABLE_COPY(ThumbnailerImpl)
     ThumbnailerImpl();
-    ThumbnailerImpl(QDBusConnection const& connection);
 
     ~ThumbnailerImpl() = default;
 
@@ -99,6 +98,7 @@ public:
     QSharedPointer<Request> getArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
+    void setDbusConnection(QDBusConnection const& connection);
 private:
     std::unique_ptr<QDBusConnection> connection_;
     std::unique_ptr<ThumbnailerInterface> iface_;
@@ -167,8 +167,7 @@ ThumbnailerImpl::ThumbnailerImpl()
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection_));
 }
 
-ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : QObject()
+void ThumbnailerImpl::setDbusConnection(QDBusConnection const& connection)
 {
     // use the given connection instead of instantiating a new one
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
@@ -242,9 +241,9 @@ Thumbnailer::Thumbnailer()
 {
 }
 
-Thumbnailer::Thumbnailer(QDBusConnection const& connection)
-    : p_(new internal::ThumbnailerImpl(connection))
+void Thumbnailer::setDbusConnection(QDBusConnection const& connection)
 {
+    p_->setDbusConnection(connection);
 }
 
 Thumbnailer::~Thumbnailer() = default;
