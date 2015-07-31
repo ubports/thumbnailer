@@ -272,4 +272,4 @@ QSharedPointer<Request> Thumbnailer::getThumbnail(QString const& filePath, QSize
 
 }  // namespace unity
 
-#include "thumbnailer.moc"
+#include "libthumbnailer.moc"

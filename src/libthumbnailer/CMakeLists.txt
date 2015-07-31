@@ -11,7 +11,7 @@ set(SO_VERSION "1")
 
 
 add_library(thumbnailer SHARED
-  thumbnailer.cpp
+  libthumbnailer.cpp
   ${CMAKE_SOURCE_DIR}/include/libthumbnailer/thumbnailer.h
   ${interface_files}
   ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
