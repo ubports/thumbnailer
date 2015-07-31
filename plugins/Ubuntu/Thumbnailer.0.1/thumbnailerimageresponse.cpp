@@ -43,6 +43,24 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
+                                                   QString const& default_image,
+                                                   std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job)
+    : requested_size_(requested_size)
+    , job_(job)
+    , default_image_(default_image)
+{
+
+    auto send_request = [this, job]
+    {
+        auto pending_reply = job();
+        watcher_.reset(new QDBusPendingCallWatcher(pending_reply));
+        connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
+    };
+    send_request();  // TODO: do queuing here
+    // connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
+}
+
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image)
     : requested_size_(requested_size)
     , default_image_(default_image)

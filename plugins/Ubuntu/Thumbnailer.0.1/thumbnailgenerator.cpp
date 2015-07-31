@@ -21,6 +21,8 @@
 #include "artgeneratorcommon.h"
 #include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
+#include <iostream>  // TODO: remove this
+#include <thread>  // TODO: remove this
 
 namespace
 {
@@ -62,6 +64,7 @@ ThumbnailGenerator::ThumbnailGenerator()
 
 QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
+    std::cerr << "thumbnail rIR: " << std::this_thread::get_id() << std::endl;
     // TODO: Turn this into an error soonish.
     if (!requestedSize.isValid())
     {
@@ -88,10 +91,13 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
         iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
     }
 
+#if 1
     auto reply = iface->GetThumbnail(src_path, requestedSize);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
     return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), std::move(watcher));
+#else
+#endif
 }
 
 }  // namespace qml

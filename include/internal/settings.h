@@ -53,6 +53,7 @@ public:
     int max_downloads() const;
     int max_extractions() const;
     int extraction_timeout() const;  // In seconds
+    int max_pending_requests() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;

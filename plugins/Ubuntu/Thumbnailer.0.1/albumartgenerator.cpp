@@ -22,6 +22,8 @@
 #include "artgeneratorcommon.h"
 #include <service/dbus_names.h>
 #include "thumbnailerimageresponse.h"
+#include <iostream>  // TODO: remove this
+#include <thread>  // TODO: remove this
 
 namespace
 {
@@ -46,6 +48,7 @@ AlbumArtGenerator::AlbumArtGenerator()
 
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
+    std::cerr << "album rIR: " << std::this_thread::get_id() << std::endl;
     // TODO: Turn this into an error soonish.
     if (!requestedSize.isValid())
     {
@@ -71,11 +74,19 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
     const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
 
-    // perform dbus call
+    // Schedule dbus call
+    auto job = [this, artist, album, requestedSize]
+    {
+        return iface->GetAlbumArt(artist, album, requestedSize);
+    };
+#if 0
     auto reply = iface->GetAlbumArt(artist, album, requestedSize);
     std::unique_ptr<QDBusPendingCallWatcher> watcher(
         new QDBusPendingCallWatcher(reply));
     return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART, std::move(watcher));
+#else
+    return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART, job);
+#endif
 }
 
 }  // namespace qml
