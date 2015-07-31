@@ -34,7 +34,10 @@ enum class Access
     read = (1 << 2)
 };
 
+#ifndef AA_CLASS_FILE
+// Prior to Wily, /usr/include/sys/apparmor.h did not define this.
 char const AA_CLASS_FILE = 2;
+#endif
 
 bool query_file(Access access, string const& label, string const& path)
 {
