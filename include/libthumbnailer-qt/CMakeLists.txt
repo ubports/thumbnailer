@@ -1,1 +1,1 @@
-install(FILES thumbnailer.h DESTINATION include)
+install(FILES thumbnailer-qt.h DESTINATION include)

@@ -1,11 +1,11 @@
 {
 global:
     extern "C++" {
-        unity::thumbnailer::[!i]*;
-        typeinfo?for?unity::thumbnailer::[!i]*;
-        typeinfo?name?for?unity::thumbnailer::[!i]*;
-        vtable?for?unity::thumbnailer::[!i]*;
-        VTT?for?unity::thumbnailer::[!i]*;
+        unity::thumbnailer::qt::[!i]*;
+        typeinfo?for?unity::thumbnailer::qt::[!i]*;
+        typeinfo?name?for?unity::thumbnailer::qt::[!i]*;
+        vtable?for?unity::thumbnailer::qt::[!i]*;
+        VTT?for?unity::thumbnailer::qt::[!i]*;
     };
 local:
     extern "C++" {
