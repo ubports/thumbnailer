@@ -9,6 +9,11 @@ set(subdirs
     core
     libthumbnailer-qt
 )
+
+set(public-headers-dirs
+    libthumbnailer-qt
+)
+
 find_package(Qt5Core REQUIRED)
 set(extra_inc_dirs "${Qt5Core_INCLUDE_DIRS}")
 find_package(Qt5Network REQUIRED)
@@ -43,4 +48,10 @@ foreach(dir ${subdirs})
             ${CMAKE_CURRENT_SOURCE_DIR}/compile_headers.py
                 ${internal_inc_dir} ${CMAKE_CXX_COMPILER} "${CMAKE_CXX_COMPILER_ARG1} -fPIC -fsyntax-only -I${root_inc_dir} -I${internal_inc_dir} ${other_inc_dirs} ${CMAKE_CXX_FLAGS} ${extra_includes}")
     endif()
+endforeach()
+
+foreach(dir ${public-headers-dirs})
+# Test that no public header includes an internal header
+    set(public_inc_dir ${root_inc_dir}/${dir})
+    add_test(clean-public-${location}-headers ${CMAKE_CURRENT_SOURCE_DIR}/check_public_headers.py ${public_inc_dir})
 endforeach()
