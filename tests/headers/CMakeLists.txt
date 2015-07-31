@@ -7,6 +7,7 @@ set(root_inc_dir ${CMAKE_SOURCE_DIR}/include)
 set(subdirs
     internal
     core
+    libthumbnailer-qt
 )
 find_package(Qt5Core REQUIRED)
 set(extra_inc_dirs "${Qt5Core_INCLUDE_DIRS}")

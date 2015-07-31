@@ -27,6 +27,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QColor>
+#include <QImage>
 
 #include <testsetup.h>
 

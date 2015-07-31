@@ -18,7 +18,6 @@
 #pragma once
 
 #include <QObject>
-#include <QImage>
 
 class QDBusConnection;
 
