@@ -39,8 +39,8 @@ Multi-Arch: foreign
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Breaks: libthumbnailer0 (<< 1.4~)
-Replaces: libthumbnailer0 (<< 1.4~)
+Conflicts: libthumbnailer0
+Replaces: libthumbnailer0
 Description: D-Bus service for out of process thumbnailing
  This package provides a D-Bus service that can provide thumbnails on
  behalf of another process.

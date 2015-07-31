@@ -64,11 +64,14 @@ ThumbnailGenerator::ThumbnailGenerator()
 
 QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
+    QSize size = requestedSize;
     // TODO: Turn this into an error soonish.
     if (!requestedSize.isValid())
     {
         qWarning().nospace() << "ThumbnailGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
+        size.setWidth(128);
+        size.setHeight(128);
     }
 
     /* Allow appending a query string (e.g. ?something=timestamp)
@@ -91,11 +94,11 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     }
 
     // Schedule dbus call
-    auto job = [this, src_path, requestedSize]
+    auto job = [this, src_path, size]
     {
-        return iface->GetThumbnail(src_path, requestedSize);
+        return iface->GetThumbnail(src_path, size);
     };
-    return new ThumbnailerImageResponse(requestedSize, default_image_based_on_mime(id), &backlog_limiter, job);
+    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), &backlog_limiter, job);
 }
 
 }  // namespace qml

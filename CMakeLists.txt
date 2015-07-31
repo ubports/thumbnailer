@@ -1,3 +1,9 @@
+# Default install location. Must be set here, before setting the project.
+if (NOT DEFINED CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE PATH "" FORCE)
+    set(LOCAL_INSTALL "ON")
+endif()
+
 project(thumbnailer C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

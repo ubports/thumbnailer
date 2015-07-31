@@ -22,7 +22,6 @@
 #include <QProcess>
 #include <QTemporaryFile>
 #include <QTimer>
-#include <unity/util/ResourcePtr.h>
 
 #include <chrono>
 #include <memory>
@@ -41,11 +40,11 @@ class ImageExtractor final : public QObject
 {
     Q_OBJECT
 public:
-    ImageExtractor(int fd, std::chrono::milliseconds timeout);
+    ImageExtractor(std::string const& filename, std::chrono::milliseconds timeout);
     ~ImageExtractor();
 
-    ImageExtractor(const ImageExtractor& t) = delete;
-    ImageExtractor& operator=(const ImageExtractor& t) = delete;
+    ImageExtractor(ImageExtractor const& t) = delete;
+    ImageExtractor& operator=(ImageExtractor const& t) = delete;
 
     void extract();
     std::string data();
@@ -59,8 +58,8 @@ private Q_SLOTS:
     void error();
 
 private:
-    unity::util::ResourcePtr<int, void (*)(int)> fd_;
-    int timeout_ms_;
+    std::string const filename_;
+    int const timeout_ms_;
     QString exe_path_;
     std::string error_;
 

@@ -166,7 +166,6 @@ protected:
 
 private:
     string filename_;
-    FdPtr fd_;
     unique_ptr<ImageExtractor> image_extractor_;
 };
 
@@ -379,7 +378,6 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
                                              chrono::milliseconds timeout)
     : RequestBase(thumbnailer, "", requested_size, timeout)
     , filename_(filename)
-    , fd_(-1, do_close)
 {
     // We canonicalise the path name both to avoid caching the file
     // multiple times, and to ensure our access checks are against the
@@ -392,6 +390,11 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
         // LCOV_EXCL_START
         throw runtime_error("LocalThumbnailRequest(): Could not stat " + filename_ + ": " + safe_strerror(errno));
         // LCOV_EXCL_STOP
+    }
+
+    if (!S_ISREG(st.st_mode))
+    {
+        throw runtime_error("LocalThumbnailRequest(): '" + filename_ + "' is not a regular file");
     }
 
     // The full cache key for the file is the concatenation of path
@@ -456,14 +459,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
         return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
     }
 
-    fd_.reset(open(filename_.c_str(), O_RDONLY | O_CLOEXEC));
-    if (fd_.get() < 0)
-    {
-        // LCOV_EXCL_START
-        throw runtime_error("LocalThumbnailRequest(): Could not open " + filename_ + ": " + safe_strerror(errno));
-        // LCOV_EXCL_STOP
-    }
-
     // Call the appropriate image extractor and return the image data as JPEG (not scaled).
     // We indicate that full-size images are to be cached only for audio and video files,
     // for which extraction is expensive. For local images, we don't cache full size.
@@ -474,7 +469,14 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     }
     if (content_type.find("image/") == 0)
     {
-        Image scaled(fd_.get(), size_hint);
+        FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
+        if (fd.get() < 0)
+        {
+            // LCOV_EXCL_START
+            throw runtime_error("LocalThumbnailRequest::fetch(): Could not open " + filename_ + ": " + safe_strerror(errno));
+            // LCOV_EXCL_STOP
+        }
+        Image scaled(fd.get(), size_hint);
         return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
     }
     return ImageData(FetchStatus::not_found, Location::local);
@@ -486,7 +488,7 @@ void LocalThumbnailRequest::download(chrono::milliseconds timeout)
     {
         timeout = timeout_;
     }
-    image_extractor_.reset(new ImageExtractor(fd_.get(), timeout));
+    image_extractor_.reset(new ImageExtractor(filename_, timeout));
     connect(image_extractor_.get(), &ImageExtractor::finished, this, &LocalThumbnailRequest::downloadFinished,
             Qt::DirectConnection);
     image_extractor_->extract();
