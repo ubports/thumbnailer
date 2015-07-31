@@ -3,6 +3,7 @@ qt5_use_modules(stress_test Network DBus Test)
 target_link_libraries(stress_test
     thumbnailer
     testutils
+    ${GST_DEPS_LDFLAGS}
     Qt5::Network
     Qt5::DBus
     Qt5::Test

@@ -21,6 +21,7 @@
 #include <testsetup.h>
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
+#include <utils/supports_decoder.h>
 
 #include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
@@ -210,10 +211,14 @@ TEST_F(StressTest, photo_no_exif)
     add_stats(N_REQUESTS, start, finish);
 }
 
-// TODO: Disabled for now because we don't have the codecs on Jenkins.
-
-TEST_F(StressTest, DISABLED_mp3)
+TEST_F(StressTest, mp3)
 {
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
     int const N_REQUESTS = 300;
 
     string source = "short-track.mp3";
@@ -237,10 +242,14 @@ TEST_F(StressTest, DISABLED_mp3)
     add_stats(N_REQUESTS, start, finish);
 }
 
-// TODO: Disabled for now because we don't have the codecs on Jenkins.
-
-TEST_F(StressTest, DISABLED_video)
+TEST_F(StressTest, video)
 {
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
     int const N_REQUESTS = 50;
 
     string source = "testvideo.mp4";
