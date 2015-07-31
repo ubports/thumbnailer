@@ -61,7 +61,10 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
 
-ThumbnailerImageResponse::~ThumbnailerImageResponse() = default;
+ThumbnailerImageResponse::~ThumbnailerImageResponse()
+{
+    cancel();
+}
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
