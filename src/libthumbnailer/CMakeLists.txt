@@ -24,7 +24,7 @@ set_target_properties(thumbnailer PROPERTIES
 
 set(symbol_map "${CMAKE_SOURCE_DIR}/src/libthumbnailer/libthumbnailer.map")
 set_target_properties(thumbnailer PROPERTIES
-                      LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map}")
+                      LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map} ")
 set_target_properties(thumbnailer PROPERTIES LINK_DEPENDS ${symbol_map})
 
 qt5_use_modules(thumbnailer DBus Gui)
