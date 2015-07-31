@@ -11,8 +11,8 @@ set(SO_VERSION ${SO_VERSION_MAJOR}.${SO_VERSION_MINOR})
 
 
 add_library(thumbnailer SHARED
-  libthumbnailer.cpp
-  ${CMAKE_SOURCE_DIR}/include/libthumbnailer/thumbnailer.h
+  libthumbnailer-qt.cpp
+  ${CMAKE_SOURCE_DIR}/include/libthumbnailer-qt/thumbnailer-qt.h
   ${interface_files}
   ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
 )
@@ -22,7 +22,7 @@ set_target_properties(thumbnailer PROPERTIES
     SOVERSION ${SO_VERSION}
 )
 
-set(symbol_map "${CMAKE_SOURCE_DIR}/src/libthumbnailer/libthumbnailer.map")
+set(symbol_map "${CMAKE_SOURCE_DIR}/src/libthumbnailer-qt/libthumbnailer-qt.map")
 set_target_properties(thumbnailer PROPERTIES
                       LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map} ")
 set_target_properties(thumbnailer PROPERTIES LINK_DEPENDS ${symbol_map})

@@ -16,7 +16,7 @@
  * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
  */
 
-#include <libthumbnailer/thumbnailer.h>
+#include <libthumbnailer-qt/thumbnailer-qt.h>
 
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
@@ -31,7 +31,7 @@
 #include <testsetup.h>
 
 using namespace std;
-using namespace unity::thumbnailer;
+using namespace unity::thumbnailer::qt;
 
 namespace
 {

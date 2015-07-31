@@ -45,7 +45,7 @@ target_link_libraries(thumbnailer-static
     ${APPARMOR_DEPS_LDFLAGS}
 )
 
-add_subdirectory(libthumbnailer)
+add_subdirectory(libthumbnailer-qt)
 add_subdirectory(service)
 add_subdirectory(thumbnailer-admin)
 add_subdirectory(vs-thumb)

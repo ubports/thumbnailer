@@ -28,6 +28,9 @@ namespace unity
 namespace thumbnailer
 {
 
+namespace qt
+{
+
 namespace internal
 {
 class ThumbnailerImpl;
@@ -144,6 +147,8 @@ public:
 private:
     QScopedPointer<internal::ThumbnailerImpl> p_;
 };
+
+} // namespace qt
 
 }  // namespace thumbnailer
 

@@ -15,7 +15,7 @@ set(unit_test_dirs
     gobj_ptr
     image
     qml
-    libthumbnailer
+    libthumbnailer-qt
     safe_strerror
     settings
     thumbnailer

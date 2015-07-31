@@ -16,7 +16,7 @@
  * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
  */
 
-#include <libthumbnailer/thumbnailer.h>
+#include <libthumbnailer-qt/thumbnailer-qt.h>
 
 #include <thumbnailerinterface.h>
 #include <utils/artgeneratorcommon.h>
@@ -30,6 +30,9 @@ namespace unity
 {
 
 namespace thumbnailer
+{
+
+namespace qt
 {
 
 namespace internal
@@ -103,7 +106,7 @@ private:
     std::unique_ptr<QDBusConnection> connection_;
     std::unique_ptr<ThumbnailerInterface> iface_;
 
-    friend class unity::thumbnailer::Thumbnailer;
+    friend class unity::thumbnailer::qt::Thumbnailer;
 };
 
 RequestImpl::RequestImpl(QSize const& requested_size, std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
@@ -127,7 +130,7 @@ void RequestImpl::dbusCallFinished()
     try
     {
         QSize realSize;
-        image_ = imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
+        image_ = unity::thumbnailer::internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         finished_ = true;
         finished_successfully_ = true;
         error_message_ = "";
@@ -267,8 +270,10 @@ QSharedPointer<Request> Thumbnailer::getThumbnail(QString const& filePath, QSize
     return p_->getThumbnail(filePath, requestedSize);
 }
 
+}  // namespace qt
+
 }  // namespace thumbnailer
 
 }  // namespace unity
 
-#include "libthumbnailer.moc"
+#include "libthumbnailer-qt.moc"
