@@ -1,3 +1,15 @@
+# Leaks in valgrind itself with version 1:3.10.1-1ubuntu3
+# TODO: Check periodically whether these go away with a later version.
+{
+    valgrind
+    Memcheck:Leak
+    match-leak-kinds: definite
+    ...
+    obj:/usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so
+}
+
+# Assorted suppressions for other libraries below
+
 {
     g_settings_new
     Memcheck:Leak
@@ -52,6 +64,17 @@
     fun:_ZN35QNetworkConfigurationManagerPrivate10initializeEv
     fun:_Z35qNetworkConfigurationManagerPrivatev
     fun:_ZN28QNetworkConfigurationManagerC1EP7QObject
+}
+
+{
+    QNetworkConfigurationManager2
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:malloc
+    ...
+    fun:_ZN35QNetworkConfigurationManagerPrivate20updateConfigurationsEv
+    fun:_ZN35QNetworkConfigurationManagerPrivate10initializeEv
+    fun:_Z35qNetworkConfigurationManagerPrivatev
 }
 
 {
@@ -130,4 +153,59 @@
     ...
     fun:g_module_open
     fun:gst_plugin_load_file
+}
+
+{
+    gdk_pixbuf_save_to_buffer
+    Memcheck:Value8
+    ...
+    fun:jpeg_write_scanlines
+    ...
+    fun:gdk_pixbuf_save_to_callbackv
+    fun:gdk_pixbuf_save_to_bufferv
+    fun:gdk_pixbuf_save_to_buffer
+    fun:_ZNK5unity11thumbnailer8internal5Image7to_jpegEi
+}
+
+{
+    gdk_pixbuf_save_to_buffer2
+    Memcheck:Cond
+    ...
+    fun:jpeg_write_scanlines
+    ...
+    fun:gdk_pixbuf_save_to_callbackv
+    fun:gdk_pixbuf_save_to_bufferv
+    fun:gdk_pixbuf_save_to_buffer
+    fun:_ZNK5unity11thumbnailer8internal5Image7to_jpegEi
+}
+
+{
+    gdk_pixbuf_loader_write
+    Memcheck:Value8
+    fun:_ZN7leveldb6crc32c6ExtendEjPKcm
+    fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
+    fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
+    fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
+    fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
+    fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
+    fun:_ZN5unity11thumbnailer8internal11RequestBase9thumbnailEv
+}
+
+{
+    gdk_pixbuf_loader_write2
+    Memcheck:Param
+    write(buf)
+    obj:/lib/x86_64-linux-gnu/libc-2.21.so
+    fun:_IO_file_write@@GLIBC_2.2.5
+    fun:new_do_write
+    fun:_IO_do_write@@GLIBC_2.2.5
+    fun:_IO_file_sync@@GLIBC_2.2.5
+    fun:fflush_unlocked
+    obj:/usr/lib/x86_64-linux-gnu/libleveldb.so.1.18
+    fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
+    fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
+    fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
+    fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
+    fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
+    fun:_ZN5unity11thumbnailer8internal11RequestBase9thumbnailEv
 }

@@ -1305,6 +1305,10 @@ void PersistentStringCacheImpl::check_version()
         stats_->num_entries_ = 0;
         stats_->hist_clear();
         stats_->cache_size_ = 0;
+
+        // init_stats() (called later) calls deserialize() on the stats,
+        // so we need to create a proper stats record here.
+        write_stats();
     }
 }
 

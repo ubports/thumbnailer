@@ -1,3 +1,18 @@
+thumbnailer (2.2-0ubuntu0) UNRELEASED; urgency=medium
+
+  [ Michi Henning ]
+  * Compatibility fixes  for GCC 5, Boost 1.58, and Libapparmor 2.10.
+  * Correctly initialise the cache stats after upgrading from an old
+    cache version.
+  * Rename clear-stats sub-command of thumbnailer-admin to zero-stats.
+
+  [ James Henstridge ]
+  * Pass a filename to the vs-thumb helper utility rather than a file
+    descriptor.  This avoids the use of the fdsrc GStreamer element, which
+    appears to be unstable on Wily.
+
+ -- James Henstridge <james.henstridge@canonical.com>  Fri, 31 Jul 2015 15:18:46 +0800
+
 thumbnailer (2.1+15.10.20150715-0ubuntu1) wily; urgency=medium
 
   [ James Henstridge ]
