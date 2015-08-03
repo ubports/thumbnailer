@@ -98,6 +98,7 @@ void ThumbnailerImageResponse::cancel()
     // are no longer interested in the reply.  The destruction will
     // also clear up the signal connections.
     watcher_.reset();
+    //Q_EMIT finished();
 }
 
 void ThumbnailerImageResponse::loadDefaultImage()
