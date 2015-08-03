@@ -23,6 +23,8 @@
 #include <service/dbus_names.h>
 #include <settings.h>
 #include "thumbnailerimageresponse.h"
+#include <iostream>  // TODO: remove this
+#include <thread>  // TODO: remove this
 
 namespace
 {

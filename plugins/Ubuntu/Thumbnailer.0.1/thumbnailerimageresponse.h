@@ -46,6 +46,9 @@ public:
                              unity::thumbnailer::RateLimiter* rate_limiter,
                              std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> reply);
     ThumbnailerImageResponse(QSize const& requested_size,
+                             QString const& default_image,
+                             std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> reply);
+    ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();
 
