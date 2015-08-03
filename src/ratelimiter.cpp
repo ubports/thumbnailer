@@ -62,25 +62,26 @@ function<void()> RateLimiter::schedule(function<void()> job)
 
 void RateLimiter::done()
 {
-    if (queue_.empty())
-    {
-        running_--;
-        return;
-    }
-
-    // Discard any cancelled jobs.
+    // Find the next job, discarding any cancelled jobs.
     shared_ptr<function<void()>> job_p;
-    do
+    while (!queue_.empty())
     {
         job_p = queue_.front();
         queue_.pop();
+        if (*job_p)
+        {
+            break;
+        }
     }
-    while (*job_p == nullptr && !queue_.empty());
 
     // If we found an uncancelled job, call it.
-    if (*job_p)
+    if (job_p && *job_p)
     {
         (*job_p)();
+    }
+    if (queue_.empty())
+    {
+        --running_;
     }
 }
 

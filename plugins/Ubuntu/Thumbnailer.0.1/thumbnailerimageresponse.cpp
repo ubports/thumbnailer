@@ -61,7 +61,10 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
 
-ThumbnailerImageResponse::~ThumbnailerImageResponse() = default;
+ThumbnailerImageResponse::~ThumbnailerImageResponse()
+{
+    //cancel();  // TODO: This causes the qml test to hang.
+}
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
