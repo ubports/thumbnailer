@@ -48,31 +48,14 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
         watcher_.reset(new QDBusPendingCallWatcher(pending_reply));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
     };
-    auto cancel_func_ = backlog_limiter_->schedule(send_request);
-}
-
-ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
-                                                   QString const& default_image,
-                                                   std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job)
-    : requested_size_(requested_size)
-    , job_(job)
-    , default_image_(default_image)
-{
-
-    auto send_request = [this, job]
-    {
-        auto pending_reply = job();
-        watcher_.reset(new QDBusPendingCallWatcher(pending_reply));
-        connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
-    };
-    send_request();  // TODO: do queuing here
-    // connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
+    cancel_func_ = backlog_limiter_->schedule(send_request);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image)
     : requested_size_(requested_size)
     , default_image_(default_image)
+    , cancel_func_([]{})
 {
     loadDefaultImage();
     // Queue the signal emission so there is time for the caller to connect.
@@ -81,7 +64,7 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
 
 ThumbnailerImageResponse::~ThumbnailerImageResponse()
 {
-    //cancel();  // TODO: This causes the qml test to hang.
+    cancel();
 }
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
@@ -93,12 +76,12 @@ void ThumbnailerImageResponse::cancel()
 {
     // Remove request from queue if it is still in there.
     cancel_func_();
+
     // Deleting the pending call watcher (which should hold the only
     // reference to the pending call at this point) tells Qt that we
     // are no longer interested in the reply.  The destruction will
     // also clear up the signal connections.
     watcher_.reset();
-    //Q_EMIT finished();
 }
 
 void ThumbnailerImageResponse::loadDefaultImage()
