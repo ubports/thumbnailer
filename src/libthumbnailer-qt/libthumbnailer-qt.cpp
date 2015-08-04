@@ -61,9 +61,9 @@ public:
         return error_message_;
     }
 
-    bool finishedSucessfully() const
+    bool isValid() const
     {
-        return finished_successfully_;
+        return is_valid_;
     }
 
     void waitForFinished()
@@ -84,13 +84,12 @@ private:
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
     QString error_message_;
     bool finished_;
-    bool finished_successfully_;
+    bool is_valid_;
     QImage image_;
 };
 
-class ThumbnailerImpl : public QObject
+class ThumbnailerImpl
 {
-    Q_OBJECT
 public:
     Q_DISABLE_COPY(ThumbnailerImpl)
     ThumbnailerImpl();
@@ -105,15 +104,13 @@ public:
 private:
     std::unique_ptr<QDBusConnection> connection_;
     std::unique_ptr<ThumbnailerInterface> iface_;
-
-    friend class unity::thumbnailer::qt::Thumbnailer;
 };
 
 RequestImpl::RequestImpl(QSize const& requested_size, std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
     : requested_size_(requested_size)
     , watcher_(std::move(watcher))
     , finished_(false)
-    , finished_successfully_(false)
+    , is_valid_(false)
 {
     connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
 }
@@ -132,7 +129,7 @@ void RequestImpl::dbusCallFinished()
         QSize realSize;
         image_ = unity::thumbnailer::internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         finished_ = true;
-        finished_successfully_ = true;
+        is_valid_ = true;
         error_message_ = "";
         Q_EMIT finished();
         return;
@@ -156,14 +153,13 @@ void RequestImpl::finishWithError(QString const& errorMessage)
 {
     error_message_ = errorMessage;
     finished_ = true;
-    finished_successfully_ = false;
+    is_valid_ = false;
     image_ = QImage();
     qWarning() << error_message_;
     Q_EMIT finished();
 }
 
 ThumbnailerImpl::ThumbnailerImpl()
-    : QObject()
 {
     connection_.reset(new QDBusConnection(
         QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
@@ -229,9 +225,9 @@ QString Request::errorMessage() const
     return p_->errorMessage();
 }
 
-bool Request::finishedSucessfully() const
+bool Request::isValid() const
 {
-    return p_->finishedSucessfully();
+    return p_->isValid();
 }
 
 void Request::waitForFinished()

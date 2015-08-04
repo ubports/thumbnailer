@@ -100,7 +100,7 @@ TEST_F(LibThumbnailerTest, get_album_art)
     ASSERT_EQ(spy.count(), 1);
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_TRUE(reply->isValid());
     EXPECT_EQ(reply->errorMessage(), QString());
 
     QImage image = reply->image();
@@ -122,7 +122,7 @@ TEST_F(LibThumbnailerTest, get_album_art_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_TRUE(reply->isValid());
     EXPECT_EQ(reply->errorMessage(), QString());
 
     QImage image = reply->image();
@@ -150,7 +150,7 @@ TEST_F(LibThumbnailerTest, get_artist_art)
         ASSERT_EQ(spy.count(), 1);
 
         EXPECT_TRUE(reply->isFinished());
-        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_TRUE(reply->isValid());
         EXPECT_EQ(reply->errorMessage(), QString());
 
         QImage image = reply->image();
@@ -175,7 +175,7 @@ TEST_F(LibThumbnailerTest, get_artist_art_sync)
         reply->waitForFinished();
 
         EXPECT_TRUE(reply->isFinished());
-        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_TRUE(reply->isValid());
         EXPECT_EQ(reply->errorMessage(), QString());
 
         QImage image = reply->image();
@@ -202,7 +202,7 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
     ASSERT_EQ(spy.count(), 1);
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_TRUE(reply->isValid());
     EXPECT_EQ(reply->errorMessage(), QString());
 
     QImage image = reply->image();
@@ -227,7 +227,7 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(reply->finishedSucessfully());
+    EXPECT_TRUE(reply->isValid());
     EXPECT_EQ(reply->errorMessage(), QString());
 
     QImage image = reply->image();
@@ -257,7 +257,7 @@ TEST_F(LibThumbnailerTest, song_image)
         ASSERT_EQ(spy.count(), 1);
 
         EXPECT_TRUE(reply->isFinished());
-        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_TRUE(reply->isValid());
         EXPECT_EQ(reply->errorMessage(), QString());
 
         QImage image = reply->image();
@@ -283,7 +283,7 @@ TEST_F(LibThumbnailerTest, song_image_sync)
         reply->waitForFinished();
 
         EXPECT_TRUE(reply->isFinished());
-        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_TRUE(reply->isValid());
         EXPECT_EQ(reply->errorMessage(), QString());
 
         QImage image = reply->image();
@@ -313,7 +313,7 @@ TEST_F(LibThumbnailerTest, video_image)
         ASSERT_EQ(spy.count(), 1);
 
         EXPECT_TRUE(reply->isFinished());
-        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_TRUE(reply->isValid());
         EXPECT_EQ(reply->errorMessage(), QString());
 
         QImage image = reply->image();
@@ -335,7 +335,7 @@ TEST_F(LibThumbnailerTest, video_image_sync)
         reply->waitForFinished();
 
         EXPECT_TRUE(reply->isFinished());
-        EXPECT_TRUE(reply->finishedSucessfully());
+        EXPECT_TRUE(reply->isValid());
         EXPECT_EQ(reply->errorMessage(), QString());
 
         QImage image = reply->image();
@@ -359,7 +359,7 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "));
-    EXPECT_FALSE(reply->finishedSucessfully());
+    EXPECT_FALSE(reply->isValid());
 }
 
 
@@ -375,7 +375,7 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "));
-    EXPECT_FALSE(reply->finishedSucessfully());
+    EXPECT_FALSE(reply->isValid());
 }
 
 TEST_F(LibThumbnailerTest, server_error)
@@ -391,7 +391,7 @@ TEST_F(LibThumbnailerTest, server_error)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
-    EXPECT_FALSE(reply->finishedSucessfully());
+    EXPECT_FALSE(reply->isValid());
 }
 
 TEST_F(LibThumbnailerTest, server_error_sync)
@@ -404,7 +404,7 @@ TEST_F(LibThumbnailerTest, server_error_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
-    EXPECT_FALSE(reply->finishedSucessfully());
+    EXPECT_FALSE(reply->isValid());
 }
 
 Q_DECLARE_METATYPE(QProcess::ExitStatus)  // Avoid noise from signal spy.

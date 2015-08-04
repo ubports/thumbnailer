@@ -76,7 +76,7 @@ public:
      \brief Returns if the request finished successfully.
      \return true if the request finished successfully, false in case of any failure.
     */
-    bool finishedSucessfully() const;
+    bool isValid() const;
 
     /**
      \brief Blocks the calling thread until the request finishes.
@@ -102,14 +102,14 @@ private:
 After the user calls any of his public methods to obtain thumbnails it creates a QSharedPointer to a
 unity::thumbnailer::Request object which will hold the information and state of that particular request.
 */
-class Thumbnailer
+class Thumbnailer final
 {
 public:
     /// @cond
     Q_DISABLE_COPY(Thumbnailer)
 
     Thumbnailer();
-    virtual ~Thumbnailer();
+    ~Thumbnailer();
     /// @endcond
 
     /**
