@@ -109,6 +109,7 @@ public:
     Q_DISABLE_COPY(Thumbnailer)
 
     Thumbnailer();
+    explicit Thumbnailer(QDBusConnection const& connection);
     ~Thumbnailer();
     /// @endcond
 
@@ -138,16 +139,11 @@ public:
     */
     QSharedPointer<Request> getThumbnail(QString const& filePath, QSize const& requestedSize);
 
-    /// @cond
-    // NOTE: this method is provided for testing purposes only.
-    void setDbusConnection(QDBusConnection const& connection);
-    /// @endcond
-
 private:
     QScopedPointer<internal::ThumbnailerImpl> p_;
 };
 
-} // namespace qt
+}  // namespace qt
 
 }  // namespace thumbnailer
 

@@ -2,7 +2,6 @@ libthumbnailer-qt.so.1.0 libthumbnailer-qt1.0 #MINVER#
  (c++)"unity::thumbnailer::qt::Thumbnailer::getAlbumArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Thumbnailer::getArtistArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Thumbnailer::getThumbnail(QString const&, QSize const&)@Base" 0replaceme
- (c++)"unity::thumbnailer::qt::Thumbnailer::setDbusConnection(QDBusConnection const&)@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Thumbnailer::Thumbnailer()@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Thumbnailer::Thumbnailer()@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Thumbnailer::~Thumbnailer()@Base" 0replaceme
@@ -23,6 +22,7 @@ libthumbnailer-qt.so.1.0 libthumbnailer-qt1.0 #MINVER#
  (c++)"unity::thumbnailer::qt::Request::errorMessage() const@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Request::isValid() const@Base" 0replaceme
  (c++)"unity::thumbnailer::qt::Request::image() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::Thumbnailer(QDBusConnection const&)@Base" 0replaceme
  (c++)"typeinfo for unity::thumbnailer::qt::Request@Base" 0replaceme
  (c++)"typeinfo name for unity::thumbnailer::qt::Request@Base" 0replaceme
  (c++)"vtable for unity::thumbnailer::qt::Request@Base" 0replaceme

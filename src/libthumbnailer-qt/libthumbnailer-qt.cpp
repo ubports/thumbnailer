@@ -71,6 +71,11 @@ public:
         watcher_->waitForFinished();
     }
 
+    void setRequest(unity::thumbnailer::qt::Request* request)
+    {
+        public_request_ = request;
+    }
+
 Q_SIGNALS:
     void finished();
 
@@ -86,23 +91,23 @@ private:
     bool finished_;
     bool is_valid_;
     QImage image_;
+    unity::thumbnailer::qt::Request* public_request_;
 };
 
 class ThumbnailerImpl
 {
 public:
     Q_DISABLE_COPY(ThumbnailerImpl)
-    ThumbnailerImpl();
-
+    explicit ThumbnailerImpl(QDBusConnection const& connection);
     ~ThumbnailerImpl() = default;
 
     QSharedPointer<Request> getAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QSharedPointer<Request> getArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
-    void setDbusConnection(QDBusConnection const& connection);
 private:
-    std::unique_ptr<QDBusConnection> connection_;
+    QSharedPointer<Request> createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> reply,
+                                          QSize const& requested_size);
     std::unique_ptr<ThumbnailerInterface> iface_;
 };
 
@@ -111,6 +116,7 @@ RequestImpl::RequestImpl(QSize const& requested_size, std::unique_ptr<QDBusPendi
     , watcher_(std::move(watcher))
     , finished_(false)
     , is_valid_(false)
+    , public_request_(nullptr)
 {
     connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
 }
@@ -131,7 +137,8 @@ void RequestImpl::dbusCallFinished()
         finished_ = true;
         is_valid_ = true;
         error_message_ = "";
-        Q_EMIT finished();
+        Q_ASSERT(public_request_);
+        public_request_->finished();
         return;
     }
     // LCOV_EXCL_START
@@ -156,19 +163,12 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     is_valid_ = false;
     image_ = QImage();
     qWarning() << error_message_;
-    Q_EMIT finished();
+    Q_ASSERT(public_request_);
+    public_request_->finished();
 }
 
-ThumbnailerImpl::ThumbnailerImpl()
+ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
 {
-    connection_.reset(new QDBusConnection(
-        QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-    iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection_));
-}
-
-void ThumbnailerImpl::setDbusConnection(QDBusConnection const& connection)
-{
-    // use the given connection instead of instantiating a new one
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
 }
 
@@ -178,8 +178,7 @@ QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
 {
     // perform dbus call
     auto reply = iface_->GetAlbumArt(artist, album, requestedSize);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    return QSharedPointer<Request>(new Request(new RequestImpl(requestedSize, std::move(watcher))));
+    return createRequest(reply, requestedSize);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
@@ -188,16 +187,25 @@ QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
 {
     // perform dbus call
     auto reply = iface_->GetArtistArt(artist, album, requestedSize);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    return QSharedPointer<Request>(new Request(new RequestImpl(requestedSize, std::move(watcher))));
+    return createRequest(reply, requestedSize);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, QSize const& requestedSize)
 {
     // perform dbus call
     auto reply = iface_->GetThumbnail(filename, requestedSize);
+    return createRequest(reply, requestedSize);
+}
+
+QSharedPointer<Request> ThumbnailerImpl::createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> reply,
+                                                       QSize const& requested_size)
+{
     std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    return QSharedPointer<Request>(new Request(new RequestImpl(requestedSize, std::move(watcher))));
+    auto request_impl = new RequestImpl(requested_size, std::move(watcher));
+    auto request = QSharedPointer<Request>(new Request(request_impl));
+    request_impl->setRequest(request.data());
+
+    return request;
 }
 
 }  // namespace internal
@@ -235,14 +243,16 @@ void Request::waitForFinished()
     p_->waitForFinished();
 }
 
+// LCOV_EXCL_START
 Thumbnailer::Thumbnailer()
-    : p_(new internal::ThumbnailerImpl())
+    : Thumbnailer(QDBusConnection::sessionBus())
 {
 }
+// LCOV_EXCL_STOP
 
-void Thumbnailer::setDbusConnection(QDBusConnection const& connection)
+Thumbnailer::Thumbnailer(QDBusConnection const& connection)
+    : p_(new internal::ThumbnailerImpl(connection))
 {
-    p_->setDbusConnection(connection);
 }
 
 Thumbnailer::~Thumbnailer() = default;
