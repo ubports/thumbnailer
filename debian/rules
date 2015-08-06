@@ -19,5 +19,7 @@ override_dh_auto_configure:
 override_dh_auto_test:
 	dh_auto_test --max-parallel=1 -- ARGS="--verbose"
 
+# cmake adds an SONAME to the library, even if built as a MODULE, which causes
+# lintian to complain about useless calls to ldconfig.
 override_dh_makeshlibs:
 	dh_makeshlibs -Xlibthumbnailer-qml
