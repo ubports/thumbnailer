@@ -2,7 +2,7 @@ Source: thumbnailer
 Section: libdevel
 Priority: optional
 Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-Standards-Version: 3.9.4
+Standards-Version: 3.9.6
 Build-Depends: cmake,
                cmake-extras (>= 0.4),
                debhelper (>= 9),
@@ -21,7 +21,6 @@ Build-Depends: cmake,
                python3-tornado,
                qml-module-qtquick2,
                qml-module-qttest,
-               qt5-default,
                qtbase5-dev,
                qtbase5-dev-tools,
                qtdeclarative5-dev,
@@ -48,10 +47,9 @@ Description: D-Bus service for out of process thumbnailing
 Package: qtdeclarative5-ubuntu-thumbnailer0.1
 Architecture: any
 Multi-Arch: same
-Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         thumbnailer-common (= ${binary:Version}),
+         thumbnailer-common,
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
 Recommends: thumbnailer-service (= ${binary:Version}),
