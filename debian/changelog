@@ -1,3 +1,11 @@
+thumbnailer (2.3) UNRELEASED; urgency=medium
+
+  [ Michi Henning ]
+  * Added man pages for thumbnailer-admin, thumbnailer-service,
+    thumbnailer-settings, and vs-thumb.
+
+ -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
+
 thumbnailer (2.1+15.10.20150715-0ubuntu1) wily; urgency=medium
 
   [ James Henstridge ]
