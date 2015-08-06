@@ -41,6 +41,14 @@ endif()
 
 add_definitions(-DQT_NO_KEYWORDS)
 
+# libthumbnailer-qt version
+set(LIBTHUMBNAILER_QT thumbnailer-qt)
+set(LIBTHUMBNAILER_QT_SO_VERSION_MAJOR "1")
+set(LIBTHUMBNAILER_QT_SO_VERSION_MINOR "0")
+set(LIBTHUMBNAILER_QT_SO_VERSION_MICRO "0")
+set(LIBTHUMBNAILER_QT_SO_VERSION ${LIBTHUMBNAILER_QT_SO_VERSION_MAJOR}.${LIBTHUMBNAILER_QT_SO_VERSION_MINOR})
+set(LIBTHUMBNAILER_QT_HDR_INSTALL_DIR include/${LIBTHUMBNAILER_QT}-${LIBTHUMBNAILER_QT_SO_VERSION}/unity/thumbnailer/qt)
+
 # Flags for thread/address sanitizer
 set(SANITIZER "" CACHE STRING "Build with -fsanitize=<value> (legal values: thread, address)")
 
@@ -115,7 +123,8 @@ add_subdirectory(doc)
 
 enable_coverage_report(
     TARGETS
-        thumbnailer
+        thumbnailer-static
+        thumbnailer-qt
         thumbnailer-admin
         thumbnailer-service
         thumbnailer-qml

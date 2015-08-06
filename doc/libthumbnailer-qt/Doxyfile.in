@@ -52,7 +52,7 @@ PROJECT_LOGO           =
 # If a relative path is entered, it will be relative to the location
 # where doxygen was started. If left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = @PROJECT_BINARY_DIR@/doc/thumbnailer
+OUTPUT_DIRECTORY       = @PROJECT_BINARY_DIR@/doc/thumbnailer/qt
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create
 # 4096 sub-directories (in 2 levels) under the output directory of each output
@@ -147,7 +147,7 @@ STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@ @PROJECT_BINARY_DIR@
 # definition is used. Otherwise one should specify the include paths that
 # are normally passed to the compiler using the -I flag.
 
-STRIP_FROM_INC_PATH    = @PROJECT_SOURCE_DIR@/include/libthumbnailer @PROJECT_BINARY_DIR@/include/libthumbnailer
+STRIP_FROM_INC_PATH    = @PROJECT_SOURCE_DIR@/include/libthumbnailer-qt @PROJECT_BINARY_DIR@/include/libthumbnailer-qt
 
 # If the SHORT_NAMES tag is set to YES, doxygen will generate much shorter
 # (but less readable) file names. This can be useful if your file system
@@ -648,7 +648,7 @@ WARN_FORMAT            = "$file:$line: $text"
 # documented source files. You may enter file names like "myfile.cpp" or
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
-INPUT                  = @PROJECT_SOURCE_DIR@/doc/libthumbnailer/tutorial.dox @PROJECT_BINARY_DIR@/include/libthumbnailer @PROJECT_SOURCE_DIR@/include/libthumbnailer
+INPUT                  = @PROJECT_SOURCE_DIR@/doc/libthumbnailer-qt/tutorial.dox @PROJECT_BINARY_DIR@/include/libthumbnailer-qt @PROJECT_SOURCE_DIR@/include/libthumbnailer-qt
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is

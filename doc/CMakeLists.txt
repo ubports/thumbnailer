@@ -1,1 +1,1 @@
-add_subdirectory(libthumbnailer)
+add_subdirectory(libthumbnailer-qt)

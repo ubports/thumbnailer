@@ -16,7 +16,7 @@
  * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
  */
 
-#include <libthumbnailer/thumbnailer.h>
+#include <libthumbnailer-qt/thumbnailer-qt.h>
 
 #include <thumbnailerinterface.h>
 #include <utils/artgeneratorcommon.h>
@@ -32,6 +32,9 @@ namespace unity
 namespace thumbnailer
 {
 
+namespace qt
+{
+
 namespace internal
 {
 
@@ -43,29 +46,34 @@ public:
 
     ~RequestImpl() = default;
 
-    bool IsFinished() const
+    bool isFinished() const
     {
         return finished_;
     }
 
-    QImage Image() const
+    QImage image() const
     {
         return image_;
     }
 
-    QString ErrorMessage() const
+    QString errorMessage() const
     {
         return error_message_;
     }
 
-    bool FinishedSucessfully() const
+    bool isValid() const
     {
-        return finished_successfully_;
+        return is_valid_;
     }
 
-    void WaitForFinished()
+    void waitForFinished()
     {
         watcher_->waitForFinished();
+    }
+
+    void setRequest(unity::thumbnailer::qt::Request* request)
+    {
+        public_request_ = request;
     }
 
 Q_SIGNALS:
@@ -75,42 +83,40 @@ private Q_SLOTS:
     void dbusCallFinished();
 
 private:
-    void FinishWithError(QString const& errorMessage);
+    void finishWithError(QString const& errorMessage);
 
     QSize requested_size_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
     QString error_message_;
     bool finished_;
-    bool finished_successfully_;
+    bool is_valid_;
     QImage image_;
+    unity::thumbnailer::qt::Request* public_request_;
 };
 
-class ThumbnailerImpl : public QObject
+class ThumbnailerImpl
 {
-    Q_OBJECT
 public:
     Q_DISABLE_COPY(ThumbnailerImpl)
-    ThumbnailerImpl();
-    ThumbnailerImpl(QDBusConnection const& connection);
-
+    explicit ThumbnailerImpl(QDBusConnection const& connection);
     ~ThumbnailerImpl() = default;
 
-    QSharedPointer<Request> GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
-    QSharedPointer<Request> GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
-    QSharedPointer<Request> GetThumbnail(QString const& filename, QSize const& requestedSize);
+    QSharedPointer<Request> getAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QSharedPointer<Request> getArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
-    std::unique_ptr<QDBusConnection> connection_;
+    QSharedPointer<Request> createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> reply,
+                                          QSize const& requested_size);
     std::unique_ptr<ThumbnailerInterface> iface_;
-
-    friend class unity::thumbnailer::Thumbnailer;
 };
 
 RequestImpl::RequestImpl(QSize const& requested_size, std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
     : requested_size_(requested_size)
     , watcher_(std::move(watcher))
     , finished_(false)
-    , finished_successfully_(false)
+    , is_valid_(false)
+    , public_request_(nullptr)
 {
     connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
 }
@@ -120,86 +126,86 @@ void RequestImpl::dbusCallFinished()
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        FinishWithError("ThumbnailerRequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
+        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
         return;
     }
 
     try
     {
         QSize realSize;
-        image_ = imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
+        image_ = unity::thumbnailer::internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         finished_ = true;
-        finished_successfully_ = true;
+        is_valid_ = true;
         error_message_ = "";
-        Q_EMIT finished();
+        Q_ASSERT(public_request_);
+        public_request_->finished();
         return;
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        FinishWithError("ThumbnailerRequestImpl::dbusCallFinished(): thumbnailer failed: " +
+        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): thumbnailer failed: " +
                         QString::fromStdString(e.what()));
     }
     catch (...)
     {
-        FinishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception");
+        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception");
     }
 
-    FinishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown error");
+    finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown error");
     // LCOV_EXCL_STOP
 }
 
-void RequestImpl::FinishWithError(QString const& errorMessage)
+void RequestImpl::finishWithError(QString const& errorMessage)
 {
     error_message_ = errorMessage;
     finished_ = true;
-    finished_successfully_ = false;
+    is_valid_ = false;
     image_ = QImage();
     qWarning() << error_message_;
-    Q_EMIT finished();
-}
-
-ThumbnailerImpl::ThumbnailerImpl()
-    : QObject()
-{
-    connection_.reset(new QDBusConnection(
-        QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-    iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection_));
+    Q_ASSERT(public_request_);
+    public_request_->finished();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : QObject()
 {
-    // use the given connection instead of instantiating a new one
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
 }
 
-QSharedPointer<Request> ThumbnailerImpl::GetAlbumArt(QString const& artist,
+QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
                                                      QString const& album,
                                                      QSize const& requestedSize)
 {
     // perform dbus call
     auto reply = iface_->GetAlbumArt(artist, album, requestedSize);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    return QSharedPointer<Request>(new Request(new RequestImpl(requestedSize, std::move(watcher))));
+    return createRequest(reply, requestedSize);
 }
 
-QSharedPointer<Request> ThumbnailerImpl::GetArtistArt(QString const& artist,
+QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
                                                       QString const& album,
                                                       QSize const& requestedSize)
 {
     // perform dbus call
     auto reply = iface_->GetArtistArt(artist, album, requestedSize);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    return QSharedPointer<Request>(new Request(new RequestImpl(requestedSize, std::move(watcher))));
+    return createRequest(reply, requestedSize);
 }
 
-QSharedPointer<Request> ThumbnailerImpl::GetThumbnail(QString const& filename, QSize const& requestedSize)
+QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, QSize const& requestedSize)
 {
     // perform dbus call
     auto reply = iface_->GetThumbnail(filename, requestedSize);
+    return createRequest(reply, requestedSize);
+}
+
+QSharedPointer<Request> ThumbnailerImpl::createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> reply,
+                                                       QSize const& requested_size)
+{
     std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    return QSharedPointer<Request>(new Request(new RequestImpl(requestedSize, std::move(watcher))));
+    auto request_impl = new RequestImpl(requested_size, std::move(watcher));
+    auto request = QSharedPointer<Request>(new Request(request_impl));
+    request_impl->setRequest(request.data());
+
+    return request;
 }
 
 }  // namespace internal
@@ -212,35 +218,37 @@ Request::Request(internal::RequestImpl* impl)
 
 Request::~Request() = default;
 
-bool Request::IsFinished() const
+bool Request::isFinished() const
 {
-    return p_->IsFinished();
+    return p_->isFinished();
 }
 
-QImage Request::Image() const
+QImage Request::image() const
 {
-    return p_->Image();
+    return p_->image();
 }
 
-QString Request::ErrorMessage() const
+QString Request::errorMessage() const
 {
-    return p_->ErrorMessage();
+    return p_->errorMessage();
 }
 
-bool Request::FinishedSucessfully() const
+bool Request::isValid() const
 {
-    return p_->FinishedSucessfully();
+    return p_->isValid();
 }
 
-void Request::WaitForFinished()
+void Request::waitForFinished()
 {
-    p_->WaitForFinished();
+    p_->waitForFinished();
 }
 
+// LCOV_EXCL_START
 Thumbnailer::Thumbnailer()
-    : p_(new internal::ThumbnailerImpl())
+    : Thumbnailer(QDBusConnection::sessionBus())
 {
 }
+// LCOV_EXCL_STOP
 
 Thumbnailer::Thumbnailer(QDBusConnection const& connection)
     : p_(new internal::ThumbnailerImpl(connection))
@@ -249,27 +257,29 @@ Thumbnailer::Thumbnailer(QDBusConnection const& connection)
 
 Thumbnailer::~Thumbnailer() = default;
 
-QSharedPointer<Request> Thumbnailer::GetAlbumArt(QString const& artist,
+QSharedPointer<Request> Thumbnailer::getAlbumArt(QString const& artist,
                                                  QString const& album,
                                                  QSize const& requestedSize)
 {
-    return p_->GetAlbumArt(artist, album, requestedSize);
+    return p_->getAlbumArt(artist, album, requestedSize);
 }
 
-QSharedPointer<Request> Thumbnailer::GetArtistArt(QString const& artist,
+QSharedPointer<Request> Thumbnailer::getArtistArt(QString const& artist,
                                                   QString const& album,
                                                   QSize const& requestedSize)
 {
-    return p_->GetArtistArt(artist, album, requestedSize);
+    return p_->getArtistArt(artist, album, requestedSize);
 }
 
-QSharedPointer<Request> Thumbnailer::GetThumbnail(QString const& filePath, QSize const& requestedSize)
+QSharedPointer<Request> Thumbnailer::getThumbnail(QString const& filePath, QSize const& requestedSize)
 {
-    return p_->GetThumbnail(filePath, requestedSize);
+    return p_->getThumbnail(filePath, requestedSize);
 }
+
+}  // namespace qt
 
 }  // namespace thumbnailer
 
 }  // namespace unity
 
-#include "thumbnailer.moc"
+#include "libthumbnailer-qt.moc"

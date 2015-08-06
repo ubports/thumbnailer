@@ -1,0 +1,1 @@
+install(FILES thumbnailer-qt.h DESTINATION ${LIBTHUMBNAILER_QT_HDR_INSTALL_DIR})
