@@ -18,7 +18,7 @@
  *          Pawel Stolowski <pawel.stolowski@canonical.com>
  */
 
-#include "artgeneratorcommon.h"
+#include <utils/artgeneratorcommon.h>
 
 #include <QFile>
 #include <QImageReader>
@@ -29,7 +29,7 @@ namespace unity
 namespace thumbnailer
 {
 
-namespace qml
+namespace internal
 {
 
 QImage imageFromFd(int fd, QSize* realSize, const QSize& requestedSize)
@@ -65,7 +65,7 @@ QImage imageFromFd(int fd, QSize* realSize, const QSize& requestedSize)
     return image;
 }
 
-}  // namespace qml
+}  // namespace internal
 
 }  // namespace thumbnailer
 

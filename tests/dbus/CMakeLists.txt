@@ -1,7 +1,7 @@
 add_executable(dbus_test dbus_test.cpp)
 qt5_use_modules(dbus_test Network DBus Test)
 target_link_libraries(dbus_test
-    thumbnailer
+    thumbnailer-static
     testutils
     Qt5::Network
     Qt5::DBus
