@@ -1,0 +1,3 @@
+usr/lib/*/libthumbnailer-qt.so
+usr/include/thumbnailer-qt-1.0/unity/thumbnailer/qt/*.h
+usr/lib/*/pkgconfig/libthumbnailer-qt.pc
