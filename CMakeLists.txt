@@ -125,6 +125,7 @@ add_subdirectory(data)
 add_subdirectory(plugins/Ubuntu/Thumbnailer.0.1)
 add_subdirectory(tests)
 add_subdirectory(include)
+add_subdirectory(doc)
 
 enable_coverage_report(
     TARGETS

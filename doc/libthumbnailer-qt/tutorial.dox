@@ -1,0 +1,125 @@
+/*!
+\mainpage notitle
+
+\section overview Thumbnailer API
+
+\subsection intro Introduction
+
+libthumbnailer is the library that offers Qt/C++ direct access to the thumbnailer component in Unity.
+
+The thumbnailer component has an internal centralized component, called the thumbnailer-service, that is
+a dbus service listening to requests coming from other processes.
+This library wraps those dbus calls and offers an API that can work synchronously and asynchronously.
+
+This document describes how to use the API in both modes, asynchronous and synchronous, withouth dealing with dbus calls.
+
+\section develop Using the Thumbnailer API
+
+\subsection starting Getting started
+
+This simple API has one main class: unity::thumbnailer::qt::Thumbnailer which has the possible methods a programmer may use.
+For every method the user obtains a QSharedPointer to a unity::thumbnailer::qt::Request which will emit a unity::thumbnailer::qt::Request::finished signal
+when it finishes.
+
+\subsection async Asynchronous API
+
+We provide a simple example showing how to use the API in asynchornous mode, following Qt's design.
+
+\code
+
+class MyClass : public QObject
+{
+    Q_OBJECT
+public:
+    MyClass();
+    ~MyClass() = default;
+
+    void setArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size);
+
+public slots:
+    void requestFinished();
+
+private:
+    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
+    QImage image_;
+}
+
+MyClass::MyClass() : QObject()
+{
+}
+
+void MyClass::setArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size)
+{
+    request_ = thumbnailer_.getArtistArt(artist, album, size);
+    connect(request_.data(), &unity::thumbnailer::qt::Request::finished, this, &MyClass::requestFinished);
+}
+
+void MyClass::requestFinished()
+{
+    if (request_->isValid())
+    {
+        // get the image from the request.
+        image_ = request_->image();
+    }
+    else
+    {
+        QString errorMessage = request_->errorMessage();
+        // do whatever you need to do to report the error.
+    }
+}
+
+\endcode
+
+\subsection sync Synchronous API
+
+For synchronous mode the unity::thumbnailer::qt::Request class exposes a WaitForFinished method, that blocks waiting for the request
+to finish.
+
+\code
+
+class MyClass : public QObject
+{
+    Q_OBJECT
+public:
+    MyClass();
+    ~MyClass() = default;
+
+    void setAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size);
+
+public slots:
+    void requestFinished();
+
+private:
+    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
+    QImage image_;
+}
+
+MyClass::MyClass() : QObject()
+{
+}
+
+void MyClass::setAlbumThumbnailSyncc(QString const& artist, QString const& album, QSize const& size)
+{
+    auto request = thumbnailer_.getAlbumArt(artist, album, size);
+
+    // block here waiting for the response
+    request->waitForFinished();
+
+    if (request->isValid())
+    {
+        // get the image from the request.
+        image_ = request->image();
+    }
+    else
+    {
+        QString errorMessage = request->errorMessage();
+        // do whatever you need to do to report the error.
+    }
+}
+
+\endcode
+
+Take into account that this use blocks the calling thread, so it may affect Gui threads or general performance.
+
+*/
