@@ -1,11 +1,11 @@
 /*!
 \mainpage notitle
 
-\section overview Thumbnailer API
+\section overview Thumbnailer Qt API
 
 \subsection intro Introduction
 
-`libthumbnailer-qt.so` provides access to Unity's thumbnailer service (see <b>thumbnailer-service</b>(1)
+`libthumbnailer-qt.so` provides access to Unity's thumbnailer service (see the <b>thumbnailer-service</b>(1)
 man page). The implementation accesses the thumbnailer service via its DBus interface.
 
 Methods to retrieve thumbnails are asynchronous; you can also use them synchronously by calling
