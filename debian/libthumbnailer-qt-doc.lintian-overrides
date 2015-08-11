@@ -1,0 +1,3 @@
+# Nothing we can do about this because, depending on the installed version
+# of jquery.js, the tree widget breaks.
+libthumbnailer-qt-doc: embedded-javascript-library
