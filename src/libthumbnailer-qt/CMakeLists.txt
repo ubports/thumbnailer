@@ -5,7 +5,7 @@ qt5_add_dbus_interface(interface_files ${dbusinterface_xml} thumbnailerinterface
 
 add_library(${LIBTHUMBNAILER_QT} SHARED
   libthumbnailer-qt.cpp
-  ${CMAKE_SOURCE_DIR}/include/libthumbnailer-qt/thumbnailer-qt.h
+  ${CMAKE_SOURCE_DIR}/include/unity/thumbnailer/qt/thumbnailer-qt.h
   ${interface_files}
   ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
 )

@@ -5,7 +5,7 @@
 
 option(DEVEL_DOCS "Enable detailed Doxygen documentation")
 
-file(GLOB libthumbnailer_headers "${PROJECT_SOURCE_DIR}/include/libthumbnailer-qt/*.h")
+file(GLOB libthumbnailer_headers "${PROJECT_SOURCE_DIR}/include/unity/thumbnailer/qt/*.h")
 
 find_package(Doxygen)
 find_program(DOT_EXECUTABLE dot /usr/bin)
