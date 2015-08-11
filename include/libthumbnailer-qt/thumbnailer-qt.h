@@ -118,7 +118,7 @@ the thumbnail will be scaled.
 defines a square bounding box of <i>n</i> pixels. To obtain an image in its original size, pass `QSize(0, 0)`.
 Sizes with one or both dimensions less than zero return an error.
 
-Original images is never scaled up, so the returned thumbnail may be smaller than its requested size.
+Original images are never scaled up, so the returned thumbnail may be smaller than its requested size.
 
 All methods are asynchronous and are guaranteed not to block.
 
