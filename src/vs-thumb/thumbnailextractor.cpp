@@ -28,8 +28,6 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
 
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#include <gst/gst.h>
 #include <gst/tag/tag.h>
 
 #include <internal/gobj_memory.h>
@@ -58,59 +56,6 @@ void throw_error(const char* msg, GError* error = nullptr)
         g_error_free(error);
     }
     throw std::runtime_error(message);
-}
-
-void change_state(GstElement* element, GstState state)
-{
-    GstStateChangeReturn ret = gst_element_set_state(element, state);
-    switch (ret)
-    {
-        case GST_STATE_CHANGE_NO_PREROLL:
-        case GST_STATE_CHANGE_SUCCESS:
-            return;
-        case GST_STATE_CHANGE_ASYNC:
-            // The change is happening in a background thread, which we
-            // will wait on below.
-            break;
-        case GST_STATE_CHANGE_FAILURE:
-        default:
-            throw_error("change_state(): Could not change element state");
-    }
-
-    // We're in the async case here, so pop messages off the bus until
-    // it is done.
-    gobj_ptr<GstBus> bus(gst_element_get_bus(element));
-    while (true)
-    {
-        std::unique_ptr<GstMessage, decltype(&gst_message_unref)> message(
-            gst_bus_timed_pop_filtered(bus.get(), GST_CLOCK_TIME_NONE,
-                                       static_cast<GstMessageType>(GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR)),
-            gst_message_unref);
-        if (!message)
-        {
-            break;
-        }
-
-        switch (GST_MESSAGE_TYPE(message.get()))
-        {
-            case GST_MESSAGE_ASYNC_DONE:
-                if (GST_MESSAGE_SRC(message.get()) == GST_OBJECT(element))
-                {
-                    return;
-                }
-                break;
-            case GST_MESSAGE_ERROR:
-            {
-                GError* error = nullptr;
-                gst_message_parse_error(message.get(), &error, nullptr);
-                throw_error("change_state(): reading async messages", error);
-                break;
-            }
-            default:
-                /* ignore other message types */
-                ;
-        }
-    }
 }
 
 class BufferMap final
@@ -161,16 +106,6 @@ private:
 
 }  // namespace
 
-struct ThumbnailExtractor::Private
-{
-    gobj_ptr<GstElement> playbin;
-    gint64 duration = -1;
-
-    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample{nullptr, gst_sample_unref};
-    GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    bool sample_raw = true;
-};
-
 /* GstPlayFlags flags from playbin.
  *
  * GStreamer does not install headers for the enums of individual
@@ -192,14 +127,13 @@ typedef enum
 } GstPlayFlags;
 
 ThumbnailExtractor::ThumbnailExtractor()
-    : p(new Private)
 {
     GstElement* pb = gst_element_factory_make("playbin", "playbin");
     if (!pb)
     {
         throw_error("ThumbnailExtractor(): Could not create playbin");
     }
-    p->playbin.reset(static_cast<GstElement*>(g_object_ref_sink(pb)));
+    playbin_.reset(static_cast<GstElement*>(g_object_ref_sink(pb)));
 
     GstElement* audio_sink = gst_element_factory_make("fakesink", "audio-fake-sink");
     if (!audio_sink)
@@ -214,57 +148,172 @@ ThumbnailExtractor::ThumbnailExtractor()
     }
 
     g_object_set(video_sink, "sync", TRUE, nullptr);
-    g_object_set(p->playbin.get(), "audio-sink", audio_sink, "video-sink", video_sink, "flags",
-                 GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO, nullptr);
+    g_object_set(playbin_.get(),
+                 "audio-sink", audio_sink,
+                 "video-sink", video_sink,
+                 "flags", GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO,
+                 nullptr);
+
+    bus_.reset(gst_element_get_bus(pb));
+    gst_bus_add_watch(bus_.get(), &ThumbnailExtractor::on_new_message, this);
 }
 
 ThumbnailExtractor::~ThumbnailExtractor()
 {
     reset();
+    if (bus_) {
+        gst_bus_remove_watch(bus_.get());
+    }
 }
+
+void ThumbnailExtractor::extract(std::string const& uri, std::string const& outfile, std::function<void(bool)> callback) {
+    outfile_ = outfile;
+    callback_ = callback;
+    set_uri(uri);
+}
+
 
 void ThumbnailExtractor::reset()
 {
-    change_state(p->playbin.get(), GST_STATE_NULL);
-    p->sample.reset();
-    p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    p->sample_raw = true;
+    gst_element_set_state(playbin_.get(), GST_STATE_NULL);
+    sample_.reset();
+    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    sample_raw_ = true;
+    is_seeking_ = false;
+}
+
+gboolean ThumbnailExtractor::on_new_message(GstBus */*bus*/, GstMessage *message, void *user_data)
+{
+    auto extractor = reinterpret_cast<ThumbnailExtractor*>(user_data);
+
+    if (GST_MESSAGE_SRC(message) != GST_OBJECT(extractor->playbin_.get()))
+    {
+        return G_SOURCE_CONTINUE;
+    }
+    
+    switch (GST_MESSAGE_TYPE(message))
+    {
+    case GST_MESSAGE_STATE_CHANGED:
+        GstState newstate;
+        gst_message_parse_state_changed(message, nullptr, &newstate, nullptr);
+        extractor->state_changed(newstate);
+        break;
+    case GST_MESSAGE_ASYNC_DONE:
+        fprintf(stderr, "Got Async done message, is_seeking == %d\n", extractor->is_seeking_);
+        if (extractor->is_seeking_)
+        {
+            // Check to make sure the state change after the seek has
+            // truely completed.
+            if (gst_element_get_state(
+                    extractor->playbin_.get(),
+                    nullptr, nullptr, 0) != GST_STATE_CHANGE_ASYNC)
+            {
+                extractor->is_seeking_ = false;
+                extractor->seek_done();
+            }
+        }
+        break;
+    case GST_MESSAGE_ERROR:
+    {
+        GError* error = nullptr;
+        gst_message_parse_error(message, &error, nullptr);
+        extractor->bus_error(error);
+        g_error_free(error);
+        break;
+    }
+    default:
+        /* ignore other message types */
+        ;
+    }
+
+    return G_SOURCE_CONTINUE;
 }
 
 void ThumbnailExtractor::set_uri(const std::string& uri)
 {
     reset();
-    g_object_set(p->playbin.get(), "uri", uri.c_str(), nullptr);
-    fprintf(stderr, "Changing to state PAUSED\n");
-    change_state(p->playbin.get(), GST_STATE_PAUSED);
+    g_object_set(playbin_.get(), "uri", uri.c_str(), nullptr);
 
-    if (!gst_element_query_duration(p->playbin.get(), GST_FORMAT_TIME, &p->duration))
+    fprintf(stderr, "Changing to state PAUSED\n");
+    auto ret = gst_element_set_state(playbin_.get(), GST_STATE_PAUSED);
+    if (ret == GST_STATE_CHANGE_FAILURE)
     {
-        p->duration = -1;
+        throw_error("set_uri(): Could not change pipeline state to paused.");
     }
 }
+
+void ThumbnailExtractor::state_changed(GstState state)
+{
+    fprintf(stderr, "State changed to %d\n", (int)state);
+    switch (state) {
+    case GST_STATE_PAUSED:
+        if (has_video())
+        {
+            if (!is_seeking_)
+            {
+                // Seek somewhere that will hopefully give a relevant image.
+                int64_t duration, seek_point;
+                if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration))
+                {
+                    seek_point = 2 * duration / 7;
+                }
+                else
+                {
+                    seek_point = 10 * GST_SECOND;
+                }
+                fprintf(stderr, "Seeking to position %d\n", (int)(seek_point / GST_SECOND));
+                is_seeking_ = true;
+                gst_element_seek_simple(playbin_.get(), GST_FORMAT_TIME,
+                                        static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), seek_point);
+            }
+        }
+        else
+        {
+            if (callback_)
+            {
+                callback_(extract_audio_cover_art());
+                callback_ = nullptr;
+            }
+            reset();
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void ThumbnailExtractor::seek_done()
+{
+    if (callback_)
+    {
+        callback_(extract_video_frame());
+        callback_ = nullptr;
+    }
+    reset();
+}
+
+void ThumbnailExtractor::bus_error(GError *error)
+{
+    fprintf(stderr, "Error: %s\n", error->message);
+    if (callback_)
+    {
+        callback_(false);
+        callback_ = nullptr;
+    }
+    reset();
+}
+
 
 bool ThumbnailExtractor::has_video()
 {
     int n_video = 0;
-    g_object_get(p->playbin.get(), "n-video", &n_video, nullptr);
+    g_object_get(playbin_.get(), "n-video", &n_video, nullptr);
+    fprintf(stderr, "Number of video streams == %d\n", n_video);
     return n_video > 0;
 }
 
 bool ThumbnailExtractor::extract_video_frame()
 {
-    gint64 seek_point = 10 * GST_SECOND;
-    if (p->duration >= 0)
-    {
-        seek_point = 2 * p->duration / 7;
-    }
-    fprintf(stderr, "Seeking to position %d\n", (int)(seek_point / GST_SECOND));
-    gst_element_seek_simple(p->playbin.get(), GST_FORMAT_TIME,
-                            static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), seek_point);
-    fprintf(stderr, "Waiting for seek to complete\n");
-    gst_element_get_state(p->playbin.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
-    fprintf(stderr, "Done.\n");
-
     // Retrieve sample from the playbin
     fprintf(stderr, "Requesting sample frame.\n");
     std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
@@ -272,18 +321,19 @@ bool ThumbnailExtractor::extract_video_frame()
                             1, nullptr),
         gst_caps_unref);
     GstSample* s;
-    g_signal_emit_by_name(p->playbin.get(), "convert-sample", desired_caps.get(), &s);
+    g_signal_emit_by_name(playbin_.get(), "convert-sample", desired_caps.get(), &s);
     if (!s)
     {
+        fprintf(stderr, "Could not extract sample\n");
         return false;
     }
-    p->sample.reset(s);
-    p->sample_raw = true;
+    sample_.reset(s);
+    sample_raw_ = true;
 
     // Does the sample need to be rotated?
-    p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
+    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     GstTagList* tags = nullptr;
-    g_signal_emit_by_name(p->playbin.get(), "get-video-tags", 0, &tags);
+    g_signal_emit_by_name(playbin_.get(), "get-video-tags", 0, &tags);
     if (tags)
     {
         char* orientation = nullptr;
@@ -291,66 +341,71 @@ bool ThumbnailExtractor::extract_video_frame()
         {
             if (!strcmp(orientation, "rotate-90"))
             {
-                p->sample_rotation = GDK_PIXBUF_ROTATE_CLOCKWISE;
+                sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
             }
             else if (!strcmp(orientation, "rotate-180"))
             {
-                p->sample_rotation = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
+                sample_rotation_ = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
             }
             else if (!strcmp(orientation, "rotate-270"))
             {
-                p->sample_rotation = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
+                sample_rotation_ = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
             }
         }
         gst_tag_list_unref(tags);
     }
-    return true;
+    return save_screenshot();
 }
 
 bool ThumbnailExtractor::extract_audio_cover_art()
 {
+    fprintf(stderr, "Extracting cover art\n");
     GstTagList* tags = nullptr;
-    g_signal_emit_by_name(p->playbin.get(), "get-audio-tags", 0, &tags);
+    g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
     if (!tags)
     {
         return false;
     }
-    p->sample.reset();
-    p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    p->sample_raw = false;
+    sample_.reset();
+    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    sample_raw_ = false;
     bool found_cover = false;
     for (int i = 0; !found_cover; i++)
     {
-        GstSample* sample;
-        if (!gst_tag_list_get_sample_index(tags, GST_TAG_IMAGE, i, &sample))
+        GstSample* s;
+        if (!gst_tag_list_get_sample_index(tags, GST_TAG_IMAGE, i, &s))
         {
             break;
         }
         // Check the type of this image
-        auto caps = gst_sample_get_caps(sample);
+        auto caps = gst_sample_get_caps(s);
         auto structure = gst_caps_get_structure(caps, 0);
         int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
         gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
         if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
         {
-            p->sample.reset(gst_sample_ref(sample));
+            sample_.reset(gst_sample_ref(s));
             found_cover = true;
         }
-        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !p->sample)
+        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample_)
         {
             // Save the first unknown image tag, but continue scanning
             // in case there is one marked as the cover.
-            p->sample.reset(gst_sample_ref(sample));
+            sample_.reset(gst_sample_ref(s));
         }
-        gst_sample_unref(sample);
+        gst_sample_unref(s);
     }
     gst_tag_list_unref(tags);
-    return bool(p->sample);
+    if (!sample_)
+    {
+        return false;
+    }
+    return save_screenshot();
 }
 
-void ThumbnailExtractor::save_screenshot(const std::string& filename)
+bool ThumbnailExtractor::save_screenshot()
 {
-    if (!p->sample)
+    if (!sample_)
     {
         throw_error("save_screenshot(): Could not retrieve screenshot");
     }
@@ -359,9 +414,9 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     fprintf(stderr, "Creating pixbuf from sample\n");
     BufferMap buffermap;
     gobj_ptr<GdkPixbuf> image;
-    if (p->sample_raw)
+    if (sample_raw_)
     {
-        GstCaps* sample_caps = gst_sample_get_caps(p->sample.get());
+        GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
         if (!sample_caps)
         {
             throw_error("save_screenshot(): Could not retrieve caps for sample buffer");
@@ -375,7 +430,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
             throw_error("save_screenshot(): Could not retrieve image dimensions");
         }
 
-        buffermap.map(gst_sample_get_buffer(p->sample.get()));
+        buffermap.map(gst_sample_get_buffer(sample_.get()));
         image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
                                              GST_ROUND_UP_4(width * 3), nullptr, nullptr));
     }
@@ -383,7 +438,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     {
         gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
 
-        buffermap.map(gst_sample_get_buffer(p->sample.get()));
+        buffermap.map(gst_sample_get_buffer(sample_.get()));
         GError* error = nullptr;
         if (gdk_pixbuf_loader_write(loader.get(), buffermap.data(), buffermap.size(), &error) &&
             gdk_pixbuf_loader_close(loader.get(), &error))
@@ -400,9 +455,9 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         }
     }
 
-    if (p->sample_rotation != GDK_PIXBUF_ROTATE_NONE)
+    if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
     {
-        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), p->sample_rotation);
+        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
         if (rotated)
         {
             image.reset(rotated);
@@ -414,11 +469,12 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // keep all the policy decisions about image quality in the main thumbnailer.
     fprintf(stderr, "Saving pixbuf to tiff\n");
     GError* error = nullptr;
-    if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
+    if (!gdk_pixbuf_save(image.get(), outfile_.c_str(), "tiff", &error, "compression", "1", nullptr))
     {
         throw_error("save_screenshot(): saving image", error);
     }
     fprintf(stderr, "Done.\n");
+    return true;
 }
 
 }  // namespace internal

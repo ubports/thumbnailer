@@ -54,28 +54,6 @@ string command_line_arg_to_uri(string const& arg)
     return uri;
 }
 
-bool extract_thumbnail(string const& uri, string const& ofname)
-{
-    ThumbnailExtractor extractor;
-
-    extractor.set_uri(uri);
-    if (extractor.has_video())
-    {
-        if (!extractor.extract_video_frame())
-        {
-            return false;
-        }
-    }
-    else
-    {
-        if (!extractor.extract_audio_cover_art())
-        {
-            return false;
-        }
-    }
-    extractor.save_screenshot(ofname);
-    return true;
-}
 }
 
 int main(int argc, char** argv)
@@ -100,15 +78,15 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    try
-    {
-        success = extract_thumbnail(uri, outfile);
-    }
-    catch (exception const& e)
-    {
-        fprintf(stderr, "Error creating thumbnail: %s\n", e.what());
-        return 2;
-    }
+    std::unique_ptr<GMainLoop, decltype(&g_main_loop_unref)> main_loop(
+        g_main_loop_new(nullptr, false), g_main_loop_unref);
+    auto callback = [&](bool result){
+        success = result;
+        g_main_loop_quit(main_loop.get());
+    };
+    ThumbnailExtractor extractor;
+    extractor.extract(uri, outfile, callback);
+    g_main_loop_run(main_loop.get());
 
     return success ? 0 : 1;
 }
