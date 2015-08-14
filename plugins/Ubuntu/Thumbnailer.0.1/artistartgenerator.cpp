@@ -53,8 +53,7 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     {
         qWarning().nospace() << "ArtistArtGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
+        // Size will be adjusted by the service to 128x128.
     }
 
     QUrlQuery query(id);
