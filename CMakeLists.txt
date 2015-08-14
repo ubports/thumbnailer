@@ -17,13 +17,17 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower) # Build types shoul
 
 set(ACCEPTED_BUILD_TYPES "" none release debug relwithdebinfo coverage)
 list(FIND ACCEPTED_BUILD_TYPES "${cmake_build_type_lower}" IS_BUILD_TYPE_ACCEPTED)
-if(${IS_BUILD_TYPE_ACCEPTED} EQUAL -1)
+if (${IS_BUILD_TYPE_ACCEPTED} EQUAL -1)
     message(FATAL_ERROR "Invalid CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}\nValid types are: ${ACCEPTED_BUILD_TYPES}")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -pedantic -Wextra")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    # Clang doesn't understand this flag
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wabi-tag")
+endif()
 
 # Some additional warnings not included by the general flags set above.
 set(EXTRA_C_WARNINGS "-Wcast-align -Wcast-qual -Wformat -Wredundant-decls -Wswitch-default")

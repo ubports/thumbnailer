@@ -29,7 +29,14 @@
 #pragma GCC diagnostic ignored "-Wcast-align"
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
 #include <gst/gst.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include <gst/tag/tag.h>
 
 #include <internal/gobj_memory.h>

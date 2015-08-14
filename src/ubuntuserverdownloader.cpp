@@ -98,7 +98,14 @@ bool network_down_error(QNetworkReply::NetworkError error)
 
 class UbuntuServerArtReply : public ArtReply
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 public:
     Q_DISABLE_COPY(UbuntuServerArtReply)
