@@ -86,6 +86,21 @@ std::string filename_to_uri(const std::string& filename)
     return uri.get();
 }
 
+bool extract(std::string const& filename, std::string const& outfile)
+{
+    bool success = false;
+    std::unique_ptr<GMainLoop, decltype(&g_main_loop_unref)> main_loop(
+        g_main_loop_new(nullptr, false), g_main_loop_unref);
+    auto callback = [&](bool result){
+        success = result;
+        g_main_loop_quit(main_loop.get());
+    };
+    ThumbnailExtractor extractor;
+    extractor.extract(filename_to_uri(filename), outfile, callback);
+    g_main_loop_run(main_loop.get());
+    return success;
+}
+
 gobj_ptr<GdkPixbuf> load_image(const std::string& filename)
 {
     GError* error = nullptr;
@@ -143,12 +158,8 @@ TEST_F(ExtractorTest, extract_theora)
         return;
     }
 
-    ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.jpg";
-    extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
-    ASSERT_TRUE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    ASSERT_TRUE(extract(THEORA_TEST_FILE, outfile));
 
     auto image = load_image(outfile);
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
@@ -163,12 +174,8 @@ TEST_F(ExtractorTest, extract_mp4)
         return;
     }
 
-    ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.jpg";
-    extractor.set_uri(filename_to_uri(MP4_LANDSCAPE_TEST_FILE));
-    ASSERT_TRUE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    ASSERT_TRUE(extract(MP4_LANDSCAPE_TEST_FILE, outfile));
 
     auto image = load_image(outfile);
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
@@ -183,11 +190,8 @@ TEST_F(ExtractorTest, extract_mp4_rotation)
         return;
     }
 
-    ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.jpg";
-    extractor.set_uri(filename_to_uri(MP4_PORTRAIT_TEST_FILE));
-    ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    ASSERT_TRUE(extract(MP4_PORTRAIT_TEST_FILE, outfile));
 
     auto image = load_image(outfile);
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 720);
@@ -196,13 +200,8 @@ TEST_F(ExtractorTest, extract_mp4_rotation)
 
 TEST_F(ExtractorTest, extract_vorbis_cover_art)
 {
-    ThumbnailExtractor extractor;
-
     std::string outfile = tempdir + "/out.jpg";
-    extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
-    ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_audio_cover_art());
-    extractor.save_screenshot(outfile);
+    ASSERT_TRUE(extract(VORBIS_TEST_FILE, outfile));
 
     auto image = load_image(outfile);
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
@@ -211,8 +210,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
 
 TEST_F(ExtractorTest, file_not_found)
 {
-    ThumbnailExtractor extractor;
-    EXPECT_THROW(extractor.set_uri(filename_to_uri(TESTDATADIR "/no-such-file.ogv")), std::runtime_error);
+    EXPECT_THROW(extract(TESTDATADIR "/no-such-file.ogv", ""), std::runtime_error);
 }
 
 int main(int argc, char** argv)

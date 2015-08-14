@@ -85,7 +85,15 @@ int main(int argc, char** argv)
         g_main_loop_quit(main_loop.get());
     };
     ThumbnailExtractor extractor;
-    extractor.extract(uri, outfile, callback);
+    try
+    {
+        extractor.extract(uri, outfile, callback);
+    }
+    catch (exception const& e)
+    {
+        fprintf(stderr, "Error starting extraction \"%s\": %s\n", argv[1], e.what());
+        return 1;
+    }
     g_main_loop_run(main_loop.get());
 
     return success ? 0 : 1;

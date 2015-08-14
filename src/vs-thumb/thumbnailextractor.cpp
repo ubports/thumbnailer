@@ -407,7 +407,8 @@ bool ThumbnailExtractor::save_screenshot()
 {
     if (!sample_)
     {
-        throw_error("save_screenshot(): Could not retrieve screenshot");
+        fprintf(stderr, "save_screenshot(): Could not retrieve screenshot\n");
+        return false;
     }
 
     // Construct a pixbuf from the sample
@@ -419,7 +420,8 @@ bool ThumbnailExtractor::save_screenshot()
         GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
         if (!sample_caps)
         {
-            throw_error("save_screenshot(): Could not retrieve caps for sample buffer");
+            fprintf(stderr, "save_screenshot(): Could not retrieve caps for sample buffer\n");
+            return false;
         }
         GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
         int width = 0, height = 0;
@@ -427,7 +429,8 @@ bool ThumbnailExtractor::save_screenshot()
         gst_structure_get_int(sample_struct, "height", &height);
         if (width <= 0 || height <= 0)
         {
-            throw_error("save_screenshot(): Could not retrieve image dimensions");
+            fprintf(stderr, "save_screenshot(): Could not retrieve image dimensions\n");
+            return false;
         }
 
         buffermap.map(gst_sample_get_buffer(sample_.get()));
@@ -451,7 +454,9 @@ bool ThumbnailExtractor::save_screenshot()
         }
         else
         {
-            throw_error("save_screenshot(): decoding image", error);
+            fprintf(stderr, "save_screenshot(): decoding image: %s\n", error->message);
+            g_error_free(error);
+            return false;
         }
     }
 
@@ -471,9 +476,10 @@ bool ThumbnailExtractor::save_screenshot()
     GError* error = nullptr;
     if (!gdk_pixbuf_save(image.get(), outfile_.c_str(), "tiff", &error, "compression", "1", nullptr))
     {
-        throw_error("save_screenshot(): saving image", error);
+        fprintf(stderr, "save_screenshot(): saving image: %s\n", error->message);
+        g_error_free(error);
+        return false;
     }
-    fprintf(stderr, "Done.\n");
     return true;
 }
 
