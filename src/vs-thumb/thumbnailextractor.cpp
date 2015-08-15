@@ -166,19 +166,25 @@ ThumbnailExtractor::~ThumbnailExtractor()
     }
 }
 
-void ThumbnailExtractor::extract(std::string const& uri, std::string const& outfile, std::function<void(bool)> callback) {
-    outfile_ = outfile;
+void ThumbnailExtractor::extract(std::string const& uri, std::function<void(GdkPixbuf* const)> callback)
+{
     callback_ = callback;
     set_uri(uri);
 }
 
+void ThumbnailExtractor::finished(GdkPixbuf* const thumbnail)
+{
+    if (callback_)
+    {
+        callback_(thumbnail);
+        callback_ = nullptr;
+    }
+    reset();
+}
 
 void ThumbnailExtractor::reset()
 {
     gst_element_set_state(playbin_.get(), GST_STATE_NULL);
-    sample_.reset();
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
-    sample_raw_ = true;
     is_seeking_ = false;
 }
 
@@ -190,7 +196,7 @@ gboolean ThumbnailExtractor::on_new_message(GstBus */*bus*/, GstMessage *message
     {
         return G_SOURCE_CONTINUE;
     }
-    
+
     switch (GST_MESSAGE_TYPE(message))
     {
     case GST_MESSAGE_STATE_CHANGED:
@@ -269,12 +275,7 @@ void ThumbnailExtractor::state_changed(GstState state)
         }
         else
         {
-            if (callback_)
-            {
-                callback_(extract_audio_cover_art());
-                callback_ = nullptr;
-            }
-            reset();
+            extract_audio_cover_art();
         }
         break;
     default:
@@ -284,25 +285,14 @@ void ThumbnailExtractor::state_changed(GstState state)
 
 void ThumbnailExtractor::seek_done()
 {
-    if (callback_)
-    {
-        callback_(extract_video_frame());
-        callback_ = nullptr;
-    }
-    reset();
+    extract_video_frame();
 }
 
 void ThumbnailExtractor::bus_error(GError *error)
 {
     fprintf(stderr, "Error: %s\n", error->message);
-    if (callback_)
-    {
-        callback_(false);
-        callback_ = nullptr;
-    }
-    reset();
+    finished(nullptr);
 }
-
 
 bool ThumbnailExtractor::has_video()
 {
@@ -312,7 +302,7 @@ bool ThumbnailExtractor::has_video()
     return n_video > 0;
 }
 
-bool ThumbnailExtractor::extract_video_frame()
+void ThumbnailExtractor::extract_video_frame()
 {
     // Retrieve sample from the playbin
     fprintf(stderr, "Requesting sample frame.\n");
@@ -325,13 +315,13 @@ bool ThumbnailExtractor::extract_video_frame()
     if (!s)
     {
         fprintf(stderr, "Could not extract sample\n");
-        return false;
+        finished(nullptr);
+        return;
     }
-    sample_.reset(s);
-    sample_raw_ = true;
+    GstSamplePtr sample(s, gst_sample_unref);
 
     // Does the sample need to be rotated?
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    GdkPixbufRotation rotation = GDK_PIXBUF_ROTATE_NONE;
     GstTagList* tags = nullptr;
     g_signal_emit_by_name(playbin_.get(), "get-video-tags", 0, &tags);
     if (tags)
@@ -341,34 +331,33 @@ bool ThumbnailExtractor::extract_video_frame()
         {
             if (!strcmp(orientation, "rotate-90"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
+                rotation = GDK_PIXBUF_ROTATE_CLOCKWISE;
             }
             else if (!strcmp(orientation, "rotate-180"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
+                rotation = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
             }
             else if (!strcmp(orientation, "rotate-270"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
+                rotation = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
             }
         }
         gst_tag_list_unref(tags);
     }
-    return save_screenshot();
+    save_screenshot(std::move(sample), rotation, true);
 }
 
-bool ThumbnailExtractor::extract_audio_cover_art()
+void ThumbnailExtractor::extract_audio_cover_art()
 {
     fprintf(stderr, "Extracting cover art\n");
     GstTagList* tags = nullptr;
     g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
     if (!tags)
     {
-        return false;
+        finished(nullptr);
+        return;
     }
-    sample_.reset();
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
-    sample_raw_ = false;
+    GstSamplePtr sample(nullptr, gst_sample_unref);
     bool found_cover = false;
     for (int i = 0; !found_cover; i++)
     {
@@ -384,44 +373,47 @@ bool ThumbnailExtractor::extract_audio_cover_art()
         gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
         if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
         {
-            sample_.reset(gst_sample_ref(s));
+            sample.reset(gst_sample_ref(s));
             found_cover = true;
         }
-        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample_)
+        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample)
         {
             // Save the first unknown image tag, but continue scanning
             // in case there is one marked as the cover.
-            sample_.reset(gst_sample_ref(s));
+            sample.reset(gst_sample_ref(s));
         }
         gst_sample_unref(s);
     }
     gst_tag_list_unref(tags);
-    if (!sample_)
+    if (!sample)
     {
-        return false;
+        finished(nullptr);
+        return;
     }
-    return save_screenshot();
+    save_screenshot(std::move(sample), GDK_PIXBUF_ROTATE_NONE, false);
 }
 
-bool ThumbnailExtractor::save_screenshot()
+void ThumbnailExtractor::save_screenshot(GstSamplePtr sample, GdkPixbufRotation rotation, bool raw)
 {
-    if (!sample_)
+    if (!sample)
     {
         fprintf(stderr, "save_screenshot(): Could not retrieve screenshot\n");
-        return false;
+        finished(nullptr);
+        return;
     }
 
     // Construct a pixbuf from the sample
     fprintf(stderr, "Creating pixbuf from sample\n");
     BufferMap buffermap;
     gobj_ptr<GdkPixbuf> image;
-    if (sample_raw_)
+    if (raw)
     {
-        GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
+        GstCaps* sample_caps = gst_sample_get_caps(sample.get());
         if (!sample_caps)
         {
             fprintf(stderr, "save_screenshot(): Could not retrieve caps for sample buffer\n");
-            return false;
+            finished(nullptr);
+            return;
         }
         GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
         int width = 0, height = 0;
@@ -430,10 +422,11 @@ bool ThumbnailExtractor::save_screenshot()
         if (width <= 0 || height <= 0)
         {
             fprintf(stderr, "save_screenshot(): Could not retrieve image dimensions\n");
-            return false;
+            finished(nullptr);
+            return;
         }
 
-        buffermap.map(gst_sample_get_buffer(sample_.get()));
+        buffermap.map(gst_sample_get_buffer(sample.get()));
         image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
                                              GST_ROUND_UP_4(width * 3), nullptr, nullptr));
     }
@@ -441,7 +434,7 @@ bool ThumbnailExtractor::save_screenshot()
     {
         gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
 
-        buffermap.map(gst_sample_get_buffer(sample_.get()));
+        buffermap.map(gst_sample_get_buffer(sample.get()));
         GError* error = nullptr;
         if (gdk_pixbuf_loader_write(loader.get(), buffermap.data(), buffermap.size(), &error) &&
             gdk_pixbuf_loader_close(loader.get(), &error))
@@ -456,31 +449,23 @@ bool ThumbnailExtractor::save_screenshot()
         {
             fprintf(stderr, "save_screenshot(): decoding image: %s\n", error->message);
             g_error_free(error);
-            return false;
+            finished(nullptr);
+            return;
         }
     }
 
-    if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
+    if (rotation != GDK_PIXBUF_ROTATE_NONE)
     {
-        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
+        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), rotation);
         if (rotated)
         {
             image.reset(rotated);
         }
     }
 
-    // Saving as TIFF with no compression here to avoid artefacts due to converting to jpg twice.
-    // (The main thumbnailer saves as jpg.) By staying lossless here, we
-    // keep all the policy decisions about image quality in the main thumbnailer.
-    fprintf(stderr, "Saving pixbuf to tiff\n");
-    GError* error = nullptr;
-    if (!gdk_pixbuf_save(image.get(), outfile_.c_str(), "tiff", &error, "compression", "1", nullptr))
-    {
-        fprintf(stderr, "save_screenshot(): saving image: %s\n", error->message);
-        g_error_free(error);
-        return false;
-    }
-    return true;
+    finished(image.get());
+#if 0
+#endif
 }
 
 }  // namespace internal

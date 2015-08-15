@@ -47,26 +47,23 @@ public:
     ThumbnailExtractor();
     ~ThumbnailExtractor();
 
-    void extract(std::string const& uri, std::string const& outfile, std::function<void(bool)> callback);
+    void extract(std::string const& uri, std::function<void(GdkPixbuf* const)> callback);
 
 private:
     gobj_ptr<GstElement> playbin_;
     gobj_ptr<GstBus> bus_;
-
-    std::string outfile_;
-    std::function<void(bool)> callback_;
-
     bool is_seeking_ = false;
-    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample_{nullptr, gst_sample_unref};
-    GdkPixbufRotation sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
-    bool sample_raw_ = true;
 
+    std::function<void(GdkPixbuf* const)> callback_;
+
+    void finished(GdkPixbuf* const thumbnail);
     void reset();
     void set_uri(const std::string& uri);
     bool has_video();
-    bool extract_video_frame();
-    bool extract_audio_cover_art();
-    bool save_screenshot();
+    void extract_video_frame();
+    void extract_audio_cover_art();
+    typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> GstSamplePtr;
+    void save_screenshot(GstSamplePtr sample, GdkPixbufRotation rotation, bool raw);
 
     static gboolean on_new_message(GstBus *bus, GstMessage *message, void *user_data);
     void state_changed(GstState state);

@@ -46,33 +46,8 @@ const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
 class ExtractorTest : public ::testing::Test
 {
 protected:
-    ExtractorTest()
-    {
-    }
-    virtual ~ExtractorTest()
-    {
-    }
-
-    virtual void SetUp() override
-    {
-        tempdir = "./vsthumb-test.XXXXXX";
-        if (mkdtemp(const_cast<char*>(tempdir.data())) == nullptr)
-        {
-            tempdir = "";
-            throw std::runtime_error("Could not create temporary directory");
-        }
-    }
-
-    virtual void TearDown() override
-    {
-        if (!tempdir.empty())
-        {
-            std::string cmd = "rm -rf \"" + tempdir + "\"";
-            ASSERT_EQ(system(cmd.c_str()), 0);
-        }
-    }
-
-    std::string tempdir;
+    ExtractorTest() = default;
+    virtual ~ExtractorTest() = default;
 };
 
 std::string filename_to_uri(const std::string& filename)
@@ -86,32 +61,20 @@ std::string filename_to_uri(const std::string& filename)
     return uri.get();
 }
 
-bool extract(std::string const& filename, std::string const& outfile)
+gobj_ptr<GdkPixbuf> extract(std::string const& filename)
 {
-    bool success = false;
+    gobj_ptr<GdkPixbuf> image;
     std::unique_ptr<GMainLoop, decltype(&g_main_loop_unref)> main_loop(
         g_main_loop_new(nullptr, false), g_main_loop_unref);
-    auto callback = [&](bool result){
-        success = result;
+    auto callback = [&](GdkPixbuf* const thumbnail) {
+        // We copy the image here, because it may be backed by mmaped memory
+        image.reset(gdk_pixbuf_copy(thumbnail));
         g_main_loop_quit(main_loop.get());
     };
     ThumbnailExtractor extractor;
-    extractor.extract(filename_to_uri(filename), outfile, callback);
+    extractor.extract(filename_to_uri(filename), callback);
     g_main_loop_run(main_loop.get());
-    return success;
-}
-
-gobj_ptr<GdkPixbuf> load_image(const std::string& filename)
-{
-    GError* error = nullptr;
-    gobj_ptr<GdkPixbuf> image(gdk_pixbuf_new_from_file(filename.c_str(), &error));
-    if (error)
-    {
-        std::string message(error->message);
-        g_error_free(error);
-        throw std::runtime_error(message);
-    }
-    return std::move(image);
+    return image;
 }
 
 bool supports_decoder(const std::string& format)
@@ -158,10 +121,8 @@ TEST_F(ExtractorTest, extract_theora)
         return;
     }
 
-    std::string outfile = tempdir + "/out.jpg";
-    ASSERT_TRUE(extract(THEORA_TEST_FILE, outfile));
-
-    auto image = load_image(outfile);
+    auto image = extract(THEORA_TEST_FILE);
+    ASSERT_NE(nullptr, image.get());
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
 }
@@ -174,10 +135,8 @@ TEST_F(ExtractorTest, extract_mp4)
         return;
     }
 
-    std::string outfile = tempdir + "/out.jpg";
-    ASSERT_TRUE(extract(MP4_LANDSCAPE_TEST_FILE, outfile));
-
-    auto image = load_image(outfile);
+    auto image = extract(MP4_LANDSCAPE_TEST_FILE);
+    ASSERT_NE(nullptr, image.get());
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
 }
@@ -190,27 +149,23 @@ TEST_F(ExtractorTest, extract_mp4_rotation)
         return;
     }
 
-    std::string outfile = tempdir + "/out.jpg";
-    ASSERT_TRUE(extract(MP4_PORTRAIT_TEST_FILE, outfile));
-
-    auto image = load_image(outfile);
+    auto image = extract(MP4_PORTRAIT_TEST_FILE);
+    ASSERT_NE(nullptr, image.get());
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 720);
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1280);
 }
 
 TEST_F(ExtractorTest, extract_vorbis_cover_art)
 {
-    std::string outfile = tempdir + "/out.jpg";
-    ASSERT_TRUE(extract(VORBIS_TEST_FILE, outfile));
-
-    auto image = load_image(outfile);
+    auto image = extract(VORBIS_TEST_FILE);
+    ASSERT_NE(nullptr, image.get());
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
 }
 
 TEST_F(ExtractorTest, file_not_found)
 {
-    EXPECT_THROW(extract(TESTDATADIR "/no-such-file.ogv", ""), std::runtime_error);
+    EXPECT_THROW(extract(TESTDATADIR "/no-such-file.ogv"), std::runtime_error);
 }
 
 int main(int argc, char** argv)

@@ -66,7 +66,6 @@ int main(int argc, char** argv)
     }
     string uri;
     string outfile(argv[2]);
-    bool success = false;
 
     try
     {
@@ -80,14 +79,30 @@ int main(int argc, char** argv)
 
     std::unique_ptr<GMainLoop, decltype(&g_main_loop_unref)> main_loop(
         g_main_loop_new(nullptr, false), g_main_loop_unref);
-    auto callback = [&](bool result){
-        success = result;
+    bool success = false;
+    auto callback = [&](GdkPixbuf* const thumbnail) {
+        if (thumbnail)
+        {
+            // Saving as TIFF with no compression here to avoid
+            // artefacts due to converting to jpg twice.
+            // (The main thumbnailer saves as jpg.) By staying
+            // lossless here, we keep all the policy decisions about
+            // image quality in the main thumbnailer.
+            fprintf(stderr, "Saving pixbuf to tiff\n");
+            GError* error = nullptr;
+            success = gdk_pixbuf_save(thumbnail, outfile.c_str(), "tiff", &error, "compression", "1", nullptr);
+            if (!success)
+            {
+                fprintf(stderr, "save_screenshot(): saving image: %s\n", error->message);
+                g_error_free(error);
+            }
+        }
         g_main_loop_quit(main_loop.get());
     };
     ThumbnailExtractor extractor;
     try
     {
-        extractor.extract(uri, outfile, callback);
+        extractor.extract(uri, callback);
     }
     catch (exception const& e)
     {
