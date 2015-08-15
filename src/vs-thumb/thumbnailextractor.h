@@ -48,6 +48,7 @@ public:
     ~ThumbnailExtractor();
 
     void extract(std::string const& uri, std::function<void(GdkPixbuf* const)> callback);
+    void reset();
 
 private:
     gobj_ptr<GstElement> playbin_;
@@ -57,13 +58,11 @@ private:
     std::function<void(GdkPixbuf* const)> callback_;
 
     void finished(GdkPixbuf* const thumbnail);
-    void reset();
     void set_uri(const std::string& uri);
     bool has_video();
     void extract_video_frame();
     void extract_audio_cover_art();
-    typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> GstSamplePtr;
-    void save_screenshot(GstSamplePtr sample, GdkPixbufRotation rotation, bool raw);
+    void save_screenshot(GstSample* sample, GdkPixbufRotation rotation, bool raw);
 
     static gboolean on_new_message(GstBus *bus, GstMessage *message, void *user_data);
     void state_changed(GstState state);

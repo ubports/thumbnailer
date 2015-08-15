@@ -318,7 +318,8 @@ void ThumbnailExtractor::extract_video_frame()
         finished(nullptr);
         return;
     }
-    GstSamplePtr sample(s, gst_sample_unref);
+    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample(
+        s, gst_sample_unref);
 
     // Does the sample need to be rotated?
     GdkPixbufRotation rotation = GDK_PIXBUF_ROTATE_NONE;
@@ -344,7 +345,7 @@ void ThumbnailExtractor::extract_video_frame()
         }
         gst_tag_list_unref(tags);
     }
-    save_screenshot(std::move(sample), rotation, true);
+    save_screenshot(sample.get(), rotation, true);
 }
 
 void ThumbnailExtractor::extract_audio_cover_art()
@@ -357,7 +358,8 @@ void ThumbnailExtractor::extract_audio_cover_art()
         finished(nullptr);
         return;
     }
-    GstSamplePtr sample(nullptr, gst_sample_unref);
+    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample(
+        nullptr, gst_sample_unref);
     bool found_cover = false;
     for (int i = 0; !found_cover; i++)
     {
@@ -390,10 +392,10 @@ void ThumbnailExtractor::extract_audio_cover_art()
         finished(nullptr);
         return;
     }
-    save_screenshot(std::move(sample), GDK_PIXBUF_ROTATE_NONE, false);
+    save_screenshot(sample.get(), GDK_PIXBUF_ROTATE_NONE, false);
 }
 
-void ThumbnailExtractor::save_screenshot(GstSamplePtr sample, GdkPixbufRotation rotation, bool raw)
+void ThumbnailExtractor::save_screenshot(GstSample* sample, GdkPixbufRotation rotation, bool raw)
 {
     if (!sample)
     {
@@ -408,7 +410,7 @@ void ThumbnailExtractor::save_screenshot(GstSamplePtr sample, GdkPixbufRotation 
     gobj_ptr<GdkPixbuf> image;
     if (raw)
     {
-        GstCaps* sample_caps = gst_sample_get_caps(sample.get());
+        GstCaps* sample_caps = gst_sample_get_caps(sample);
         if (!sample_caps)
         {
             fprintf(stderr, "save_screenshot(): Could not retrieve caps for sample buffer\n");
@@ -426,7 +428,7 @@ void ThumbnailExtractor::save_screenshot(GstSamplePtr sample, GdkPixbufRotation 
             return;
         }
 
-        buffermap.map(gst_sample_get_buffer(sample.get()));
+        buffermap.map(gst_sample_get_buffer(sample));
         image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
                                              GST_ROUND_UP_4(width * 3), nullptr, nullptr));
     }
@@ -434,7 +436,7 @@ void ThumbnailExtractor::save_screenshot(GstSamplePtr sample, GdkPixbufRotation 
     {
         gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
 
-        buffermap.map(gst_sample_get_buffer(sample.get()));
+        buffermap.map(gst_sample_get_buffer(sample));
         GError* error = nullptr;
         if (gdk_pixbuf_loader_write(loader.get(), buffermap.data(), buffermap.size(), &error) &&
             gdk_pixbuf_loader_close(loader.get(), &error))
@@ -464,8 +466,6 @@ void ThumbnailExtractor::save_screenshot(GstSamplePtr sample, GdkPixbufRotation 
     }
 
     finished(image.get());
-#if 0
-#endif
 }
 
 }  // namespace internal
