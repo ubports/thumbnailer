@@ -87,7 +87,7 @@ void ThumbnailerImageResponse::dbusCallFinished()
     try
     {
         QSize realSize;
-        image_ = imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
+        image_ = internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         Q_EMIT finished();
         return;
     }
