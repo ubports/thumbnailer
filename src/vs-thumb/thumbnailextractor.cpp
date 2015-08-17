@@ -192,19 +192,22 @@ gboolean ThumbnailExtractor::on_new_message(GstBus */*bus*/, GstMessage *message
 {
     auto extractor = reinterpret_cast<ThumbnailExtractor*>(user_data);
 
-    if (GST_MESSAGE_SRC(message) != GST_OBJECT(extractor->playbin_.get()))
-    {
-        return G_SOURCE_CONTINUE;
-    }
-
     switch (GST_MESSAGE_TYPE(message))
     {
     case GST_MESSAGE_STATE_CHANGED:
+        if (GST_MESSAGE_SRC(message) != GST_OBJECT(extractor->playbin_.get()))
+        {
+            break;
+        }
         GstState newstate;
         gst_message_parse_state_changed(message, nullptr, &newstate, nullptr);
         extractor->state_changed(newstate);
         break;
     case GST_MESSAGE_ASYNC_DONE:
+        if (GST_MESSAGE_SRC(message) != GST_OBJECT(extractor->playbin_.get()))
+        {
+            break;
+        }
         fprintf(stderr, "Got Async done message, is_seeking == %d\n", extractor->is_seeking_);
         if (extractor->is_seeking_)
         {

@@ -42,6 +42,7 @@ const char THEORA_TEST_FILE[] = TESTDATADIR "/testvideo.ogg";
 const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/gegl-landscape.mp4";
 const char MP4_PORTRAIT_TEST_FILE[] = TESTDATADIR "/gegl-portrait.mp4";
 const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
+const char EMPTY_TEST_FILE[] = TESTDATADIR "/empty";
 
 class ExtractorTest : public ::testing::Test
 {
@@ -68,7 +69,7 @@ gobj_ptr<GdkPixbuf> extract(std::string const& filename)
         g_main_loop_new(nullptr, false), g_main_loop_unref);
     auto callback = [&](GdkPixbuf* const thumbnail) {
         // We copy the image here, because it may be backed by mmaped memory
-        image.reset(gdk_pixbuf_copy(thumbnail));
+        image.reset(thumbnail ? gdk_pixbuf_copy(thumbnail) : nullptr);
         g_main_loop_quit(main_loop.get());
     };
     ThumbnailExtractor extractor;
@@ -161,6 +162,12 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
     ASSERT_NE(nullptr, image.get());
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+}
+
+TEST_F(ExtractorTest, extract_empty)
+{
+    auto image = extract(EMPTY_TEST_FILE);
+    ASSERT_EQ(nullptr, image.get());
 }
 
 TEST_F(ExtractorTest, file_not_found)
