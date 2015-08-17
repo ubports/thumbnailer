@@ -52,11 +52,9 @@ private Q_SLOTS:
     void dbusCallFinished();
 
 private:
-    void loadDefaultImage();
-
     QString id_;
     QSize requested_size_;
-    QQuickTextureFactory * texture_ = nullptr;
+    QImage image_;
     QString default_image_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
 };
