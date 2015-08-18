@@ -1,6 +1,6 @@
 include(UseDoxygen OPTIONAL)
 
-file(GLOB libthumbnailer_headers "${PROJECT_SOURCE_DIR}/include/libthumbnailer-qt/*.h")
+file(GLOB libthumbnailer_headers "${PROJECT_SOURCE_DIR}/include/unity/thumbnailer/qt/*.h")
 
 add_doxygen(
     libthumbnailer-qt-doc
