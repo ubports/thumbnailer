@@ -1,7 +1,6 @@
 set(section1
     thumbnailer-admin.1
     thumbnailer-service.1
-    vs-thumb.1
 )
 
 set(section5
