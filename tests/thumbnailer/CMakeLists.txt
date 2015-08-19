@@ -7,7 +7,7 @@ target_link_libraries(thumbnailer_test
     Qt5::DBus
     Qt5::Network
     Qt5::Test
-    thumbnailer
+    thumbnailer-static
     testutils
     gtest)
 add_dependencies(thumbnailer_test thumbnailer-service)
