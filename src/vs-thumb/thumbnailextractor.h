@@ -53,6 +53,7 @@ public:
 private:
     gobj_ptr<GstElement> playbin_;
     gobj_ptr<GstBus> bus_;
+    unsigned int bus_watch_id_ = 0;
     bool is_seeking_ = false;
 
     std::function<void(GdkPixbuf* const)> callback_;

@@ -155,14 +155,19 @@ ThumbnailExtractor::ThumbnailExtractor()
                  nullptr);
 
     bus_.reset(gst_element_get_bus(pb));
-    gst_bus_add_watch(bus_.get(), &ThumbnailExtractor::on_new_message, this);
+    bus_watch_id_ = gst_bus_add_watch(
+        bus_.get(), &ThumbnailExtractor::on_new_message, this);
 }
 
 ThumbnailExtractor::~ThumbnailExtractor()
 {
-    reset();
-    if (bus_) {
-        gst_bus_remove_watch(bus_.get());
+    if (bus_watch_id_ != 0)
+    {
+        g_source_remove(bus_watch_id_);
+    }
+    if (playbin_)
+    {
+        reset();
     }
 }
 
