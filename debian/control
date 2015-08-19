@@ -47,9 +47,10 @@ Description: D-Bus service for out of process thumbnailing
 Package: qtdeclarative5-ubuntu-thumbnailer0.1
 Architecture: any
 Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         thumbnailer-common,
+         thumbnailer-common (= ${source:Version}),
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
 Recommends: thumbnailer-service (= ${binary:Version}),

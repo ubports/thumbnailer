@@ -16,7 +16,7 @@ add_library(thumbnailer-qml MODULE
   ${interface_files}
 )
 
-set_target_properties(thumbnailer-qml PROPERTIES AUTOMOC TRUE)
+set_target_properties(thumbnailer-qml PROPERTIES AUTOMOC TRUE NO_SONAME TRUE)
 qt5_use_modules(thumbnailer-qml Qml Quick DBus)
 target_link_libraries(thumbnailer-qml Qt5::Qml Qt5::Quick Qt5::DBus)
 
