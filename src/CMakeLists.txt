@@ -1,5 +1,3 @@
-add_subdirectory(core)
-
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/src/settings-defaults.h
     COMMAND ${CMAKE_SOURCE_DIR}/tools/parse-settings.py
         -i ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml
@@ -36,7 +34,6 @@ qt5_use_modules(thumbnailer-static Core Network)
 set_target_properties(thumbnailer-static PROPERTIES AUTOMOC TRUE)
 
 target_link_libraries(thumbnailer-static
-    core
     Qt5::Core
     Qt5::Network
     ${Boost_LIBRARIES}
@@ -45,6 +42,7 @@ target_link_libraries(thumbnailer-static
     ${IMG_DEPS_LDFLAGS}
     ${UNITY_API_DEPS_LDFLAGS}
     ${APPARMOR_DEPS_LDFLAGS}
+    ${CACHE_DEPS_LDFLAGS}
 )
 
 add_subdirectory(libthumbnailer-qt)

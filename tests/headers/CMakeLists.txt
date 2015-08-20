@@ -6,7 +6,6 @@ set(root_inc_dir ${CMAKE_SOURCE_DIR}/include)
 
 set(subdirs
     internal
-    core
     libthumbnailer-qt
 )
 
