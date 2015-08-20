@@ -19,6 +19,8 @@
 
 #include "ratelimiter.h"
 
+#include <cassert>
+
 using namespace std;
 
 namespace unity
@@ -31,12 +33,18 @@ RateLimiter::RateLimiter(int concurrency)
     : concurrency_(concurrency)
     , running_(0)
 {
+    assert(concurrency > 0);
 }
 
-RateLimiter::~RateLimiter() = default;
+RateLimiter::~RateLimiter()
+{
+    assert(running_ == 0);
+}
 
 function<void()> RateLimiter::schedule(function<void()> job)
 {
+    assert(job);
+
     if (running_ < concurrency_)
     {
         running_++;
@@ -79,8 +87,9 @@ void RateLimiter::done()
     {
         (*job_p)();
     }
-    if (queue_.empty())
+    else if (queue_.empty())
     {
+        assert(running_ > 0);
         --running_;
     }
 }
