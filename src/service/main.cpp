@@ -35,6 +35,8 @@ using namespace unity::thumbnailer::service;
 
 int main(int argc, char** argv)
 {
+    TraceMessageHandler message_handler("thumbnailer-service");
+
     int rc = 1;
     try
     {

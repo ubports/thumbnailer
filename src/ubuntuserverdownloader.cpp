@@ -20,7 +20,7 @@
 #include <internal/ubuntuserverdownloader.h>
 
 #include <internal/artreply.h>
-#include <internal/settings.h>
+#include <settings.h>
 
 #include <QNetworkReply>
 #include <QTimer>

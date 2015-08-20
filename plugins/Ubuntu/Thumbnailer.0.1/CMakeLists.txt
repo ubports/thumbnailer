@@ -12,13 +12,16 @@ add_library(thumbnailer-qml MODULE
   plugin.cpp
   thumbnailerimageresponse.cpp
   thumbnailgenerator.cpp
+  ${CMAKE_SOURCE_DIR}/src/ratelimiter.cpp
+  ${CMAKE_SOURCE_DIR}/src/settings.cpp
   ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
   ${interface_files}
 )
+include_directories(thumbnailer-qml ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/src)
 
 set_target_properties(thumbnailer-qml PROPERTIES AUTOMOC TRUE NO_SONAME TRUE)
 qt5_use_modules(thumbnailer-qml Qml Quick DBus)
-target_link_libraries(thumbnailer-qml Qt5::Qml Qt5::Quick Qt5::DBus)
+target_link_libraries(thumbnailer-qml Qt5::Qml Qt5::Quick Qt5::DBus ${GIO_DEPS_LDFLAGS})
 
 configure_file(qmldir qmldir)
 

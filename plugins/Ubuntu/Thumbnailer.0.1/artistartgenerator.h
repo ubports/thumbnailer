@@ -18,8 +18,10 @@
 
 #pragma once
 
-#include <QQuickImageProvider>
+#include <ratelimiter.h>
 #include <thumbnailerinterface.h>
+
+#include <QQuickImageProvider>
 
 #include <memory>
 
@@ -35,6 +37,7 @@ class ArtistArtGenerator : public QQuickAsyncImageProvider
 private:
     std::unique_ptr<QDBusConnection> connection;
     std::unique_ptr<ThumbnailerInterface> iface;
+    unity::thumbnailer::RateLimiter backlog_limiter;
 
 public:
     ArtistArtGenerator();

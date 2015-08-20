@@ -19,7 +19,6 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
-#include <internal/trace.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -230,6 +229,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         QString details;
         QTextStream s(&details);
         s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,

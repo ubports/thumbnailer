@@ -29,14 +29,15 @@ namespace thumbnailer
 namespace internal
 {
 
-class TraceMessageHandlerInitializer final
+class TraceMessageHandler final
 {
 public:
-    TraceMessageHandlerInitializer();
-    ~TraceMessageHandlerInitializer();
-};
+    TraceMessageHandler(std::string const& prog_name);
+    ~TraceMessageHandler();
 
-static TraceMessageHandlerInitializer trace_message_handler_initializer_;  // Schwartz counter
+private:
+    QtMessageHandler old_message_handler_;
+};
 
 }  // namespace internal
 

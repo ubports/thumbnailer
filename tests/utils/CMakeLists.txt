@@ -25,6 +25,7 @@ qt5_add_dbus_interface(
 add_library(testutils STATIC
     artserver.cpp
     dbusserver.cpp
+    supports_decoder.cpp
     ${interface_files}
     ${CMAKE_SOURCE_DIR}/src/service/stats.cpp
 )
