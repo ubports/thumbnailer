@@ -1,0 +1,54 @@
+.TH thumbnailer\-settings 5 "5 August 2015" "Ubuntu" "Linux User's Manual"
+
+.SH NAME
+thumbnailer\-settings \- Configuration settings for \fBthumbnailer\-service\fP(1).
+
+.SH DESCRIPTION
+The \fBthumbnailer\-service\fP program uses \fBdconf\fP(7) for its configuration.
+Configuration values are read once only, on start\-up of the service.
+.P
+The following settings are used:
+.TP
+.B dash\-ubuntu\-com\-key \fR(string)\fP
+The API key for the remote artwork service.
+.TP
+.B full\-size\-cache\-size \fR(int)\fP
+The size (in megabytes) of the image cache that stores original artwork. The default is 50 MB.
+.TP
+.B thumbnail\-size\-cache\-size \fR(int)\fP
+The size (in megabytes) of the thumbnail cache that stores scaled thumbnails. The default is 100 MB.
+.TP
+.B thumbnail\-size\-cache\-size \fR(int)\fP
+The size (in megabytes) of the failure cache that stores media keys for media without an image. The default is 2 MB.
+.TP
+.B max\-thumbnail\-size \fR(int)\fP
+Requests for thumbnails larger than this will automatically reduce the thumbnail to \fBmax\-thumbnail\-size\fP
+(in pixels) in the larger dimension. An exception are requests for thumbnails with size zero,
+which return a thumbnail in original size.
+.TP
+.B retry\-not\-found\-hours \fR(int)\fP
+If artwork cannot be retrieved because the remote server authoritavely confirmed that no artwork exists for
+an artist or album, this parameter defines how long the thumbnailer waits before trying to download
+the same image again. The default is 168 hours (one week).
+.TP
+.B retry\-error\-hours \fR(int)\fP
+If artwork cannot be retrieved from the remote server due to an unexpected error (such as the server not
+responding), this parameter defines how long the thumbnailer waits before trying to download the same
+image again. The default is two hours.
+.TP
+.B max\-downloads \fR(int)\fP
+Controls the maximum number of concurrent downloads for remote artwork.
+.TP
+.B max\-extractions \fR(int)\fP
+Controls the maximum number of concurrent image extractions from local media files.
+The default value is zero, which sets the value according to the number of CPU cores.
+.TP
+.B max\-extraction\-timeout \fR(int)\fP
+Sets the amount of time (in seconds) to wait for a remote image download or
+a thumbnail extraction before giving up.
+
+.SH FILES
+/usr/share/glib\-2.0/schemas/com.canonical.Unity.Thumbnailer.gschema.xml
+
+.SH "SEE ALSO"
+.B thumbnailer\-service\fR(1)\fP, dconf\fR(7)\fP, gsettings\fR(1)\fP
