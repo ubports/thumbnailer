@@ -1,2 +1,2 @@
 add_subdirectory(internal)
-add_subdirectory(libthumbnailer-qt)
+add_subdirectory(unity)

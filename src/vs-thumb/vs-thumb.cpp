@@ -54,28 +54,6 @@ string command_line_arg_to_uri(string const& arg)
     return uri;
 }
 
-bool extract_thumbnail(string const& uri, string const& ofname)
-{
-    ThumbnailExtractor extractor;
-
-    extractor.set_uri(uri);
-    if (extractor.has_video())
-    {
-        if (!extractor.extract_video_frame())
-        {
-            return false;
-        }
-    }
-    else
-    {
-        if (!extractor.extract_audio_cover_art())
-        {
-            return false;
-        }
-    }
-    extractor.save_screenshot(ofname);
-    return true;
-}
 }
 
 int main(int argc, char** argv)
@@ -88,7 +66,6 @@ int main(int argc, char** argv)
     }
     string uri;
     string outfile(argv[2]);
-    bool success = false;
 
     try
     {
@@ -100,15 +77,39 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    std::unique_ptr<GMainLoop, decltype(&g_main_loop_unref)> main_loop(
+        g_main_loop_new(nullptr, false), g_main_loop_unref);
+    bool success = false;
+    auto callback = [&](GdkPixbuf* const thumbnail) {
+        if (thumbnail)
+        {
+            // Saving as TIFF with no compression here to avoid
+            // artefacts due to converting to jpg twice.
+            // (The main thumbnailer saves as jpg.) By staying
+            // lossless here, we keep all the policy decisions about
+            // image quality in the main thumbnailer.
+            fprintf(stderr, "Saving pixbuf to tiff\n");
+            GError* error = nullptr;
+            success = gdk_pixbuf_save(thumbnail, outfile.c_str(), "tiff", &error, "compression", "1", nullptr);
+            if (!success)
+            {
+                fprintf(stderr, "save_screenshot(): saving image: %s\n", error->message);
+                g_error_free(error);
+            }
+        }
+        g_main_loop_quit(main_loop.get());
+    };
+    ThumbnailExtractor extractor;
     try
     {
-        success = extract_thumbnail(uri, outfile);
+        extractor.extract(uri, callback);
     }
     catch (exception const& e)
     {
-        fprintf(stderr, "Error creating thumbnail: %s\n", e.what());
-        return 2;
+        fprintf(stderr, "Error starting extraction \"%s\": %s\n", argv[1], e.what());
+        return 1;
     }
+    g_main_loop_run(main_loop.get());
 
     return success ? 0 : 1;
 }

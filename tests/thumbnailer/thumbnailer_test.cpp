@@ -669,7 +669,7 @@ TEST_F(ThumbnailerTest, empty_file)
     catch (unity::ResourceException const& e)
     {
         string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
+        EXPECT_NE(string::npos, msg.find("could not extract screenshot")) << msg;
     }
 }
 

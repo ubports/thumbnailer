@@ -16,7 +16,7 @@
  * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
  */
 
-#include <libthumbnailer-qt/thumbnailer-qt.h>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <thumbnailerinterface.h>
 #include <utils/artgeneratorcommon.h>
