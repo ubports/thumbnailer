@@ -1,4 +1,4 @@
-thumbnailer (2.3+15.10.20150715-0ubuntu1) UNRELEASED; urgency=medium
+thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
 
   [ Michi Henning ]
   * Added man pages for thumbnailer-admin, thumbnailer-service,
@@ -6,6 +6,24 @@ thumbnailer (2.3+15.10.20150715-0ubuntu1) UNRELEASED; urgency=medium
   * Removed a bunch of lintian warnings and errors.
 
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
+
+thumbnailer (2.2+15.10.20150801-0ubuntu1) wily; urgency=medium
+
+  [ Michi Henning ]
+  * Compatibility fixes  for GCC 5, Boost 1.58, and Libapparmor 2.10.
+  * Correctly initialise the cache stats after upgrading from an old
+    cache version.
+  * Rename clear-stats sub-command of thumbnailer-admin to zero-stats.
+
+  [ James Henstridge ]
+  * Pass a filename to the vs-thumb helper utility rather than a file
+    descriptor.  This avoids the use of the fdsrc GStreamer element, which
+    appears to be unstable on Wily.
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Sat, 01 Aug 2015 04:32:14 +0000
 
 thumbnailer (2.1+15.10.20150715-0ubuntu1) wily; urgency=medium
 
