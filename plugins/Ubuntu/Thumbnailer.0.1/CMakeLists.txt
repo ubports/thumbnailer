@@ -8,13 +8,13 @@ qt5_add_dbus_interface(interface_files ${dbusinterface_xml} thumbnailerinterface
 
 add_library(thumbnailer-qml MODULE
   albumartgenerator.cpp
-  artgeneratorcommon.cpp
   artistartgenerator.cpp
   plugin.cpp
   thumbnailerimageresponse.cpp
   thumbnailgenerator.cpp
   ${CMAKE_SOURCE_DIR}/src/ratelimiter.cpp
   ${CMAKE_SOURCE_DIR}/src/settings.cpp
+  ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
   ${interface_files}
 )
 include_directories(thumbnailer-qml ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/src)

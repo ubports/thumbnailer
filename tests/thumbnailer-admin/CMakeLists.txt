@@ -7,7 +7,7 @@ add_executable(thumbnailer-admin_test
 qt5_use_modules(thumbnailer-admin_test Network Test)
 target_link_libraries(thumbnailer-admin_test
     gtest
-    thumbnailer
+    thumbnailer-static
     testutils
     Qt5::Network
     Qt5::Test

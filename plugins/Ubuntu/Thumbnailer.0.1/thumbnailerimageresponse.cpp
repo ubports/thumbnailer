@@ -16,8 +16,8 @@
  * Authors: Xavi Garcia <xavi.garcia.mena@canonical.com>
  */
 
-#include <artgeneratorcommon.h>
 #include <thumbnailerimageresponse.h>
+#include <utils/artgeneratorcommon.h>
 
 #include <QDBusReply>
 #include <QDBusUnixFileDescriptor>
@@ -57,7 +57,6 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     , default_image_(default_image)
     , cancel_func_([]{})
 {
-    loadDefaultImage();
     // Queue the signal emission so there is time for the caller to connect.
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
@@ -69,7 +68,14 @@ ThumbnailerImageResponse::~ThumbnailerImageResponse()
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
-    return texture_;
+    if (!image_.isNull()) {
+        return QQuickTextureFactory::textureFactoryForImage(image_);
+    } else {
+        char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
+        QImage aux;
+        aux.load(env_default ? QString(env_default) : default_image_);
+        return QQuickTextureFactory::textureFactoryForImage(aux);
+    }
 }
 
 void ThumbnailerImageResponse::cancel()
@@ -84,14 +90,6 @@ void ThumbnailerImageResponse::cancel()
     watcher_.reset();
 }
 
-void ThumbnailerImageResponse::loadDefaultImage()
-{
-    char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
-    QImage result;
-    result.load(env_default ? QString(env_default) : default_image_);
-    texture_ = QQuickTextureFactory::textureFactoryForImage(result);
-}
-
 void ThumbnailerImageResponse::dbusCallFinished()
 {
     backlog_limiter_->done();
@@ -100,7 +98,6 @@ void ThumbnailerImageResponse::dbusCallFinished()
     if (!reply.isValid())
     {
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << reply.error().message();
-        loadDefaultImage();
         Q_EMIT finished();
         return;
     }
@@ -108,8 +105,7 @@ void ThumbnailerImageResponse::dbusCallFinished()
     try
     {
         QSize realSize;
-        QImage image = imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
-        texture_ = QQuickTextureFactory::textureFactoryForImage(image);
+        image_ = internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         Q_EMIT finished();
         return;
     }
@@ -123,7 +119,6 @@ void ThumbnailerImageResponse::dbusCallFinished()
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): unknown exception";
     }
 
-    loadDefaultImage();
     Q_EMIT finished();
     // LCOV_EXCL_STOP
 }

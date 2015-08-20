@@ -1,0 +1,94 @@
+/*!
+\mainpage notitle
+
+\section overview Thumbnailer Qt API
+
+\subsection intro Introduction
+
+`libthumbnailer-qt.so` provides access to Unity's thumbnailer service (see the <b>thumbnailer-service</b>(1)
+man page). The implementation accesses the thumbnailer service via its DBus interface.
+
+Methods to retrieve thumbnails are asynchronous; you can also use them synchronously by calling
+\link unity::thumbnailer::qt::Request::waitForFinished() waitForFinished()\endlink on the
+\link unity::thumbnailer::qt::Request Request\endlink that is returned from the asynchronous methods.
+
+\subsection async Asynchronous API
+
+The following code example illustrates how to retrieve a thumbnail asynchronously.
+
+\code
+class MyClass : public QObject
+{
+    Q_OBJECT
+public:
+    void setArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size);
+
+public slots:
+    void requestFinished();
+
+private:
+    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
+    QImage image_;
+}
+
+void MyClass::setArtistThumbnailAsync(QString const& artist,
+                                      QString const& album,
+                                      QSize const& size)
+{
+    request_ = thumbnailer_.getArtistArt(artist, album, size);
+    connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
+            this, &MyClass::requestFinished);
+}
+
+void MyClass::requestFinished()
+{
+    if (request_->isValid())
+    {
+        image_ = request_->image();  // Get the image from the request.
+    }
+    else
+    {
+        QString errorMessage = request_->errorMessage();
+        // Do whatever you need to do to report the error.
+    }
+}
+\endcode
+
+\subsection sync Synchronous API
+
+To make a synchronous request, you can call 
+\link unity::thumbnailer::qt::Request::waitForFinished() waitForFinished()\endlink on the
+returned request. Note that this can block the calling thread for several seconds, so
+do not call this from the UI thread.
+
+\code
+class MyClass : public QObject
+{
+    Q_OBJECT
+public:
+    void setAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size);
+
+private:
+    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
+    QImage image_;
+}
+
+void MyClass::setAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size)
+{
+    auto request = thumbnailer_.getAlbumArt(artist, album, size);
+
+    request->waitForFinished();  // Blocks until the response is ready.
+
+    if (request->isValid())
+    {
+        image_ = request->image();  // Get the image from the request.
+    }
+    else
+    {
+        QString errorMessage = request->errorMessage();
+        // Do whatever you need to do to report the error.
+    }
+}
+\endcode
+*/

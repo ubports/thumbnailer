@@ -18,7 +18,7 @@
 
 #include "thumbnailgenerator.h"
 
-#include "artgeneratorcommon.h"
+#include <utils/artgeneratorcommon.h>
 #include <service/dbus_names.h>
 #include <settings.h>
 #include "thumbnailerimageresponse.h"

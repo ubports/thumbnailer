@@ -1,7 +1,7 @@
 add_executable(stress_test stress_test.cpp)
 qt5_use_modules(stress_test Network DBus Test)
 target_link_libraries(stress_test
-    thumbnailer
+    thumbnailer-static
     testutils
     ${GST_DEPS_LDFLAGS}
     Qt5::Network

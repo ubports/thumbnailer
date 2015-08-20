@@ -56,12 +56,11 @@ private Q_SLOTS:
     void dbusCallFinished();
 
 private:
-    void loadDefaultImage();
-
+    QString id_;
     QSize requested_size_;
     unity::thumbnailer::RateLimiter* backlog_limiter_ = nullptr;
     std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
-    QQuickTextureFactory * texture_ = nullptr;
+    QImage image_;
     QString default_image_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
     std::function<void()> cancel_func_;

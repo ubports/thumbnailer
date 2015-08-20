@@ -27,6 +27,7 @@ Build-Depends: cmake,
                qtdeclarative5-dev,
                shared-mime-info,
                xvfb,
+               doxygen,
 Homepage: https://launchpad.net/thumbnailer
 # if you don't have have commit access to this branch but would like to upload
 # directly to Ubuntu, don't worry: your changes will be merged back into the
@@ -67,3 +68,30 @@ Description: Common files for the thumbnailer service.
  This package provides common files for the thumbnailer service, such
  as default icons.
 
+Package: libthumbnailer-qt1.0
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends},
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         thumbnailer-service,
+Description: Qt/C++ API to obtain thumbnails
+ Library to obtain thumbnails
+
+Package: libthumbnailer-qt-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends},
+Depends: libthumbnailer-qt1.0 (= ${binary:Version}),
+         ${misc:Depends},
+Description: Header files for Thumbnailer API
+ Library to obtain thumbnails (dev files)
+
+Package: libthumbnailer-qt-doc
+Section: doc
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+Description: Documentation for Thumbnailer API
+ Library to obtain thumbnails (documentation)
