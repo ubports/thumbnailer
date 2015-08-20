@@ -19,8 +19,6 @@ add_library(thumbnailer-qml MODULE
 set_target_properties(thumbnailer-qml PROPERTIES AUTOMOC TRUE NO_SONAME TRUE)
 qt5_use_modules(thumbnailer-qml Qml Quick DBus)
 target_link_libraries(thumbnailer-qml Qt5::Qml Qt5::Quick Qt5::DBus)
-#set(moc_files albumartgenerator.cpp artistartgenerator.cpp thumbnailergenerator.cpp)
-#QT5_WRAP_CPP(moc_sources ${moc_files})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set_source_files_properties(moc_thumbnailerimageresponse.cpp PROPERTIES COMPILE_FLAGS -Wno-old-style-cast)
     set_source_files_properties(moc_plugin.cpp PROPERTIES COMPILE_FLAGS -Wno-old-style-cast)
