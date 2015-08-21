@@ -1,3 +1,11 @@
+thumbnailer (2.3+15.10.20150715-0ubuntu1) UNRELEASED; urgency=medium
+
+  [ Michi Henning ]
+  * Added man pages for thumbnailer-admin, thumbnailer-service,
+    and thumbnailer-settings.
+
+ -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
+
 thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
 
   [ Michi Henning ]
@@ -24,6 +32,15 @@ thumbnailer (2.2+15.10.20150801-0ubuntu1) wily; urgency=medium
   * New rebuild forced.
 
  -- CI Train Bot <ci-train-bot@canonical.com>  Sat, 01 Aug 2015 04:32:14 +0000
+
+thumbnailer (2.1.1) UNRELEASED; urgency=medium
+
+  [ Michi Henning ]
+  * Added request limiter on the qml side, so we don't overrun DBus with
+    too many outstanding requests. (DBus kills the connection if there
+    are more than 400 or so outstanding requests.)
+
+ -- Michi Henning <michi.henning@canonical.com>  Mon, 03 Aug 2015 14:28:09 +1000
 
 thumbnailer (2.1+15.10.20150715-0ubuntu1) wily; urgency=medium
 

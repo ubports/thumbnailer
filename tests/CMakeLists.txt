@@ -23,11 +23,18 @@ set(unit_test_dirs
     vs-thumb
 )
 
+set(slow_test_dirs
+    slow-vs-thumb
+    stress
+)
+
 set(UNIT_TEST_TARGETS "")
 
 if (${slowtests})
-    add_subdirectory(slow-vs-thumb)
-    list(APPEND UNIT_TEST_TARGETS slow-vs-thumb_test)
+    foreach(dir ${slow_test_dirs})
+        add_subdirectory(${dir})
+        list(APPEND UNIT_TEST_TARGETS "${dir}_test")
+    endforeach()
     add_subdirectory(headers)
 endif()
 

@@ -12,7 +12,6 @@ add_executable(thumbnailer-service
   handler.cpp
   inactivityhandler.cpp
   main.cpp
-  ratelimiter.cpp
   stats.cpp
   ${adaptor_files}
   ${interface_files}

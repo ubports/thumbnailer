@@ -34,24 +34,37 @@ namespace qml
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image,
-                                                   std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
+                                                   RateLimiter* backlog_limiter,
+                                                   std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job)
     : requested_size_(requested_size)
+    , backlog_limiter_(backlog_limiter)
+    , job_(job)
     , default_image_(default_image)
-    , watcher_(std::move(watcher))
 {
-    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
+    auto send_request = [this, job]
+    {
+        using namespace std;
+        auto pending_reply = job();
+        watcher_.reset(new QDBusPendingCallWatcher(pending_reply));
+        connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
+    };
+    cancel_func_ = backlog_limiter_->schedule(send_request);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image)
     : requested_size_(requested_size)
     , default_image_(default_image)
+    , cancel_func_([]{})
 {
     // Queue the signal emission so there is time for the caller to connect.
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
 
-ThumbnailerImageResponse::~ThumbnailerImageResponse() = default;
+ThumbnailerImageResponse::~ThumbnailerImageResponse()
+{
+    cancel();
+}
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
@@ -67,6 +80,9 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
+    // Remove request from queue if it is still in there.
+    cancel_func_();
+
     // Deleting the pending call watcher (which should hold the only
     // reference to the pending call at this point) tells Qt that we
     // are no longer interested in the reply.  The destruction will
@@ -76,6 +92,8 @@ void ThumbnailerImageResponse::cancel()
 
 void ThumbnailerImageResponse::dbusCallFinished()
 {
+    backlog_limiter_->done();
+
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {

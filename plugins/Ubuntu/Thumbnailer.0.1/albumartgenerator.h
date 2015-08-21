@@ -19,15 +19,19 @@
 
 #pragma once
 
-#include <QQuickImageProvider>
+#include <ratelimiter.h>
 #include <thumbnailerinterface.h>
+
+#include <QQuickImageProvider>
 
 #include <memory>
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace qml
 {
 
@@ -36,11 +40,15 @@ class AlbumArtGenerator : public QQuickAsyncImageProvider
 private:
     std::unique_ptr<QDBusConnection> connection;
     std::unique_ptr<ThumbnailerInterface> iface;
+    unity::thumbnailer::RateLimiter backlog_limiter;
 
 public:
     AlbumArtGenerator();
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
 };
-}
-}
-}
+
+}  // namespace qml
+
+}  // namespace thumbnailer
+
+}  // namespace unity

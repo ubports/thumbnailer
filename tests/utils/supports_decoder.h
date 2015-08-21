@@ -16,54 +16,6 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include "ratelimiter.h"
+#include <string>
 
-namespace unity
-{
-
-namespace thumbnailer
-{
-
-namespace service
-{
-
-RateLimiter::RateLimiter(int concurrency)
-    : concurrency_(concurrency)
-    , running_(0)
-{
-}
-
-RateLimiter::~RateLimiter() = default;
-
-void RateLimiter::schedule(std::function<void()> job)
-{
-    if (running_ < concurrency_)
-    {
-        running_++;
-        job();
-    }
-    else
-    {
-        queue_.push(job);
-    }
-}
-
-void RateLimiter::done()
-{
-    if (queue_.empty())
-    {
-        running_--;
-    }
-    else
-    {
-        auto job = queue_.front();
-        queue_.pop();
-        job();
-    }
-}
-
-}  // namespace service
-
-}  // namespace thumbnailer
-
-}  // namespace unity
+bool supports_decoder(const std::string& format);

@@ -1,0 +1,51 @@
+.TH thumbnailer\-service 1 "5 August 2015" "Ubuntu" "Linux User's Manual"
+
+.SH NAME
+thumbnailer\-service \- Thumbnailer service
+
+.SH SYNOPSIS
+.B thumbnailer\-service
+.br
+
+.SH DESCRIPTION
+The \fBthumbnailer\-service\fP program provides a DBus service for creating
+thumbnail images from local media files (photos, audio, and video files), as well
+as album cover artwork and artist images for many musicians and bands.
+
+Original images and scaled thumbnails are cached on disk, so requests for
+a thumbnail for a previously retrieved image (whether in the same size
+or a different size) are delivered as efficiently as possible.
+
+The service is fast and scalable, and it guarantees the integrity of on\-disk
+data structures even in the face of a crash or power loss.
+
+The service is activated on demand by DBus and, by default, shuts down after
+30 seconds of idle time.
+
+The service connects to the DBus session bus as \fBcom.canonical.Thumbnailer\fP.
+The interface to retrieve thumbnails is provided at the path \fB/com/canonical/Thumbnailer\fP,
+and the administrative interface (see \fBthumbnailer\-admin\fP(1)) is provided
+at the path \fB/com/canonical/ThumbnailerAdmin\fP.
+
+.SH CONFIGURATION
+The service uses \fBdconf\fP(7) for its configuration. See \fBthumbnailer\-settings\fP(5)
+for details.
+
+.SH ENVIRONMENT
+The service reads the following environment variables:
+.TP
+.B TN_UTILDIR
+The directory in which to look for the \fBvs\-thumb\fP executable, which is used
+to extract images from streaming media. If not set, the program is expected to be in
+\fB/usr/lib/\fP\fI<arch>\fP\fB/thumbnailer\fP.
+.TP
+.B THUMBNAILER_MAX_IDLE
+The service exits once it has been idle for the number of milliseconds specified by this variable. If not set,
+a default value of 30000 is assumed.
+.TP
+.B THUMBNAILER_UBUNTU_APIROOT
+This variable overrides the URI of the remote image server. If not set, the default URI
+\fBhttps://dash.ubuntu.com\fP is used.
+
+.SH "SEE ALSO"
+.B thumbnailer\-admin\fR(1)\fP, thumbnailer\-settings\fR(5)\fP, dconf\fR(7)\fP, gsettings\fR(1)\fP

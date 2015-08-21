@@ -23,7 +23,8 @@
 #include <internal/config.h>
 #include <internal/file_io.h>
 #include <internal/safe_strerror.h>
-#include <internal/trace.h>
+
+#include <QDebug>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;

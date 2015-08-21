@@ -20,7 +20,6 @@
 
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
-#include <internal/trace.h>
 
 #include <QFuture>
 #include <QFutureWatcher>
