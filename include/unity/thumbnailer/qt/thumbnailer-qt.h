@@ -38,7 +38,7 @@ class RequestImpl;
 
 #if !__DOXYGEN__
 #if !defined(__clang__) && __cplusplus >= 201103L && _GLIBCXX_USE_CXX11_ABI != 0
-#define CXX11_ABI __attribute ((abi_tag("cxx11")))
+#define CXX11_ABI __attribute__ ((abi_tag ("cxx11")))
 #else
 #define CXX11_ABI
 #endif
