@@ -42,7 +42,7 @@ class RequestImpl;
 This class stores the state of an in-progress or completed thumbnail request.
 */
 
-class Request : public QObject
+class Q_DECL_EXPORT Request : public QObject
 {
     Q_OBJECT
 public:
@@ -126,7 +126,7 @@ The return value is a shared pointer to a \link unity::thumbnailer::qt::Request 
 provides access to the scaled thumbnail (or an error message).
 */
 
-class Thumbnailer final
+class Q_DECL_EXPORT Thumbnailer final
 {
 public:
     /// @cond
