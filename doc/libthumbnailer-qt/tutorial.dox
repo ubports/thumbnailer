@@ -21,7 +21,7 @@ class MyClass : public QObject
 {
     Q_OBJECT
 public:
-    void setArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size);
+    void SetArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size);
 
 public slots:
     void requestFinished();
@@ -30,9 +30,9 @@ private:
     unity::thumbnailer::qt::Thumbnailer thumbnailer_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
     QImage image_;
-}
+};
 
-void MyClass::setArtistThumbnailAsync(QString const& artist,
+void MyClass::SetArtistThumbnailAsync(QString const& artist,
                                       QString const& album,
                                       QSize const& size)
 {
@@ -67,14 +67,14 @@ class MyClass : public QObject
 {
     Q_OBJECT
 public:
-    void setAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size);
+    void getAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size);
 
 private:
     unity::thumbnailer::qt::Thumbnailer thumbnailer_;
     QImage image_;
 }
 
-void MyClass::setAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size)
+void MyClass::getAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size)
 {
     auto request = thumbnailer_.getAlbumArt(artist, album, size);
 
