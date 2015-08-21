@@ -17,7 +17,9 @@
  */
 #pragma once
 
+#include <QImage>
 #include <QObject>
+#include <QSharedPointer>
 
 class QDBusConnection;
 

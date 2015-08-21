@@ -23,3 +23,5 @@ add_doxygen(
 
 install(DIRECTORY ${PROJECT_BINARY_DIR}/doc/libthumbnailer-qt/html
         DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/doc/libthumbnailer-qt)
+
+add_subdirectory(examples)
