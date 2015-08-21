@@ -42,6 +42,7 @@ void MyClass::requestFinished()
     {
         QString errorMessage = request_->errorMessage();
         // Do whatever you need to do to report the error.
+        image_ = QImage();
     }
 }
 
@@ -58,12 +59,13 @@ QImage MyClass::getThumbnail(QString const& path, QSize const& size)
 
     QString errorMessage = request->errorMessage();
     // Do whatever you need to do to report the error.
-    return QImage();
+    return image_ = QImage();
 }
 
-#include "qt_example.moc"
+#include "qt_example_test.moc"
 
 #include <testsetup.h>
+#include <utils/dbusserver.h>
 
 #include <QCoreApplication>
 #include <QSignalSpy>
@@ -89,22 +91,30 @@ static unique_ptr<QTemporaryDir> tempdir(set_tempdir());
 
 class QtTest : public ::testing::Test
 {
-public:
-    static string tempdir_path()
-    {
-        return tempdir->path().toStdString();
-    }
-
 protected:
     virtual void SetUp() override
     {
-        mkdir(tempdir_path().c_str(), 0700);
+        // start dbus service
+        tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
+        setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
+
+        // set 3 seconds as max idle time
+        setenv("THUMBNAILER_MAX_IDLE", "1000", true);
+
+        dbus_.reset(new DBusServer());
     }
 
     virtual void TearDown() override
     {
-        boost::filesystem::remove_all(tempdir_path());
+        dbus_.reset();
+
+        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv("XDG_CACHE_HOME");
+        tempdir.reset();
     }
+
+    unique_ptr<QTemporaryDir> tempdir;
+    unique_ptr<DBusServer> dbus_;
 };
 
 TEST_F(QtTest, basic)
@@ -126,6 +136,9 @@ TEST_F(QtTest, basic)
 int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
+    setenv("GSETTINGS_BACKEND", "memory", true);
+    setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
+    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
