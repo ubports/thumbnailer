@@ -36,14 +36,6 @@ class ThumbnailerImpl;
 class RequestImpl;
 }
 
-#if !__DOXYGEN__
-#if !defined(__clang__) && __cplusplus >= 201103L && _GLIBCXX_USE_CXX11_ABI != 0
-#define CXX11_ABI __attribute__ ((abi_tag ("cxx11")))
-#else
-#define CXX11_ABI
-#endif
-#endif
-
 /**
 \brief Holds a thumbnailer request.
 
@@ -77,9 +69,6 @@ public:
     \brief Returns the error message for a failed request.
     \return The error message in case of a failure and an empty `QString`, otherwise.
     */
-    /// @cond
-    CXX11_ABI
-    /// @endcond
     QString errorMessage() const;
 
     /**
@@ -177,8 +166,6 @@ public:
 private:
     QScopedPointer<internal::ThumbnailerImpl> p_;
 };
-
-#undef CXX11_ABI
 
 }  // namespace qt
 
