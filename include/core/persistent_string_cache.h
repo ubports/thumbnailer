@@ -33,6 +33,14 @@ class PersistentStringCacheImpl;
 
 }  // namespace internal
 
+#if !__DOXYGEN__
+#if !defined(__clang__) && __cplusplus >= 201103L && _GLIBCXX_USE_CXX11_ABI != 0
+#define CXX11_ABI __attribute ((abi_tag("cxx11")))
+#else
+#define CXX11_ABI
+#endif
+#endif
+
 /**
 \brief A cache of key-value pairs with persistent storage.
 
@@ -157,6 +165,9 @@ public:
     /**
     \brief Simple pair of value and metadata.
     */
+    //@cond
+    CXX11_ABI
+    //@endcond
     struct Data
     {
         /**
@@ -728,3 +739,5 @@ private:
 };
 
 }  // namespace core
+
+#undef CXX11_ABI

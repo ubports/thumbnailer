@@ -18,6 +18,10 @@ add_doxygen(
     EXCLUDE_SYMBOLS
         *::internal*
         *::Priv
+    DOXYFILE_IN
+        ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+    PROJECT_NAME
+        "Thumbnailer Qt API"
     ALL
 )
 
