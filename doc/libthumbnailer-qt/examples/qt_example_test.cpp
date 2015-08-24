@@ -23,10 +23,7 @@ class AsyncThumbnailProvider : public QObject
 {
     Q_OBJECT
 public:
-    AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer& thumbnailer)
-        : thumbnailer_(thumbnailer)
-    {
-    }
+    AsyncThumbnailProvider() = default;
 
     void getThumbnail(QString const& path, QSize const& size);
 
@@ -46,7 +43,7 @@ public Q_SLOTS:
     void requestFinished();
 
 private:
-    unity::thumbnailer::qt::Thumbnailer& thumbnailer_;
+    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
 };
 //! [AsyncThumbnailProvider_definition]
@@ -79,15 +76,12 @@ class SyncThumbnailProvider : public QObject
 {
     Q_OBJECT
 public:
-    SyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer& thumbnailer)
-        : thumbnailer_(thumbnailer)
-    {
-    }
+    SyncThumbnailProvider() = default;
 
     QImage getThumbnail(QString const& path, QSize const& size);
 
 private:
-    unity::thumbnailer::qt::Thumbnailer& thumbnailer_;
+    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
 };
 //! [SyncThumbnailProvider_definition]
 
@@ -166,9 +160,7 @@ protected:
 
 TEST_F(QtTest, basic)
 {
-    unity::thumbnailer::qt::Thumbnailer thumbnailer;
-
-    AsyncThumbnailProvider async_prov(thumbnailer);
+    AsyncThumbnailProvider async_prov;
     QSignalSpy spy(&async_prov, &AsyncThumbnailProvider::imageReady);
     async_prov.getThumbnail(TESTSRCDIR "/media/testimage.jpg", QSize(80, 80));
     ASSERT_TRUE(spy.wait());
@@ -176,7 +168,7 @@ TEST_F(QtTest, basic)
     EXPECT_EQ(80, image.width());
     EXPECT_EQ(50, image.height());
 
-    SyncThumbnailProvider sync_prov(thumbnailer);
+    SyncThumbnailProvider sync_prov;
     image = sync_prov.getThumbnail(TESTSRCDIR "/media/testimage.jpg", QSize(40, 40));
     EXPECT_EQ(40, image.width());
     EXPECT_EQ(25, image.height());

@@ -126,9 +126,6 @@ All methods are asynchronous and are guaranteed not to block.
 
 The return value is a shared pointer to a \link unity::thumbnailer::qt::Request Request\endlink instance that
 provides access to the scaled thumbnail (or an error message).
-
-\warning Do not not use a separate default-constructed Thumbnailer instance for each request.
-Doing so causes a separate DBus connection to be used for each request, which is expensive.
 */
 
 class Q_DECL_EXPORT Thumbnailer final
@@ -141,20 +138,16 @@ public:
     /**
     \brief Constructs a thumbnailer instance.
 
-    The constructor establishes a new DBus connection to the thumbnailer service.
-
-    \warning You should create a single Thumbnailer instance and use it
-    for all your thumbnail requests. This avoids establishing and tearing down
-    a separate DBus connection for each request.
+    A default-constructed Thumbnailer instance communicates with the
+    thumbnailer service via the session bus.
     */
     Thumbnailer();
 
     /**
     \brief Constructs a thumbnailer instance, using the supplied DBus connection.
 
-    Instead of creating its own DBus connection, this constructor uses the
-    supplied DBus connection to contact the thumbnailer service. This constructor
-    is provided mainly for testing.
+    Instead of connecting to the session bus, this constructor uses the
+    supplied DBus connection to contact the thumbnailer service.
 
     \param connection The DBus connection via which to send requests.
     */
