@@ -13,3 +13,6 @@ set_target_properties(qt_example_test PROPERTIES AUTOMOC TRUE)
 add_dependencies(qt_example_test thumbnailer-service)
 
 add_test(qt_example qt_example_test)
+
+list(APPEND UNIT_TEST_TARGETS qt_example_test)
+set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
