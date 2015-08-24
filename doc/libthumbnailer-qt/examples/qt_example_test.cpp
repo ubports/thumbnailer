@@ -16,18 +16,27 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
+//! [AsyncThumbnailProvider_definition]
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
-class MyClass : public QObject
+class AsyncThumbnailProvider : public QObject
 {
     Q_OBJECT
 public:
-    void getThumbnailAsync(QString const& path, QSize const& size);
-    QImage getThumbnail(QString const& path, QSize const& size);
+    AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer& thumbnailer)
+        : thumbnailer_(thumbnailer)
+    {
+    }
+
+    void getThumbnail(QString const& path, QSize const& size);
 
     QImage image() const
     {
-        return image_;
+        if (request_ && request_->isValid())
+        {
+            return request_->image();
+        }
+        return QImage();
     }
 
 Q_SIGNALS:
@@ -37,34 +46,53 @@ public Q_SLOTS:
     void requestFinished();
 
 private:
-    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
+    unity::thumbnailer::qt::Thumbnailer& thumbnailer_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
-    QImage image_;
 };
+//! [AsyncThumbnailProvider_definition]
 
-void MyClass::getThumbnailAsync(QString const& path, QSize const& size)
+//! [AsyncThumbnailProvider_async_implementation]
+void AsyncThumbnailProvider::getThumbnail(QString const& path, QSize const& size)
 {
     request_ = thumbnailer_.getThumbnail(path, size);
     connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
-            this, &MyClass::requestFinished);
+            this, &AsyncThumbnailProvider::requestFinished);
 }
 
-void MyClass::requestFinished()
+void AsyncThumbnailProvider::requestFinished()
 {
     if (request_->isValid())
     {
-        image_ = request_->image();  // Get the image from the request.
         Q_EMIT imageReady();
     }
     else
     {
+        request_.reset(nullptr);
         QString errorMessage = request_->errorMessage();
         // Do whatever you need to do to report the error.
-        image_ = QImage();
     }
 }
+//! [AsyncThumbnailProvider_async_implementation]
 
-QImage MyClass::getThumbnail(QString const& path, QSize const& size)
+//! [SyncThumbnailProvider_definition]
+class SyncThumbnailProvider : public QObject
+{
+    Q_OBJECT
+public:
+    SyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer& thumbnailer)
+        : thumbnailer_(thumbnailer)
+    {
+    }
+
+    QImage getThumbnail(QString const& path, QSize const& size);
+
+private:
+    unity::thumbnailer::qt::Thumbnailer& thumbnailer_;
+};
+//! [SyncThumbnailProvider_definition]
+
+//! [SyncThumbnailProvider_implementation]
+QImage SyncThumbnailProvider::getThumbnail(QString const& path, QSize const& size)
 {
     auto request = thumbnailer_.getThumbnail(path, size);
 
@@ -72,13 +100,14 @@ QImage MyClass::getThumbnail(QString const& path, QSize const& size)
 
     if (request->isValid())
     {
-        return image_ = request->image();
+        return request->image();
     }
 
     QString errorMessage = request->errorMessage();
     // Do whatever you need to do to report the error.
-    return image_ = QImage();
+    return QImage();
 }
+//! [SyncThumbnailProvider_implementation]
 
 #include "qt_example_test.moc"
 
@@ -137,16 +166,18 @@ protected:
 
 TEST_F(QtTest, basic)
 {
-    MyClass c;
+    unity::thumbnailer::qt::Thumbnailer thumbnailer;
 
-    QSignalSpy spy(&c, &MyClass::imageReady);
-    c.getThumbnailAsync(TESTSRCDIR "/media/testimage.jpg", QSize(80, 80));
+    AsyncThumbnailProvider async_prov(thumbnailer);
+    QSignalSpy spy(&async_prov, &AsyncThumbnailProvider::imageReady);
+    async_prov.getThumbnail(TESTSRCDIR "/media/testimage.jpg", QSize(80, 80));
     ASSERT_TRUE(spy.wait());
-    auto image = c.image();
+    auto image = async_prov.image();
     EXPECT_EQ(80, image.width());
     EXPECT_EQ(50, image.height());
 
-    image = c.getThumbnail(TESTSRCDIR "/media/testimage.jpg", QSize(40, 40));
+    SyncThumbnailProvider sync_prov(thumbnailer);
+    image = sync_prov.getThumbnail(TESTSRCDIR "/media/testimage.jpg", QSize(40, 40));
     EXPECT_EQ(40, image.width());
     EXPECT_EQ(25, image.height());
 }

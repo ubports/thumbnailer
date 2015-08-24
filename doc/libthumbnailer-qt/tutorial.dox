@@ -14,81 +14,44 @@ Methods to retrieve thumbnails are asynchronous; you can also use them synchrono
 
 \subsection async Asynchronous API
 
-The following code example illustrates how to retrieve a thumbnail asynchronously.
+We'll use the following class definition to illustrate how to retrieve thumbnails asynchronously.
+(Note that this is a naive implementation; a more realistic implementation would allow
+multiple requests to be in progress.)
 
-\code
-class MyClass : public QObject
-{
-    Q_OBJECT
-public:
-    void SetArtistThumbnailAsync(QString const& artist, QString const& album, QSize const& size);
+\snippet examples/qt_example_test.cpp AsyncThumbnailProvider_definition
 
-public slots:
-    void requestFinished();
+To retrieve a thumbnail asynchronously, you call the
+\link unity::thumbnailer::qt::Thumbnailer::getThumbnail() getThumbnail()\endlink method.
+(If you are intersted in album covers and artist images, you will also need to create
+methods to retrieve those. The implementation is almost identical, so we do not show
+it here.)
 
-private:
-    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
-    QSharedPointer<unity::thumbnailer::qt::Request> request_;
-    QImage image_;
-};
+\link unity::thumbnailer::qt::Thumbnailer::getThumbnail() getThumbnail()\endlink does
+not block and returns a `QSharedPointer` to a
+\link unity::thumbnailer::qt::Request Request\endlink object, which emits
+emits a 
+\link unity::thumbnailer::qt::Request::finished() finished()\endlink signal
+once the request is complete. Therefore, our `getThumbnail()` implementation
+connects the request's
+\link unity::thumbnailer::qt::Request::finished() finished()\endlink signal
+to the `requestFinished()` slot of our class. The implementation of
+`requestFinished()` checks if the request succeeded; the caller
+can retrieve the actual image by calling the `image()` method.
 
-void MyClass::SetArtistThumbnailAsync(QString const& artist,
-                                      QString const& album,
-                                      QSize const& size)
-{
-    request_ = thumbnailer_.getArtistArt(artist, album, size);
-    connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
-            this, &MyClass::requestFinished);
-}
-
-void MyClass::requestFinished()
-{
-    if (request_->isValid())
-    {
-        image_ = request_->image();  // Get the image from the request.
-    }
-    else
-    {
-        QString errorMessage = request_->errorMessage();
-        // Do whatever you need to do to report the error.
-    }
-}
-\endcode
+\snippet examples/qt_example_test.cpp AsyncThumbnailProvider_async_implementation
 
 \subsection sync Synchronous API
 
-To make a synchronous request, you can call 
-\link unity::thumbnailer::qt::Request::waitForFinished() waitForFinished()\endlink on the
-returned request. Note that this can block the calling thread for several seconds, so
+For synchronous requests, we can use the following class:
+
+\snippet examples/qt_example_test.cpp SyncThumbnailProvider_definition
+
+The implementation is trivial: we simple start the request and wait for it
+to complete before returning the image:
+
+\snippet examples/qt_example_test.cpp SyncThumbnailProvider_implementation
+
+Note that \link unity::thumbnailer::qt::Request::waitForFinished() waitForFinished()\endlink
+can block the calling thread for several seconds, so
 do not call this from the UI thread.
-
-\code
-class MyClass : public QObject
-{
-    Q_OBJECT
-public:
-    void getAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size);
-
-private:
-    unity::thumbnailer::qt::Thumbnailer thumbnailer_;
-    QImage image_;
-}
-
-void MyClass::getAlbumThumbnailSync(QString const& artist, QString const& album, QSize const& size)
-{
-    auto request = thumbnailer_.getAlbumArt(artist, album, size);
-
-    request->waitForFinished();  // Blocks until the response is ready.
-
-    if (request->isValid())
-    {
-        image_ = request->image();  // Get the image from the request.
-    }
-    else
-    {
-        QString errorMessage = request->errorMessage();
-        // Do whatever you need to do to report the error.
-    }
-}
-\endcode
 */
