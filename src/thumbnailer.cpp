@@ -68,7 +68,14 @@ enum class Location
 
 class RequestBase : public ThumbnailRequest
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
@@ -152,7 +159,14 @@ namespace
 
 class LocalThumbnailRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     LocalThumbnailRequest(Thumbnailer* thumbnailer,
                           string const& filename,
@@ -171,7 +185,14 @@ private:
 
 class AlbumRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     AlbumRequest(Thumbnailer* thumbnailer,
                  string const& artist,
@@ -191,7 +212,14 @@ private:
 
 class ArtistRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     ArtistRequest(Thumbnailer* thumbnailer,
                   string const& artist,

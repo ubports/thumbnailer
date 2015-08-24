@@ -7,11 +7,11 @@ set(root_inc_dir ${CMAKE_SOURCE_DIR}/include)
 set(subdirs
     internal
     core
-    libthumbnailer-qt
+    unity/thumbnailer/qt
 )
 
 set(public-headers-dirs
-    libthumbnailer-qt
+    unity/thumbnailer/qt
 )
 
 find_package(Qt5Core REQUIRED)
