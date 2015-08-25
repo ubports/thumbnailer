@@ -48,8 +48,6 @@ set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
 add_subdirectory(copyright)
 add_subdirectory(whitespace)
 
-add_subdirectory(core)
-
 if (NOT DEFINED GTEST_ROOT)
     set(GTEST_ROOT /usr/src/gtest)
 endif()
