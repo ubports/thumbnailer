@@ -18,6 +18,7 @@ License: GPL-3
  `/usr/share/common-licenses/GPL-3'
 
 Files: plugins/*
+       include/internal/gobj_memory.h
        include/internal/safe_strerror.h
        src/safe_strerror.cpp
 Copyright: 2015 Canonical ltd
