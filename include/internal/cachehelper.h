@@ -31,9 +31,9 @@ namespace internal
 
 // Helper class to wrap access to a persistent cache. We use this
 // to handle database corruption: if the DB reports that it is corrupt
-// (std::system error with code 666), we delete the cache files and
-// re-create the cache.
-// The constructor also deals with caches that are re-sized when opened.
+// with code 666), we delete the cache files and re-create the cache.
+//
+// In addition, the constructor also deals with caches that are re-sized when opened.
 
 class CacheHelper final
 {
@@ -57,8 +57,6 @@ private:
     template<typename T>
     T call(std::function<T(void)> func) const;
 
-    void call(std::function<void(void)> func) const;
-
     void recover() const;
     void init_cache();
 
@@ -67,26 +65,6 @@ private:
     core::CacheDiscardPolicy policy_;
     mutable std::unique_ptr<core::PersistentStringCache> c_;
 };
-
-// Simple call wrapper to allow us to call a functor and
-// check if the called function threw an exception. If so, we re-try
-// the call after calling recover(). In turn, if the exception
-// indicates DB corruption, it deletes the cache, re-initializes it,
-// and re-tries the function call one more time.
-
-template<typename T>
-T CacheHelper::call(std::function<T(void)> func) const
-{
-    try
-    {
-        return func();  // Try and call the passed function.
-    }
-    catch (...)
-    {
-        recover();      // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
-        return func();  // Try again with the recovered DB.
-    }
-}
 
 }  // namespace internal
 

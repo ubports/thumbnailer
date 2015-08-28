@@ -34,12 +34,48 @@ namespace thumbnailer
 namespace internal
 {
 
+// Simple call wrapper to allow us to call a functor and
+// check if the called function threw an exception. If so, we re-try
+// the call after calling recover(). In turn, if the exception
+// indicates DB corruption, it deletes the cache, re-initializes it,
+// and re-tries the function call one more time.
+
+template<typename T>
+T CacheHelper::call(std::function<T(void)> func) const
+{
+    try
+    {
+        return func();  // Try and call the passed function.
+    }
+    catch (...)
+    {
+        recover();      // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
+        return func();  // Try again with the recovered DB.
+    }
+}
+
+// Specialization for void return type.
+
+template<>
+void CacheHelper::call(function<void(void)> func) const
+{
+    try
+    {
+        func();      // Try and call the passed function.
+    }
+    catch (...)
+    {
+        recover();  // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
+        func();     // Try again with the recovered DB.
+    }
+}
+
 CacheHelper::CacheHelper(string const& cache_path, int64_t max_size_in_bytes, core::CacheDiscardPolicy policy)
     : path_(cache_path)
     , size_(max_size_in_bytes)
     , policy_(policy)
 {
-    call([&]{ init_cache(); });
+    call<void>([&]{ init_cache(); });
 }
 
 core::Optional<string> CacheHelper::get(string const& key) const
@@ -64,29 +100,20 @@ void CacheHelper::clear_stats()
 
 void CacheHelper::invalidate()
 {
-    call([&]{ c_->invalidate(); });
+    call<void>([&]{ c_->invalidate(); });
 }
 
 void CacheHelper::compact()
 {
-    call([&]{ c_->compact(); });
+    call<void>([&]{ c_->compact(); });
 }
 
-// Version for void return type. Non-void return type is handled
-// by the member function template.
-
-void CacheHelper::call(function<void(void)> func) const
-{
-    try
-    {
-        func();      // Try and call the passed function.
-    }
-    catch (...)
-    {
-        recover();  // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
-        func();     // Try again with the recovered DB.
-    }
-}
+// Called if a call on the PersistentStringCache throws an exception.
+// If the exception was not a system_error, or was a system error with
+// any code other than 666 we just let it escape. Otherwise, if the
+// exception was a system error with code 666, leveldb detected
+// DB corruption, and we delete the physical DB files on disk
+// and re-initialize the DB.
 
 void CacheHelper::recover() const
 {
