@@ -117,7 +117,7 @@ void CacheHelper::try_to_recover(char const* method) const
     exception_ptr e = current_exception();
     try
     {
-        throw e;
+        rethrow_exception(e);
     }
     catch (system_error const& e)
     {
@@ -126,8 +126,11 @@ void CacheHelper::try_to_recover(char const* method) const
             // Not a database corruption error.
             throw;
         }
+
+        // DB is corrupt. Blow away the cache directory and re-initialize the cache.
         qDebug().nospace() << "CacheHelper::" << method << "(): Database corrupt: " << e.what()
                            << " wiping contents of " << QString::fromStdString(path_);
+        c_.reset();
         try
         {
             boost::filesystem::remove_all(path_);
@@ -136,10 +139,8 @@ void CacheHelper::try_to_recover(char const* method) const
         {
             // Deliberately ignored. If it didn't work, we'll find out on the retry.
         }
-        c_.reset();
         const_cast<CacheHelper*>(this)->init_cache();
     }
-    throw;
 }
 
 void CacheHelper::init_cache()

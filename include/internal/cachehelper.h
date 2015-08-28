@@ -41,7 +41,7 @@ public:
     CacheHelper(std::string const& cache_path,
                 int64_t max_size_in_bytes,
                 core::CacheDiscardPolicy policy);
-    
+
     core::Optional<std::string> get(std::string const& key) const;
     bool put(std::string const& key,
              std::string const& value,
