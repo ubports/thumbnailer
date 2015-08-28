@@ -165,22 +165,24 @@ void ShowStats::show_stats(service::CacheStats const& st)
 {
     printf("    Path:                  %s\n", qPrintable(st.cache_path));
     char const* policy = st.policy ? "lru_ttl" : "lru_only";
-    printf("    Policy:                %s\n", policy);
-    printf("    Size:                  %" PRId64 "\n", int64_t(st.size));
-    printf("    Size in bytes:         %" PRId64 "\n", int64_t(st.size_in_bytes));
-    printf("    Max size in bytes:     %" PRId64 "\n", int64_t(st.max_size_in_bytes));
-    printf("    Hits:                  %" PRId64 "\n", int64_t(st.hits));
-    printf("    Misses:                %" PRId64 "\n", int64_t(st.misses));
-    printf("    Hits since last miss:  %" PRId64 "\n", int64_t(st.hits_since_last_miss));
-    printf("    Misses_since_last_hit: %" PRId64 "\n", int64_t(st.misses_since_last_hit));
-    printf("    Longest hit run:       %" PRId64 "\n", int64_t(st.longest_hit_run));
-    printf("    Longest miss run:      %" PRId64 "\n", int64_t(st.longest_miss_run));
-    printf("    TTL evictions:         %" PRId64 "\n", int64_t(st.ttl_evictions));
-    printf("    LRU evictions:         %" PRId64 "\n", int64_t(st.lru_evictions));
-    printf("    Most-recent hit time:  %s", to_time_string(st.most_recent_hit_time));
-    printf("    Most-recent miss time: %s", to_time_string(st.most_recent_miss_time));
-    printf("    Longest hit-run time:  %s", to_time_string(st.longest_hit_run_time));
-    printf("    Longest miss-run time: %s", to_time_string(st.longest_miss_run_time));
+    printf("    Policy:                %s\n",    policy);
+    printf("    Size:                  %"        PRId64 "\n", int64_t(st.size));
+    printf("    Size in bytes:         %"        PRId64 "\n", int64_t(st.size_in_bytes));
+    printf("    Max size in bytes:     %"        PRId64 "\n", int64_t(st.max_size_in_bytes));
+    printf("    Hits:                  %"        PRId64 "\n", int64_t(st.hits));
+    printf("    Misses:                %"        PRId64 "\n", int64_t(st.misses));
+    printf("    Hits since last miss:  %"        PRId64 "\n", int64_t(st.hits_since_last_miss));
+    printf("    Misses_since_last_hit: %"        PRId64 "\n", int64_t(st.misses_since_last_hit));
+    printf("    Longest hit run:       %"        PRId64 "\n", int64_t(st.longest_hit_run));
+    printf("    Longest miss run:      %"        PRId64 "\n", int64_t(st.longest_miss_run));
+    printf("    Avg hit run length:    %.02f\n", st.avg_hit_run_length);
+    printf("    Avg miss run length:   %.02f\n", st.avg_miss_run_length);
+    printf("    TTL evictions:         %"        PRId64 "\n", int64_t(st.ttl_evictions));
+    printf("    LRU evictions:         %"        PRId64 "\n", int64_t(st.lru_evictions));
+    printf("    Most-recent hit time:  %s",      to_time_string(st.most_recent_hit_time));
+    printf("    Most-recent miss time: %s",      to_time_string(st.most_recent_miss_time));
+    printf("    Longest hit-run time:  %s",      to_time_string(st.longest_hit_run_time));
+    printf("    Longest miss-run time: %s",      to_time_string(st.longest_miss_run_time));
 
     if (show_histogram_)
     {
