@@ -52,7 +52,12 @@ public:
     void compact();
 
 private:
-    void try_to_recover(char const* method) const;
+    template<typename T>
+    T call(std::function<T(void)> func) const;
+
+    void call(std::function<void(void)> func) const;
+
+    void recover() const;
     void init_cache();
 
     std::string path_;
@@ -60,6 +65,25 @@ private:
     core::CacheDiscardPolicy policy_;
     mutable std::unique_ptr<core::PersistentStringCache> c_;
 };
+
+// Simple call wrapper to allow us to call and arbitrary functor and
+// check if the called function threw an exception. If so, we re-try
+// the call after calling recover() (which may re-initialize the DB
+// after deleting the cache directory.
+
+template<typename T>
+T CacheHelper::call(std::function<T(void)> func) const
+{
+    try
+    {
+        return func();  // Try and call the passed function.
+    }
+    catch (...)
+    {
+        recover();      // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
+        return func();  // Try again with the recovered DB (if any).
+    }
+}
 
 }  // namespace internal
 

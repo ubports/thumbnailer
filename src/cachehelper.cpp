@@ -39,41 +39,17 @@ CacheHelper::CacheHelper(string const& cache_path, int64_t max_size_in_bytes, co
     , size_(max_size_in_bytes)
     , policy_(policy)
 {
-    try
-    {
-        init_cache();
-    }
-    catch (...)
-    {
-        try_to_recover("CacheHelper");
-        c_ = move(core::PersistentStringCache::open(path_, size_, policy_));
-    }
+    call([&]{ init_cache(); });
 }
 
 core::Optional<string> CacheHelper::get(string const& key) const
 {
-    try
-    {
-        return c_->get(key);
-    }
-    catch (...)
-    {
-        try_to_recover("get");
-        return c_->get(key);
-    }
+    return call<core::Optional<string>>([&]{ return c_->get(key); });
 }
 
 bool CacheHelper::put(string const& key, string const& value, chrono::time_point<chrono::system_clock> expiry_time)
 {
-    try
-    {
-        return c_->put(key, value, expiry_time);
-    }
-    catch (...)
-    {
-        try_to_recover("put");
-        return c_->put(key, value, expiry_time);
-    }
+    return call<bool>([&]{ return c_->put(key,value, expiry_time); });
 }
 
 core::PersistentCacheStats CacheHelper::stats() const
@@ -88,31 +64,31 @@ void CacheHelper::clear_stats()
 
 void CacheHelper::invalidate()
 {
-    try
-    {
-        c_->invalidate();
-    }
-    catch (...)
-    {
-        try_to_recover("invalidate");
-        c_->invalidate();
-    }
+    call([&]{ c_->invalidate(); });
 }
 
 void CacheHelper::compact()
 {
+    call([&]{ c_->compact(); });
+}
+
+// Version for void return type. Non-void return type is handled
+// by the member function template.
+
+void CacheHelper::call(function<void(void)> func) const
+{
     try
     {
-        c_->compact();
+        func();      // Try and call the passed function.
     }
     catch (...)
     {
-        try_to_recover("compact");
-        c_->compact();
+        recover();  // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
+        func();     // Try again with the recovered DB (if any).
     }
 }
 
-void CacheHelper::try_to_recover(char const* method) const
+void CacheHelper::recover() const
 {
     exception_ptr e = current_exception();
     try
@@ -128,18 +104,18 @@ void CacheHelper::try_to_recover(char const* method) const
         }
 
         // DB is corrupt. Blow away the cache directory and re-initialize the cache.
-        qDebug().nospace() << "CacheHelper::" << method << "(): Database corrupt: " << e.what()
-                           << " wiping contents of " << QString::fromStdString(path_);
-        c_.reset();
+        qDebug().nospace() << "CacheHelper: corrupt database: " << e.what()
+                           << "\n    deleting contents of " << QString::fromStdString(path_);
         try
         {
+            c_.reset();
             boost::filesystem::remove_all(path_);
+            const_cast<CacheHelper*>(this)->init_cache();
         }
         catch (...)
         {
             // Deliberately ignored. If it didn't work, we'll find out on the retry.
         }
-        const_cast<CacheHelper*>(this)->init_cache();
     }
 }
 
