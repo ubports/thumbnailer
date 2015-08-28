@@ -60,9 +60,9 @@ private:
     void recover() const;
     void init_cache();
 
-    std::string path_;
-    int64_t size_;
-    core::CacheDiscardPolicy policy_;
+    std::string const path_;
+    int64_t const size_;
+    core::CacheDiscardPolicy const policy_;
     mutable std::unique_ptr<core::PersistentStringCache> c_;
 };
 

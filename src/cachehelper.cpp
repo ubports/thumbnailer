@@ -54,22 +54,6 @@ T CacheHelper::call(std::function<T(void)> func) const
     }
 }
 
-// Specialization for void return type.
-
-template<>
-void CacheHelper::call(function<void(void)> func) const
-{
-    try
-    {
-        func();      // Try and call the passed function.
-    }
-    catch (...)
-    {
-        recover();  // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
-        func();     // Try again with the recovered DB.
-    }
-}
-
 CacheHelper::CacheHelper(string const& cache_path, int64_t max_size_in_bytes, core::CacheDiscardPolicy policy)
     : path_(cache_path)
     , size_(max_size_in_bytes)
@@ -118,30 +102,37 @@ void CacheHelper::compact()
 void CacheHelper::recover() const
 {
     exception_ptr e = current_exception();
+    assert(e);
     try
     {
         rethrow_exception(e);
     }
-    catch (system_error const& e)
+    catch (system_error const& se)
     {
-        if (e.code().value() != 666)
+        if (se.code().value() != 666)
         {
             // Not a database corruption error.
             throw;
         }
 
         // DB is corrupt. Blow away the cache directory and re-initialize the cache.
-        qDebug().nospace() << "CacheHelper: corrupt database: " << e.what()
-                           << "\n    deleting contents of " << QString::fromStdString(path_);
+        qCritical() << "CacheHelper: corrupt database:" << se.what()
+                    << ": deleting contents of " << QString::fromStdString(path_);
         try
         {
             c_.reset();
             boost::filesystem::remove_all(path_);
             const_cast<CacheHelper*>(this)->init_cache();
         }
+        catch (std::exception const& inner)
+        {
+            qCritical() << "CacheHelper: error during recovery:" << inner.what();
+            rethrow_exception(e);
+        }
         catch (...)
         {
-            // Deliberately ignored. If it didn't work, we'll find out on the retry.
+            qCritical() << "CacheHelper: error during recovery: unknown exception";
+            rethrow_exception(e);
         }
     }
 }
