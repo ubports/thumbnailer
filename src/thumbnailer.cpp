@@ -21,6 +21,7 @@
 #include <internal/thumbnailer.h>
 
 #include <internal/artreply.h>
+#include <internal/cachehelper.h>
 #include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
@@ -31,7 +32,6 @@
 #include <settings.h>
 
 #include <boost/filesystem.hpp>
-#include <core/persistent_string_cache.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
@@ -577,28 +577,6 @@ void ArtistRequest::download(chrono::milliseconds timeout)
     connect(artreply_.get(), &ArtReply::finished, this, &ThumbnailRequest::downloadFinished, Qt::DirectConnection);
 }
 
-namespace
-{
-
-core::PersistentStringCache::UPtr init_cache(string const& path,
-                                             int64_t size,
-                                             core::CacheDiscardPolicy policy)
-{
-    try
-    {
-        return core::PersistentStringCache::open(path, size, policy);
-    }
-    catch (logic_error const&)
-    {
-        // Cache size has changed.
-        auto cache = core::PersistentStringCache::open(path);
-        cache->resize(size);
-        return cache;
-    }
-}
-
-}
-
 Thumbnailer::Thumbnailer()
     : downloader_(new UbuntuServerDownloader())
 {
@@ -617,15 +595,15 @@ Thumbnailer::Thumbnailer()
     try
     {
         Settings settings;
-        full_size_cache_ = init_cache(cache_dir + "/images",
-                                      settings.full_size_cache_size() * 1024 * 1024,
-                                      core::CacheDiscardPolicy::lru_only);
-        thumbnail_cache_ = init_cache(cache_dir + "/thumbnails",
-                                      settings.thumbnail_cache_size() * 1024 * 1024,
-                                      core::CacheDiscardPolicy::lru_only);
-        failure_cache_ = init_cache(cache_dir + "/failures",
-                                    settings.failure_cache_size() * 1024 * 1024,
-                                    core::CacheDiscardPolicy::lru_ttl);
+        full_size_cache_.reset(new CacheHelper(cache_dir + "/images",
+                                               settings.full_size_cache_size() * 1024 * 1024,
+                                               core::CacheDiscardPolicy::lru_only));
+        thumbnail_cache_.reset(new CacheHelper(cache_dir + "/thumbnails",
+                                               settings.thumbnail_cache_size() * 1024 * 1024,
+                                               core::CacheDiscardPolicy::lru_only));
+        failure_cache_.reset(new CacheHelper(cache_dir + "/failures",
+                                             settings.failure_cache_size() * 1024 * 1024,
+                                             core::CacheDiscardPolicy::lru_ttl));
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
         retry_error_hours_ = settings.retry_error_hours();

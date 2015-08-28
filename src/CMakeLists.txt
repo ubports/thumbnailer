@@ -12,6 +12,7 @@ set_source_files_properties(settings.cpp PROPERTIES
 
 add_library(thumbnailer-static STATIC
     artdownloader.cpp
+    cachehelper.cpp
     check_access.cpp
     file_io.cpp
     image.cpp
