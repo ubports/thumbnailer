@@ -36,21 +36,25 @@ namespace internal
 
 // Helper class to wrap access to a persistent cache. We use this
 // to handle database corruption: if the DB reports that it is corrupt
-// with code 666), we delete the cache files and re-create the cache.
+// with code 666), we delete the cache files and re-create the cache,
+// the re-try the call one more time.
 //
 // In addition, the constructor also deals with caches that are re-sized when opened.
+//
+// This is a template so we can inject a mock cache for testing.
 
 template<typename CacheT>
 class CacheHelper final
 {
 public:
-    //typedef std::unique_ptr<CacheHelper<CacheT> UPtr;
-    using UPtr = std::unique_ptr<CacheHelper<CacheT>>;
+    using UPtr = std::unique_ptr<CacheHelper<CacheT>>;  // Convenience definition for clients.
 
     CacheHelper<CacheT>(std::string const& cache_path,
                 int64_t max_size_in_bytes,
                 core::CacheDiscardPolicy policy);
 
+    // Methods below pass through to the underlying cache, but with re-try after
+    // recovery if the underlying cache reports a corrupt DB.
     core::Optional<std::string> get(std::string const& key) const;
     bool put(std::string const& key,
              std::string const& value,
@@ -61,6 +65,7 @@ public:
     void compact();
 
 private:
+    // Call wrapper that implements the retry logic.
     template<typename T>
     T call(std::function<T(void)> func) const
     {
@@ -83,6 +88,9 @@ private:
     core::CacheDiscardPolicy const policy_;
     mutable std::unique_ptr<CacheT> c_;
 };
+
+// Convenience definition for the normal use case with a real cache.
+using PersistentCacheHelper = CacheHelper<core::PersistentStringCache>;
 
 template<typename CacheT>
 CacheHelper<CacheT>::CacheHelper(std::string const& cache_path, int64_t max_size_in_bytes, core::CacheDiscardPolicy policy)
@@ -129,12 +137,11 @@ void CacheHelper<CacheT>::compact()
     call<void>([&]{ c_->compact(); });
 }
 
-// Called if a call on the PersistentStringCache throws an exception.
+// Called if a call on the underlying cache throws an exception.
 // If the exception was not a system_error, or was a system error with
-// any code other than 666 we just let it escape. Otherwise, if the
+// any code other than 666, we just let it escape. Otherwise, if the
 // exception was a system error with code 666, leveldb detected
-// DB corruption, and we delete the physical DB files on disk
-// and re-initialize the DB.
+// DB corruption, and we delete the physical DB files and re-initialize the DB.
 
 template<typename CacheT>
 void CacheHelper<CacheT>::recover() const
@@ -191,8 +198,6 @@ void CacheHelper<CacheT>::init_cache()
         c_->resize(size_);
     }
 }
-
-using PersistentCacheHelper = CacheHelper<core::PersistentStringCache>;
 
 }  // namespace internal
 
