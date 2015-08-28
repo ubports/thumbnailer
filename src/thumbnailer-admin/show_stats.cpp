@@ -165,7 +165,7 @@ void ShowStats::show_stats(service::CacheStats const& st)
 {
     printf("    Path:                  %s\n", qPrintable(st.cache_path));
     char const* policy = st.policy ? "lru_ttl" : "lru_only";
-    printf("    Policy:                %s\n",    policy);
+    printf("    Policy:                %s\n", policy);
     printf("    Size:                  %" PRId64 "\n", int64_t(st.size));
     printf("    Size in bytes:         %" PRId64 "\n", int64_t(st.size_in_bytes));
     printf("    Max size in bytes:     %" PRId64 "\n", int64_t(st.max_size_in_bytes));
