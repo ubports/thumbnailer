@@ -147,11 +147,9 @@ private:
     typedef std::vector<CacheHelper*> CacheVec;
     CacheVec select_caches(CacheSelector selector) const;
 
-    typedef std::unique_ptr<unity::thumbnailer::internal::CacheHelper> CacheHelperUPtr;
-
-    CacheHelperUPtr full_size_cache_;               // Small cache of full (original) size images.
-    CacheHelperUPtr thumbnail_cache_;               // Large cache of scaled images.
-    CacheHelperUPtr failure_cache_;                 // Cache for failed attempts (value is always empty).
+    CacheHelper::UPtr full_size_cache_;             // Small cache of full (original) size images.
+    CacheHelper::UPtr thumbnail_cache_;             // Large cache of scaled images.
+    CacheHelper::UPtr failure_cache_;               // Cache for failed attempts (value is always empty).
     int max_size_;                                  // Max thumbnail size in pixels.
     int retry_not_found_hours_;                     // Retry wait time for authoritative "no artwork" answer.
     int retry_error_hours_;                         // Retry wait time for unexpected server errors.

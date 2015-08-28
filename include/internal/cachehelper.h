@@ -38,6 +38,8 @@ namespace internal
 class CacheHelper final
 {
 public:
+    typedef std::unique_ptr<CacheHelper> UPtr;
+
     CacheHelper(std::string const& cache_path,
                 int64_t max_size_in_bytes,
                 core::CacheDiscardPolicy policy);

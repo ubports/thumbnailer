@@ -438,10 +438,6 @@ TEST_F(ThumbnailerTest, exceptions)
         string exp = "Thumbnailer(): Cannot instantiate cache: PersistentStringCache: cannot open or create cache: ";
         EXPECT_EQ(0, msg.compare(0, exp.length(), exp)) << msg;
     }
-    catch (std::exception const& e)
-    {
-        ASSERT_STREQ("", e.what());
-    }
     ASSERT_EQ(0, chmod(cache_dir.c_str(), 0700));
 }
 
