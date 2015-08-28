@@ -63,7 +63,7 @@ int main(int argc, char** argv)
             throw runtime_error(string("thumbnailer-service: could not acquire DBus name ") + BUS_NAME);
         }
 
-        new InactivityHandler(server);
+        new InactivityHandler(server, admin_server);
 
         qDebug() << "Ready";
         rc = app.exec();

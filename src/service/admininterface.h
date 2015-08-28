@@ -54,6 +54,10 @@ public Q_SLOTS:
     void Compact(int cache_id);
     void Shutdown();
 
+Q_SIGNALS:
+    void endInactivity();
+    void startInactivity();
+
 private:
     std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
 };

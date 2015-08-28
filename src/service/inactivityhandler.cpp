@@ -49,7 +49,7 @@ int get_env_inactivity_time(int default_value)
     return default_value;
 }
 
-InactivityHandler::InactivityHandler(DBusInterface& iface)
+InactivityHandler::InactivityHandler(DBusInterface& iface, AdminInterface& admin_iface)
     : QObject(&iface)
 {
     timer_.setInterval(get_env_inactivity_time(MAX_INACTIVITY_TIME));
@@ -57,5 +57,7 @@ InactivityHandler::InactivityHandler(DBusInterface& iface)
     // connect dbus interface inactivity signals to the QTimer start and stop
     connect(&iface, &DBusInterface::endInactivity, &timer_, &QTimer::stop);
     connect(&iface, &DBusInterface::startInactivity, &timer_, static_cast<void (QTimer::*)()>(&QTimer::start));
+    connect(&admin_iface, &AdminInterface::endInactivity, &timer_, &QTimer::stop);
+    connect(&admin_iface, &AdminInterface::startInactivity, &timer_, static_cast<void (QTimer::*)()>(&QTimer::start));
     connect(&timer_, &QTimer::timeout, QCoreApplication::instance(), &QCoreApplication::quit);
 }

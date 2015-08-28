@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "admininterface.h"
 #include "dbusinterface.h"
 
 #include <QObject>
@@ -36,7 +37,7 @@ class InactivityHandler : public QObject
 {
     Q_OBJECT
 public:
-    InactivityHandler(DBusInterface& iface);
+    InactivityHandler(DBusInterface& iface, AdminInterface& admin_interface);
 
 private:
     QTimer timer_;
