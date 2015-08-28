@@ -84,7 +84,7 @@ void CacheHelper::call(function<void(void)> func) const
     catch (...)
     {
         recover();  // If the DB is corrupt, recover() wipes the DB. If not, it re-throws.
-        func();     // Try again with the recovered DB (if any).
+        func();     // Try again with the recovered DB.
     }
 }
 
