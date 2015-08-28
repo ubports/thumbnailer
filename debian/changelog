@@ -5,6 +5,7 @@ thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
     thumbnailer-settings, and vs-thumb.
   * Removed a bunch of lintian warnings and errors.
   * Removed source for persistent cache.
+  * Added average hit and miss run length to stats returned by thumbnailer-admin.
 
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
 
