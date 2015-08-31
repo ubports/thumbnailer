@@ -18,13 +18,12 @@
 
 #pragma once
 
-#include <ratelimiter.h>
-
 #include <QQuickImageProvider>
-#include <QDBusPendingCallWatcher>
-#include <QDBusPendingReply>
 
 #include <memory>
+
+#include <ratelimiter.h>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 namespace unity
 {
@@ -44,7 +43,7 @@ public:
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image,
                              unity::thumbnailer::RateLimiter* rate_limiter,
-                             std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> reply);
+                             std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> reply);
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();
@@ -53,16 +52,15 @@ public:
     void cancel() override;
 
 private Q_SLOTS:
-    void dbusCallFinished();
+    void requestFinished();
 
 private:
     QString id_;
     QSize requested_size_;
     unity::thumbnailer::RateLimiter* backlog_limiter_ = nullptr;
-    std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
-    QImage image_;
+    std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> job_;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
     QString default_image_;
-    std::unique_ptr<QDBusPendingCallWatcher> watcher_;
     std::function<void()> cancel_func_;
 };
 
