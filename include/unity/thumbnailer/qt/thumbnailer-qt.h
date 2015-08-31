@@ -85,6 +85,14 @@ public:
     */
     void waitForFinished();
 
+    /**
+    \brief Cancel the thumbnail request.
+
+    The finished signal will be emitted and the request will be
+    considered to be in an invalid state with an error message set.
+     */
+    void cancel();
+
 Q_SIGNALS:
     /**
     \brief This signal is emitted when the request completes.
@@ -93,7 +101,7 @@ Q_SIGNALS:
 
 private:
     QScopedPointer<internal::RequestImpl> p_;
-    explicit Request(internal::RequestImpl* impl);
+    explicit Request(internal::RequestImpl* impl) Q_DECL_HIDDEN;
 
     friend class internal::ThumbnailerImpl;
 };

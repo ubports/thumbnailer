@@ -64,7 +64,7 @@ ThumbnailerImageResponse::~ThumbnailerImageResponse()
 {
     if (request_)
     {
-        //request_->cancel();
+        request_->cancel();
     }
 }
 
@@ -90,13 +90,17 @@ void ThumbnailerImageResponse::cancel()
 
     if (request_)
     {
-        //request_->cancel();
+        request_->cancel();
     }
 }
 
 void ThumbnailerImageResponse::requestFinished()
 {
-    backlog_limiter_->done();
+    if (!finished_)
+    {
+        backlog_limiter_->done();
+        finished_ = true;
+    }
 
     if (!request_->isValid())
     {

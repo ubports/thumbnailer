@@ -62,6 +62,7 @@ private:
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
     QString default_image_;
     std::function<void()> cancel_func_;
+    bool finished_ = false;
 };
 
 }  // namespace qml
