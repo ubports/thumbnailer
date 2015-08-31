@@ -9,7 +9,6 @@ add_library(thumbnailer-qml MODULE
   thumbnailgenerator.cpp
   ${CMAKE_SOURCE_DIR}/src/ratelimiter.cpp
   ${CMAKE_SOURCE_DIR}/src/settings.cpp
-  ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
 )
 include_directories(thumbnailer-qml ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/src)
 
