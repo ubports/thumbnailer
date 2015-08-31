@@ -595,15 +595,15 @@ Thumbnailer::Thumbnailer()
     try
     {
         Settings settings;
-        full_size_cache_.reset(new PersistentCacheHelper(cache_dir + "/images",
-                                                         settings.full_size_cache_size() * 1024 * 1024,
-                                                         core::CacheDiscardPolicy::lru_only));
-        thumbnail_cache_.reset(new PersistentCacheHelper(cache_dir + "/thumbnails",
-                                                         settings.thumbnail_cache_size() * 1024 * 1024,
-                                                         core::CacheDiscardPolicy::lru_only));
-        failure_cache_.reset(new PersistentCacheHelper(cache_dir + "/failures",
-                                                       settings.failure_cache_size() * 1024 * 1024,
-                                                       core::CacheDiscardPolicy::lru_ttl));
+        full_size_cache_ = move(PersistentCacheHelper::open(cache_dir + "/images",
+                                                            settings.full_size_cache_size() * 1024 * 1024,
+                                                            core::CacheDiscardPolicy::lru_only));
+        thumbnail_cache_ = move(PersistentCacheHelper::open(cache_dir + "/thumbnails",
+                                                            settings.thumbnail_cache_size() * 1024 * 1024,
+                                                            core::CacheDiscardPolicy::lru_only));
+        failure_cache_ = move(PersistentCacheHelper::open(cache_dir + "/failures",
+                                                          settings.failure_cache_size() * 1024 * 1024,
+                                                          core::CacheDiscardPolicy::lru_ttl));
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
         retry_error_hours_ = settings.retry_error_hours();

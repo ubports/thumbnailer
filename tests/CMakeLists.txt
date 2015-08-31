@@ -16,6 +16,7 @@ set(unit_test_dirs
     image
     qml
     libthumbnailer-qt
+    recovery
     safe_strerror
     settings
     thumbnailer
@@ -62,9 +63,20 @@ add_library(gtest STATIC
 set_target_properties(gtest PROPERTIES INCLUDE_DIRECTORIES ${GTEST_INCLUDE_DIR})
 target_link_libraries(gtest ${CMAKE_THREAD_LIBS_INIT})
 
-# Make sure we always build gtest with debug info, otherwise we don't
-# get line numbers for the code that is dragged in by the test macros.
-set_property(TARGET gtest APPEND_STRING PROPERTY COMPILE_FLAGS " -g")
+set_target_properties(gtest PROPERTIES COMPILE_FLAGS "-g -Wno-missing-field-initializers -Wno-old-style-cast")
 
-# gtest won't compile cleanly without this.
-set_property(TARGET gtest APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-missing-field-initializers -Wno-old-style-cast")
+if (NOT DEFINED GMOCK_ROOT)
+    set(GMOCK_ROOT /usr/src/gmock)
+endif()
+
+set(GMOCK_SRC_DIR "${GMOCK_ROOT}/src")
+set(GMOCK_INCLUDE_DIR ${GMOCK_ROOT})
+
+add_library(gmock STATIC
+    ${GMOCK_SRC_DIR}/gmock-all.cc
+    ${GMOCK_SRC_DIR}/gmock_main.cc
+)
+set_target_properties(gmock PROPERTIES INCLUDE_DIRECTORIES ${GMOCK_INCLUDE_DIR})
+target_link_libraries(gmock ${CMAKE_THREAD_LIBS_INIT})
+
+set_target_properties(gmock PROPERTIES COMPILE_FLAGS "-g -Wno-missing-field-initializers")
