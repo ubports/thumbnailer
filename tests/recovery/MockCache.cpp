@@ -34,6 +34,22 @@ MockCache::UPtr MockCache::open(std::string const& cache_path,
                                 int64_t /* max_size_in_bytes */,
                                 core::CacheDiscardPolicy /* policy */)
 {
+    static int first = false;
+    first = !first;
+    if (cache_path == "throw_std_exception")
+    {
+        if (first)
+        {
+            throw std::runtime_error("testing std exception");
+        }
+    }
+    else if (cache_path == "throw_unknown_exception")
+    {
+        if (first)
+        {
+            throw 99;
+        }
+    }
     return UPtr(new MockCache(cache_path));
 }
 
@@ -50,13 +66,16 @@ MockCache::MockCache(std::string const& cache_path)
 // Throws system_error(666) on first call, then int(42).
 void MockCache::invalidate()
 {
-    static bool once = false;
-    if (!once)
+    static bool first = false;
+    first = !first;
+    if (first)
     {
-        once = true;
         throw std::system_error(std::error_code(666, std::generic_category()), "corrupt DB");
     }
-    throw 42;
+    else
+    {
+        throw 42;
+    }
 }
 
 // Throws system_error(666) on first call, succeeds on subsequent calls.

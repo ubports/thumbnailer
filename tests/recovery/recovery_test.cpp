@@ -27,9 +27,11 @@ using namespace testing;
 using namespace unity::thumbnailer::internal;
 using namespace unity::thumbnailer::internal::testing;
 
+#define CACHEDIR TESTBINDIR "/cachedir"
+
 TEST(recovery, system_error_EBADF)
 {
-    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(TESTBINDIR "/cachedir",
+    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(CACHEDIR,
                                                                    1024,
                                                                    core::CacheDiscardPolicy::lru_only);
 
@@ -54,7 +56,7 @@ TEST(recovery, system_error_EBADF)
 
 TEST(recovery, recover_from_666)
 {
-    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(TESTBINDIR "/cachedir",
+    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(CACHEDIR,
                                                                    1024,
                                                                    core::CacheDiscardPolicy::lru_only);
     ch->compact();  // Throws 666 once, then succeeds.
@@ -62,7 +64,7 @@ TEST(recovery, recover_from_666)
 
 TEST(recovery, retry_throws_runtime_error)
 {
-    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(TESTBINDIR "/cachedir",
+    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(CACHEDIR,
                                                                    1024,
                                                                    core::CacheDiscardPolicy::lru_only);
     try
@@ -72,18 +74,18 @@ TEST(recovery, retry_throws_runtime_error)
     }
     catch (runtime_error const& e)
     {
-        EXPECT_STREQ("bang", e.what());
+        EXPECT_STREQ("bang", e.what()) << e.what();
     }
 }
 
 TEST(recovery, retry_throws_42)
 {
-    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(TESTBINDIR "/cachedir",
+    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open(CACHEDIR,
                                                                    1024,
                                                                    core::CacheDiscardPolicy::lru_only);
     try
     {
-        ch->invalidate();  // Throws 666 once, then 42.
+        ch->invalidate();  // Throws system_error(666), then 42.
         FAIL();
     }
     catch (int i)
@@ -92,9 +94,60 @@ TEST(recovery, retry_throws_42)
     }
 }
 
+TEST(recovery, recovery_throws_std_exception)
+{
+    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open("throw_std_exception",
+                                                                   1024,
+                                                                   core::CacheDiscardPolicy::lru_only);
+    try
+    {
+        ch->invalidate();  // Throws system_error(666), then 42.
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_STREQ("testing std exception", e.what()) << e.what();
+    }
+}
+
+TEST(recovery, recovery_throws_unknown_exception)
+{
+    CacheHelper<MockCache>::UPtr ch = CacheHelper<MockCache>::open("throw_unknown_exception",
+                                                                   1024,
+                                                                   core::CacheDiscardPolicy::lru_only);
+    try
+    {
+        try
+        {
+            ch->invalidate();  // Throws 42. (Depends on state established by previous test.)
+            FAIL();
+        }
+        catch (int i)
+        {
+            EXPECT_EQ(42, i);
+        }
+        ch->invalidate();  // Throws system_error(666).
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        FAIL();
+    }
+    catch (int i)
+    {
+        EXPECT_EQ(99, i);
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+}
+
 int main(int argc, char** argv)
 {
+    // So error string in exceptions come out in English.
     setenv("LC_ALL", "C", true);
+
     ::testing::InitGoogleMock(&argc, argv);
     return RUN_ALL_TESTS();
 }

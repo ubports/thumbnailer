@@ -60,7 +60,7 @@ public:
     // the cache, thereby replacing the original mock with a new one, and we can't
     // set expectations on that second instance.
 
-    void invalidate();  // Throws system_error(666) on first call, then int(42).
+    void invalidate();  // Alternates throwing system_error(666) with throwing int(42).
 
     void compact();  // Throws system_error(666) on first call, succeeds on subsequent calls.
 

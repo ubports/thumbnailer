@@ -238,18 +238,16 @@ void CacheHelper<CacheT>::recover() const
             boost::filesystem::remove_all(path_);
             const_cast<CacheHelper*>(this)->init_cache();
         }
-        // LCOV_EXCL_START
         catch (std::exception const& inner)
         {
             qCritical() << "CacheHelper: error during recovery:" << inner.what();
-            rethrow_exception(e);
+            throw;
         }
         catch (...)
         {
             qCritical() << "CacheHelper: error during recovery: unknown exception";
-            rethrow_exception(e);
+            throw;
         }
-        // LCOV_EXCL_STOP
     }
 }
 
