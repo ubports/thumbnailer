@@ -76,8 +76,7 @@ public:
         public_request_ = request;
     }
 
-Q_SIGNALS:
-    void finished();
+    void cancel();
 
 private Q_SLOTS:
     void dbusCallFinished();
@@ -138,7 +137,7 @@ void RequestImpl::dbusCallFinished()
         is_valid_ = true;
         error_message_ = "";
         Q_ASSERT(public_request_);
-        public_request_->finished();
+        Q_EMIT public_request_->finished();
         return;
     }
     // LCOV_EXCL_START
@@ -164,7 +163,17 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     image_ = QImage();
     qWarning() << error_message_;
     Q_ASSERT(public_request_);
-    public_request_->finished();
+    Q_EMIT public_request_->finished();
+}
+
+void RequestImpl::cancel()
+{
+    // Deleting the pending call watcher (which should hold the only
+    // reference to the pending call at this point) tells Qt that we
+    // are no longer interested in the reply.  The destruction will
+    // also clear up the signal connections.
+    watcher_.reset();
+    finishWithError("Request cancelled");
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
@@ -213,7 +222,6 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QDBusPendingReply<QDBusUn
 Request::Request(internal::RequestImpl* impl)
     : p_(impl)
 {
-    connect(p_.data(), &internal::RequestImpl::finished, this, &Request::finished);
 }
 
 Request::~Request() = default;
@@ -241,6 +249,11 @@ bool Request::isValid() const
 void Request::waitForFinished()
 {
     p_->waitForFinished();
+}
+
+void Request::cancel()
+{
+    p_->cancel();
 }
 
 // LCOV_EXCL_START

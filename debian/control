@@ -52,6 +52,7 @@ Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+         libthumbnailer-qt1.0 (= ${binary:Version}),
          thumbnailer-common (= ${source:Version}),
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
