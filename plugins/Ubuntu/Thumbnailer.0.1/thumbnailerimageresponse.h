@@ -36,7 +36,14 @@ namespace qml
 
 class ThumbnailerImageResponse : public QQuickImageResponse  // LCOV_EXCL_LINE  // False negative from gcovr
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     Q_DISABLE_COPY(ThumbnailerImageResponse)
 
