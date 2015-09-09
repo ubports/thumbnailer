@@ -111,6 +111,7 @@ pkg_check_modules(GIO_DEPS REQUIRED gio-2.0 gio-unix-2.0)
 pkg_check_modules(IMG_DEPS REQUIRED gdk-pixbuf-2.0 libexif)
 pkg_check_modules(UNITY_API_DEPS REQUIRED libunity-api)
 pkg_check_modules(APPARMOR_DEPS REQUIRED libapparmor)
+pkg_check_modules(CACHE_DEPS REQUIRED libpersistent-cache-cpp)
 
 include_directories(${GST_DEPS_INCLUDE_DIRS})
 include_directories(${GOBJ_DEPS_INCLUDE_DIRS})
@@ -139,7 +140,6 @@ enable_coverage_report(
         vs-thumb
         testutils
     FILTER
-        ${CMAKE_SOURCE_DIR}/include/core/*
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*
     TESTS

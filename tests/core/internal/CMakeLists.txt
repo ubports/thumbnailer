@@ -1,1 +1,0 @@
-add_subdirectory(persistent_string_cache_impl)

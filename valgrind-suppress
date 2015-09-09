@@ -195,13 +195,7 @@
     gdk_pixbuf_loader_write2
     Memcheck:Param
     write(buf)
-    obj:/lib/x86_64-linux-gnu/libc-2.21.so
-    fun:_IO_file_write@@GLIBC_2.2.5
-    fun:new_do_write
-    fun:_IO_do_write@@GLIBC_2.2.5
-    fun:_IO_file_sync@@GLIBC_2.2.5
-    fun:fflush_unlocked
-    obj:/usr/lib/x86_64-linux-gnu/libleveldb.so.1.18
+    ...
     fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
     fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
     fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
