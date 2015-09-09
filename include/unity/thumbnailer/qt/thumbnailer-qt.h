@@ -17,7 +17,9 @@
  */
 #pragma once
 
+#include <QImage>
 #include <QObject>
+#include <QSharedPointer>
 
 class QDBusConnection;
 
@@ -139,9 +141,27 @@ class Q_DECL_EXPORT Thumbnailer final
 public:
     /// @cond
     Q_DISABLE_COPY(Thumbnailer)
+    /// @endcond
 
+    /**
+    \brief Constructs a thumbnailer instance.
+
+    A default-constructed Thumbnailer instance communicates with the
+    thumbnailer service via the session bus.
+    */
     Thumbnailer();
+
+    /**
+    \brief Constructs a thumbnailer instance, using the supplied DBus connection.
+
+    Instead of connecting to the session bus, this constructor uses the
+    supplied DBus connection to contact the thumbnailer service.
+
+    \param connection The DBus connection via which to send requests.
+    */
     explicit Thumbnailer(QDBusConnection const& connection);
+
+    /// @endcond
     ~Thumbnailer();
     /// @endcond
 
