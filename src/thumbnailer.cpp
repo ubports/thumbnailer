@@ -276,9 +276,10 @@ string RequestBase::thumbnail()
             requested_size_.setHeight(128);
         }
         QSize target_size = requested_size_;
-        if (target_size != QSize(0, 0))
+        if (requested_size_ != QSize(0, 0))
         {
             // Enforce size limitation.
+            target_size = QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
             if (requested_size_.width() != 0)
             {
                 target_size.setWidth(min(requested_size_.width(), thumbnailer_->max_size_));
