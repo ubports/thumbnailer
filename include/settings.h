@@ -32,9 +32,6 @@ namespace unity
 namespace thumbnailer
 {
 
-namespace internal
-{
-
 class Settings
 {
 public:
@@ -53,6 +50,7 @@ public:
     int max_downloads() const;
     int max_extractions() const;
     int extraction_timeout() const;  // In seconds
+    int max_backlog() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;
@@ -62,10 +60,8 @@ private:
 
     std::unique_ptr<GSettingsSchema, void(*)(GSettingsSchema*)> schema_;
     std::string schema_name_;
-    gobj_ptr<GSettings> settings_;
+    internal::gobj_ptr<GSettings> settings_;
 };
-
-}  // namespace internal
 
 }  // namespace thumbnailer
 

@@ -1,15 +1,14 @@
-add_subdirectory(core)
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/src/settings-defaults.h
+    COMMAND ${CMAKE_SOURCE_DIR}/tools/parse-settings.py
+        -i ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml
+        -o ${CMAKE_BINARY_DIR}/src/settings-defaults.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml)
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
-COMMAND ${CMAKE_SOURCE_DIR}/tools/parse-settings.py
--i ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml -o ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
-DEPENDS ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml)
-
-set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
-PROPERTIES HEADER_FILE_ONLY TRUE)
+set_source_files_properties(${CMAKE_BINARY_DIR}/src/settings-defaults.h
+    PROPERTIES HEADER_FILE_ONLY TRUE)
 
 set_source_files_properties(settings.cpp PROPERTIES
-OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
+    OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/src/settings-defaults.h)
 
 add_library(thumbnailer-static STATIC
     artdownloader.cpp
@@ -18,6 +17,7 @@ add_library(thumbnailer-static STATIC
     image.cpp
     imageextractor.cpp
     make_directories.cpp
+    ratelimiter.cpp
     safe_strerror.cpp
     settings.cpp
     trace.cpp
@@ -34,7 +34,6 @@ qt5_use_modules(thumbnailer-static Core Network)
 set_target_properties(thumbnailer-static PROPERTIES AUTOMOC TRUE)
 
 target_link_libraries(thumbnailer-static
-    core
     Qt5::Core
     Qt5::Network
     ${Boost_LIBRARIES}
@@ -43,6 +42,7 @@ target_link_libraries(thumbnailer-static
     ${IMG_DEPS_LDFLAGS}
     ${UNITY_API_DEPS_LDFLAGS}
     ${APPARMOR_DEPS_LDFLAGS}
+    ${CACHE_DEPS_LDFLAGS}
 )
 
 add_subdirectory(libthumbnailer-qt)

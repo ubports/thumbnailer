@@ -23,6 +23,11 @@ set(unit_test_dirs
     vs-thumb
 )
 
+set(slow_test_dirs
+    slow-vs-thumb
+    stress
+)
+
 set(UNIT_TEST_TARGETS "")
 
 foreach(dir ${unit_test_dirs})
@@ -31,8 +36,10 @@ foreach(dir ${unit_test_dirs})
 endforeach()
 
 if (${slowtests})
-    add_subdirectory(slow-vs-thumb)
-    list(APPEND UNIT_TEST_TARGETS slow-vs-thumb_test)
+    foreach(dir ${slow_test_dirs})
+        add_subdirectory(${dir})
+        list(APPEND UNIT_TEST_TARGETS "${dir}_test")
+    endforeach()
     add_subdirectory(headers)
 endif()
 
@@ -40,8 +47,6 @@ set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
 
 add_subdirectory(copyright)
 add_subdirectory(whitespace)
-
-add_subdirectory(core)
 
 if (NOT DEFINED GTEST_ROOT)
     set(GTEST_ROOT /usr/src/gtest)

@@ -17,7 +17,9 @@
  */
 #pragma once
 
+#include <QImage>
 #include <QObject>
+#include <QSharedPointer>
 
 class QDBusConnection;
 
@@ -42,7 +44,7 @@ class RequestImpl;
 This class stores the state of an in-progress or completed thumbnail request.
 */
 
-class Request : public QObject
+class Q_DECL_EXPORT Request : public QObject
 {
     Q_OBJECT
 public:
@@ -85,6 +87,14 @@ public:
     */
     void waitForFinished();
 
+    /**
+    \brief Cancel the thumbnail request.
+
+    The finished signal will be emitted and the request will be
+    considered to be in an invalid state with an error message set.
+     */
+    void cancel();
+
 Q_SIGNALS:
     /**
     \brief This signal is emitted when the request completes.
@@ -93,7 +103,7 @@ Q_SIGNALS:
 
 private:
     QScopedPointer<internal::RequestImpl> p_;
-    explicit Request(internal::RequestImpl* impl);
+    explicit Request(internal::RequestImpl* impl) Q_DECL_HIDDEN;
 
     friend class internal::ThumbnailerImpl;
 };
@@ -126,14 +136,32 @@ The return value is a shared pointer to a \link unity::thumbnailer::qt::Request 
 provides access to the scaled thumbnail (or an error message).
 */
 
-class Thumbnailer final
+class Q_DECL_EXPORT Thumbnailer final
 {
 public:
     /// @cond
     Q_DISABLE_COPY(Thumbnailer)
+    /// @endcond
 
+    /**
+    \brief Constructs a thumbnailer instance.
+
+    A default-constructed Thumbnailer instance communicates with the
+    thumbnailer service via the session bus.
+    */
     Thumbnailer();
+
+    /**
+    \brief Constructs a thumbnailer instance, using the supplied DBus connection.
+
+    Instead of connecting to the session bus, this constructor uses the
+    supplied DBus connection to contact the thumbnailer service.
+
+    \param connection The DBus connection via which to send requests.
+    */
     explicit Thumbnailer(QDBusConnection const& connection);
+
+    /// @endcond
     ~Thumbnailer();
     /// @endcond
 

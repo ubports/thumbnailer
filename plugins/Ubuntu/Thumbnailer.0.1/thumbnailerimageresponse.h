@@ -19,9 +19,11 @@
 #pragma once
 
 #include <QQuickImageProvider>
-#include <QDBusPendingCallWatcher>
 
 #include <memory>
+
+#include <ratelimiter.h>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 namespace unity
 {
@@ -34,13 +36,21 @@ namespace qml
 
 class ThumbnailerImageResponse : public QQuickImageResponse  // LCOV_EXCL_LINE  // False negative from gcovr
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     Q_DISABLE_COPY(ThumbnailerImageResponse)
 
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image,
-                             std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
+                             unity::thumbnailer::RateLimiter* rate_limiter,
+                             std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> reply);
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();
@@ -49,14 +59,17 @@ public:
     void cancel() override;
 
 private Q_SLOTS:
-    void dbusCallFinished();
+    void requestFinished();
 
 private:
     QString id_;
     QSize requested_size_;
-    QImage image_;
+    unity::thumbnailer::RateLimiter* backlog_limiter_ = nullptr;
+    std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> job_;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
     QString default_image_;
-    std::unique_ptr<QDBusPendingCallWatcher> watcher_;
+    std::function<void()> cancel_func_;
+    bool finished_ = false;
 };
 
 }  // namespace qml

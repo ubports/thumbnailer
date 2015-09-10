@@ -20,8 +20,11 @@
 
 #include "artistartgenerator.h"
 
-#include <utils/artgeneratorcommon.h>
-#include <service/dbus_names.h>
+#include <QDBusConnection>
+#include <QDebug>
+#include <QUrlQuery>
+
+#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace
@@ -42,6 +45,7 @@ namespace qml
 
 ArtistArtGenerator::ArtistArtGenerator()
     : QQuickAsyncImageProvider()
+    , backlog_limiter(Settings().max_backlog())
 {
 }
 
@@ -63,22 +67,24 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
         return new ThumbnailerImageResponse(requestedSize, DEFAULT_ARTIST_ART);
     }
 
-    if (!connection)
+    if (!thumbnailer)
     {
         // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
+        thumbnailer.reset(
+            new unity::thumbnailer::qt::Thumbnailer(
+                QDBusConnection::connectToBus(
+                    QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
     }
 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
     const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
 
-    // perform dbus call
-    auto reply = iface->GetArtistArt(artist, album, size);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(
-        new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, std::move(watcher));
+    // Schedule dbus call
+    auto job = [this, artist, album, size]
+    {
+        return thumbnailer->getArtistArt(artist, album, size);
+    };
+    return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, &backlog_limiter, job);
 }
 
 }  // namespace qml

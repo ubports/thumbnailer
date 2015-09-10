@@ -29,7 +29,14 @@ namespace qml
 
 class ThumbnailerPlugin : public QQmlExtensionPlugin
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QQmlExtensionInterface")
 
 public:

@@ -17,7 +17,7 @@
  */
 
 #include <internal/gobj_memory.h>
-#include <internal/settings.h>
+#include <settings.h>
 #include <testsetup.h>
 
 #pragma GCC diagnostic push
@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 
+using namespace unity::thumbnailer;
 using namespace unity::thumbnailer::internal;
 
 TEST(Settings, defaults_from_schema)

@@ -27,8 +27,8 @@
 #include <internal/make_directories.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
-#include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
+#include <settings.h>
 
 #include <boost/filesystem.hpp>
 #include <core/persistent_string_cache.h>
@@ -68,7 +68,14 @@ enum class Location
 
 class RequestBase : public ThumbnailRequest
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
@@ -166,7 +173,14 @@ namespace
 
 class LocalThumbnailRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     LocalThumbnailRequest(Thumbnailer* thumbnailer,
                           string const& filename,
@@ -185,7 +199,14 @@ private:
 
 class AlbumRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     AlbumRequest(Thumbnailer* thumbnailer,
                  string const& artist,
@@ -205,7 +226,14 @@ private:
 
 class ArtistRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     ArtistRequest(Thumbnailer* thumbnailer,
                   string const& artist,

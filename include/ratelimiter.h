@@ -14,20 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: James Henstridge <james.henstridge@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <queue>
 
 namespace unity
 {
 
 namespace thumbnailer
-{
-
-namespace service
 {
 
 // RateLimiter is a simple class to control the level of concurrency
@@ -43,8 +42,9 @@ public:
 
     // Schedule a job to run.  If the concurrency limit has not been
     // reached, the job will be run immediately.  Otherwise it will be
-    // added to the queue.
-    void schedule(std::function<void()> job);
+    // added to the queue. Return value is a function that, when
+    // called, cancels the job in the queue (if it's still in the queue).
+    std::function<void()> schedule(std::function<void()> job);
 
     // Notify that a job has completed.  If there are queued jobs,
     // start the one at the head of the queue.
@@ -53,10 +53,10 @@ public:
 private:
     int const concurrency_;
     int running_;
-    std::queue<std::function<void()>> queue_;
+    // We store a shared_ptr so we can detect on cancellation
+    // whether a job completed before it was cancelled.
+    std::queue<std::shared_ptr<std::function<void()>>> queue_;
 };
-
-}  // namespace service
 
 }  // namespace thumbnailer
 
