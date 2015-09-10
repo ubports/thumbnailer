@@ -115,7 +115,7 @@ Class Thumbnailer provides thumbnail images for local media (image, audio, and v
 as album covers and artist images for many musicians and bands.
 
 Most common image formats, such as PNG, JPEG, BMP, and so on, are recognized. For streaming media, the
-recognized formats depend in the installed GStreamer codecs.
+recognized formats depend on the installed GStreamer codecs.
 
 For local media files, thumbnails are extracted directly from the file. (For audio files, this
 requires the file to contain embedded artwork.) For album covers and artist images,
