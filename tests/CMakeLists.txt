@@ -1,8 +1,10 @@
 # We add -g so we get debug info for the gtest stack frames with gdb.
 # The warnings are suppressed so we get a noise-free build for gtest and gmock.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-old-style-cast -Wno-missing-field-initializer")
 
+set(old_cxx_flags ${CMAKE_CXX_FLAGS})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-old-style-cast -Wno-missing-field-initializer")
 find_package(GMock)
+set(CMAKE_CXX_FLAGS ${old_cxx_flags})
 
 set(TESTDATADIR ${CMAKE_CURRENT_SOURCE_DIR}/media)
 
