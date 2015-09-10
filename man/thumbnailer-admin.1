@@ -19,8 +19,9 @@ The thumbnailer service maintains three internal caches:
 Image cache
 The image cache stores images that are expensive to retrieve (namely
 images downloaded from the image server (dash.ubuntu.com) or extracted from audio
-or video files). Images in the this cache are kept at high resolution
-(up to a limit of 1920 pixels in the larger dimension). The image cache
+or video files). Images in the this cache are kept at high resolution,
+up to a limit of \fBmax\-thumbnail\-size\fP (usually 1920) pixels in the larger dimension (see
+\fBthumbnailer\-settings\fR(5)\fP). The image cache
 is used to create thumbnails at smaller sizes that are then inserted
 into the thumbnail cache (to avoid repeated download or extraction
 of the original images).
@@ -59,7 +60,8 @@ a square bounding box of the specified size, for example, \fB\-s 256\fP.
 Scaling always maintains the aspect ratio of the original image, and ensures that a thumbnail
 has a size of at least one pixel in the smaller dimension.
 .IP
-Specifying a size of zero (or not specifying any size) returns a thumbnail in the largest available size.
+Specifying a size of zero (or not specifying any size) is equivalent to specifying \fBmax\-thumbnail\-size\fP
+(see \fBthumbnailer\-settings\fR(5)\fP).
 .IP
 Requests for thumbnails that are larger than the original image are automatically reduced to the original
 image size, that is, original artwork is never scaled up.
@@ -68,7 +70,7 @@ Most common image formats, such as PNG, JPEG, BMP, and so on, are recognized. Fo
 recognized formats depend on the installed gstreamer codecs.
 .P
 Thumbnails are always returned in JPEG format, regardless of the encoding of the original image. The generated
-thumbnail file is tagged with the image size. For example,
+thumbnail file is tagged with the requested (not actual) image size. For example,
 .IP
 .RS
 .B thumbnailer\-admin get \-\-size=320x240 screen.png

@@ -18,12 +18,13 @@
 
 #include "thumbnailgenerator.h"
 
-#include <utils/artgeneratorcommon.h>
-#include <service/dbus_names.h>
+#include <QDBusConnection>
+#include <QDebug>
+#include <QMimeDatabase>
+#include <QUrl>
+
 #include <settings.h>
 #include "thumbnailerimageresponse.h"
-#include <iostream>  // TODO: remove this
-#include <thread>  // TODO: remove this
 
 namespace
 {
@@ -72,8 +73,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     {
         qWarning().nospace() << "ThumbnailGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
+        // Size will be adjusted by the service to 128x128.
     }
 
     /* Allow appending a query string (e.g. ?something=timestamp)
@@ -87,18 +87,19 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
 
-    if (!connection)
+    if (!thumbnailer)
     {
         // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
+        thumbnailer.reset(
+            new unity::thumbnailer::qt::Thumbnailer(
+                QDBusConnection::connectToBus(
+                    QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
     }
 
     // Schedule dbus call
     auto job = [this, src_path, size]
     {
-        return iface->GetThumbnail(src_path, size);
+        return thumbnailer->getThumbnail(src_path, size);
     };
     return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), &backlog_limiter, job);
 }

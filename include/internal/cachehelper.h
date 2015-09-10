@@ -67,6 +67,7 @@ public:
     bool put(std::string const& key,
              std::string const& value,
              std::chrono::time_point<std::chrono::system_clock> expiry_time = std::chrono::system_clock::time_point());
+    bool contains_key(std::string const& key) const;
     core::PersistentCacheStats stats() const;
     void clear_stats();
     void invalidate();
@@ -174,6 +175,13 @@ bool CacheHelper<CacheT>::put(std::string const& key,
                               std::chrono::time_point<std::chrono::system_clock> expiry_time)
 {
     return call<bool>([&]{ return c_->put(key, value, expiry_time); });
+}
+
+template<typename CacheT>
+inline
+bool CacheHelper<CacheT>::contains_key(std::string const& key) const
+{
+    return c_->contains_key(key);
 }
 
 template<typename CacheT>

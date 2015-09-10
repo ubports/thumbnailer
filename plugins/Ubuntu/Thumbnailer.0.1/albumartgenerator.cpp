@@ -19,12 +19,12 @@
 
 #include "albumartgenerator.h"
 
-#include <utils/artgeneratorcommon.h>
-#include <service/dbus_names.h>
+#include <QDBusConnection>
+#include <QDebug>
+#include <QUrlQuery>
+
 #include <settings.h>
 #include "thumbnailerimageresponse.h"
-#include <iostream>  // TODO: remove this
-#include <thread>  // TODO: remove this
 
 namespace
 {
@@ -56,8 +56,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     {
         qWarning().nospace() << "AlbumArtGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
+        // Size will be adjusted by the service to 128x128.
     }
 
     QUrlQuery query(id);
@@ -67,12 +66,13 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
         return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART);
     }
 
-    if (!connection)
+    if (!thumbnailer)
     {
         // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
+        thumbnailer.reset(
+            new unity::thumbnailer::qt::Thumbnailer(
+                QDBusConnection::connectToBus(
+                    QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
     }
 
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
@@ -81,7 +81,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     // Schedule dbus call
     auto job = [this, artist, album, size]
     {
-        return iface->GetAlbumArt(artist, album, size);
+        return thumbnailer->getAlbumArt(artist, album, size);
     };
     return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, &backlog_limiter, job);
 }

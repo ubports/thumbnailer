@@ -38,6 +38,8 @@ QDBusArgument& operator<<(QDBusArgument& arg, CacheStats const& s)
         << s.misses_since_last_hit
         << s.longest_hit_run
         << s.longest_miss_run
+        << s.avg_hit_run_length
+        << s.avg_miss_run_length
         << s.ttl_evictions
         << s.lru_evictions
         << quint64(duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count())
@@ -69,6 +71,8 @@ QDBusArgument const& operator>>(QDBusArgument const& arg, CacheStats& s)
         >> s.misses_since_last_hit
         >> s.longest_hit_run
         >> s.longest_miss_run
+        >> s.avg_hit_run_length
+        >> s.avg_miss_run_length
         >> s.ttl_evictions
         >> s.lru_evictions
         >> mrht

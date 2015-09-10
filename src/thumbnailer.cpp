@@ -68,7 +68,14 @@ enum class Location
 
 class RequestBase : public ThumbnailRequest
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
@@ -92,6 +99,13 @@ public:
         CachePolicy cache_policy;
         Location location;
 
+        ImageData()
+            : status(FetchStatus::error)
+            , cache_policy(CachePolicy::dont_cache_fullsize)
+            , location(Location::local)
+        {
+        }
+
         ImageData(Image const& image, CachePolicy policy, Location location)
             : status(FetchStatus::downloaded)
             , image(image)
@@ -99,12 +113,16 @@ public:
             , location(location)
         {
         }
+
         ImageData(FetchStatus status, Location location)
             : status(status)
             , cache_policy(CachePolicy::dont_cache_fullsize)
             , location(location)
         {
         }
+
+        ImageData(ImageData&&) = default;
+        ImageData& operator=(ImageData&&) = default;
     };
 
 protected:
@@ -138,9 +156,12 @@ protected:
         return new_key;
     }
 
-    Thumbnailer const* thumbnailer_;
+    Thumbnailer* thumbnailer_;
     string key_;
-    QSize const requested_size_;
+    // TODO: Make this a const member again once we remove the hack
+    //       that adjusts invalid QSizes to 128x128.
+    //QSize const requested_size_;
+    QSize requested_size_;
     chrono::milliseconds timeout_;
 
 private:
@@ -152,7 +173,14 @@ namespace
 
 class LocalThumbnailRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     LocalThumbnailRequest(Thumbnailer* thumbnailer,
                           string const& filename,
@@ -171,7 +199,14 @@ private:
 
 class AlbumRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     AlbumRequest(Thumbnailer* thumbnailer,
                  string const& artist,
@@ -191,7 +226,14 @@ private:
 
 class ArtistRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     ArtistRequest(Thumbnailer* thumbnailer,
                   string const& artist,
@@ -250,11 +292,29 @@ string RequestBase::thumbnail()
 {
     try
     {
-        QSize target_size = requested_size_.isValid()
-                                ? requested_size_
-                                : QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
+        // TODO: Turn this into an error soonish. This is logged here as well
+        //       as on the Qt/QML size so we don't need to look at the logs for
+        //       all applications to spot when we get an invalid size.
+        if (!requested_size_.isValid())
+        {
+            qWarning().nospace() << "deprecated invalid size: "
+                                 << requested_size_
+                                 << ". This feature will be removed soon. Pass the desired size instead.";
+            requested_size_.setWidth(128);
+            requested_size_.setHeight(128);
+        }
 
-        // desired_size is (0,0) if the caller wants original size.
+        // Enforce size limitation.
+        auto target_size = QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
+        if (requested_size_.width() != 0)
+        {
+            target_size.setWidth(min(requested_size_.width(), thumbnailer_->max_size_));
+        }
+        if (requested_size_.height() != 0)
+        {
+            target_size.setHeight(min(requested_size_.height(), thumbnailer_->max_size_));
+        }
+
         string sized_key = key_;
         sized_key += '\0';
         sized_key += to_string(target_size.width());
@@ -288,13 +348,52 @@ string RequestBase::thumbnail()
                 status_ = ThumbnailRequest::FetchStatus::cached_failure;
                 return "";
             }
-            auto image_data = fetch(target_size);
-            status_ = image_data.status;
+            ImageData image_data;
+            try
+            {
+                image_data = fetch(target_size);
+                status_ = image_data.status;
+            }
+            catch (...)
+            {
+                // Record any failure due to an exception. Because GStreamer
+                // is flaky and can hang, if we extracted via vs-thumb and got
+                // an error, we don't add the failure to the failure cache
+                // because the next attempt may work again. For extraction
+                // via vs-thumb, location is local and policy is cache_fullsize.
+                if (image_data.location == Location::local)
+                {
+                    if (image_data.cache_policy != CachePolicy::cache_fullsize)
+                    {
+                        thumbnailer_->failure_cache_->put(key_, "");  // It wasn't vs-thumb that failed.
+                    }
+                }
+                else
+                {
+                    // TODO: This appears to be impossible to cover because because fetch()
+                    //       does not throw when a remote access fails. Consider unifying
+                    //       the error handling in ImageData to do never throw at all,
+                    //       so everthing can be handled via the ImageData::status member;
+                    thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
+                }
+                image_data.status = FetchStatus::error;
+                throw;
+            }
             switch (status_)
             {
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
                     break;
                 case FetchStatus::needs_download:  // Caller will call download().
+                    if (image_data.location == Location::remote)
+                    {
+                        // If we had the last failure within the retry limit,
+                        // don't attempt the download.
+                        auto now = chrono::system_clock::now();
+                        if (now <= thumbnailer_->nw_fail_time_ + chrono::hours(thumbnailer_->retry_error_hours_))
+                        {
+                            status_ = ThumbnailRequest::FetchStatus::cached_failure;
+                        }
+                    }
                     return "";
                 case FetchStatus::no_network:      // Network down, try again next time.
                     return "";
@@ -315,16 +414,22 @@ string RequestBase::thumbnail()
                 case FetchStatus::error:
                 {
                     // Some non-authoritative failure, such as the server not responding,
-                    // or an out-of-process codec crashing.
+                    // or an out-of-process codec reporting an error.
                     // For local files, we don't set an expiry time because, if the file is
                     // changed, (say, its permissions change), the file's key will change too.
-                    // For remote files, we try again after two hours.
-                    chrono::time_point<std::chrono::system_clock> later;  // Infinite expiry time
-                    if (image_data.location == Location::remote)
+                    // For remote files, we record the time of this failure.
+                    if (image_data.location == Location::local)
                     {
-                        later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_error_hours_);
+                        // TODO: This is currently uncovered because we handle this earlier,
+                        //       when fetch() throws. Consider unifying
+                        //       the error handling in ImageData to do never throw at all,
+                        //       so everthing can be handled here.
+                        thumbnailer_->failure_cache_->put(key_, "");
                     }
-                    thumbnailer_->failure_cache_->put(key_, "", later);
+                    else
+                    {
+                        thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
+                    }
                     // TODO: That's really poor. Should store the error data so we can produce
                     //       a proper diagnostic.
                     throw runtime_error("fetch() failed");
@@ -437,7 +542,8 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     if (image_extractor_)
     {
         // The image data has been extracted via vs-thumb
-        return ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
+        auto id = ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
+        return id;
     }
 
     // Work out content type.
@@ -577,6 +683,33 @@ void ArtistRequest::download(chrono::milliseconds timeout)
     connect(artreply_.get(), &ArtReply::finished, this, &ThumbnailRequest::downloadFinished, Qt::DirectConnection);
 }
 
+namespace
+{
+
+core::PersistentStringCache::UPtr init_cache(string const& path,
+                                             int64_t size,
+                                             core::CacheDiscardPolicy policy)
+{
+    try
+    {
+        return core::PersistentStringCache::open(path, size, policy);
+    }
+    catch (logic_error const&)
+    {
+        // Cache size has changed.
+        auto cache = core::PersistentStringCache::open(path);
+        cache->resize(size);
+        return cache;
+    }
+}
+
+// Key under which we store the last time we had a network failure.
+// No entry in the failure cache ever has this key because keys for
+// local files include inode number and modification times.
+string const LAST_NETWORK_FAIL_TIME_KEY = "/*** LAST_NETWORK_FAIL_TIME ***/";
+
+}
+
 Thumbnailer::Thumbnailer()
     : downloader_(new UbuntuServerDownloader())
 {
@@ -608,6 +741,16 @@ Thumbnailer::Thumbnailer()
         retry_not_found_hours_ = settings.retry_not_found_hours();
         retry_error_hours_ = settings.retry_error_hours();
         extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout() * 1000);
+
+        // For transient remote errors, we read the time at which the last failure
+        // happened. The destructor writes that time back out, so we remember
+        // the time across re-starts. We call contains_key() to avoid generating
+        // a bogus cache miss in the stats.
+        if (failure_cache_->contains_key(LAST_NETWORK_FAIL_TIME_KEY))
+        {
+            auto last_network_fail_time = failure_cache_->get(LAST_NETWORK_FAIL_TIME_KEY);
+            nw_fail_time_ = chrono::system_clock::time_point(chrono::seconds(stoll(*last_network_fail_time)));
+        }
     }
     catch (std::exception const& e)
     {
@@ -615,7 +758,24 @@ Thumbnailer::Thumbnailer()
     }
 }
 
-Thumbnailer::~Thumbnailer() = default;
+Thumbnailer::~Thumbnailer()
+{
+    try
+    {
+        auto seconds = chrono::duration_cast<chrono::seconds>(nw_fail_time_.time_since_epoch()).count();
+        failure_cache_->put(LAST_NETWORK_FAIL_TIME_KEY, to_string(seconds));
+    }
+    // LCOV_EXCL_START
+    catch (std::exception const& e)
+    {
+        qDebug() << "~Thumbnailer(): cannot update network failure time:" << e.what();
+    }
+    catch (...)
+    {
+        qDebug() << "~Thumbnailer(): cannot update network failure time: unknown exception";
+    }
+    // LCOV_EXCL_STOP
+}
 
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
                                                         QSize const& requested_size)

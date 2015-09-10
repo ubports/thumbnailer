@@ -17,7 +17,7 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower) # Build types shoul
 
 set(ACCEPTED_BUILD_TYPES "" none release debug relwithdebinfo coverage)
 list(FIND ACCEPTED_BUILD_TYPES "${cmake_build_type_lower}" IS_BUILD_TYPE_ACCEPTED)
-if(${IS_BUILD_TYPE_ACCEPTED} EQUAL -1)
+if (${IS_BUILD_TYPE_ACCEPTED} EQUAL -1)
     message(FATAL_ERROR "Invalid CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}\nValid types are: ${ACCEPTED_BUILD_TYPES}")
 endif()
 
@@ -102,6 +102,7 @@ find_package(Boost COMPONENTS filesystem regex system REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5DBus REQUIRED)
+find_package(Qt5Gui REQUIRED)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_DEPS REQUIRED gstreamer-1.0 gstreamer-plugins-base-1.0 gstreamer-tag-1.0)

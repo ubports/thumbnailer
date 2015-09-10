@@ -18,8 +18,17 @@ add_doxygen(
     EXCLUDE_SYMBOLS
         *::internal*
         *::Priv
+    DOXYFILE_IN
+        ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+    PROJECT_NAME
+        "Thumbnailer Qt API"
     ALL
 )
 
 install(DIRECTORY ${PROJECT_BINARY_DIR}/doc/libthumbnailer-qt/html
         DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/doc/libthumbnailer-qt)
+
+add_subdirectory(examples)
+
+list(APPEND UNIT_TEST_TARGETS qt_example_test)
+set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)

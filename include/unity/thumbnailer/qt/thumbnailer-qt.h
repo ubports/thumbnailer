@@ -17,7 +17,9 @@
  */
 #pragma once
 
+#include <QImage>
 #include <QObject>
+#include <QSharedPointer>
 
 class QDBusConnection;
 
@@ -85,6 +87,14 @@ public:
     */
     void waitForFinished();
 
+    /**
+    \brief Cancel the thumbnail request.
+
+    The finished signal will be emitted and the request will be
+    considered to be in an invalid state with an error message set.
+     */
+    void cancel();
+
 Q_SIGNALS:
     /**
     \brief This signal is emitted when the request completes.
@@ -93,7 +103,7 @@ Q_SIGNALS:
 
 private:
     QScopedPointer<internal::RequestImpl> p_;
-    explicit Request(internal::RequestImpl* impl);
+    explicit Request(internal::RequestImpl* impl) Q_DECL_HIDDEN;
 
     friend class internal::ThumbnailerImpl;
 };
@@ -105,7 +115,7 @@ Class Thumbnailer provides thumbnail images for local media (image, audio, and v
 as album covers and artist images for many musicians and bands.
 
 Most common image formats, such as PNG, JPEG, BMP, and so on, are recognized. For streaming media, the
-recognized formats depend in the installed GStreamer codecs.
+recognized formats depend on the installed GStreamer codecs.
 
 For local media files, thumbnails are extracted directly from the file. (For audio files, this
 requires the file to contain embedded artwork.) For album covers and artist images,
@@ -114,9 +124,11 @@ database of albums and musicians.
 
 The requested size for a thumbnail specifies a bounding box (in pixels) of type `QSize` to which
 the thumbnail will be scaled.
-(The aspect ratio of the original image is preserved.) Passing a `QSize(0, `<i>n</i>`)` or `QSize(`<i>n</i>`, 0)`
-defines a square bounding box of <i>n</i> pixels. To obtain an image in its original size, pass `QSize(0, 0)`.
-Sizes with one or both dimensions less than zero return an error.
+(The aspect ratio of the original image is preserved.) Passing `QSize(0,`<i>n</i>`)` or `QSize(`<i>n</i>`,0)`
+defines a square bounding box of <i>n</i> pixels.
+Sizes with one or both dimensions &lt;&nbsp;0 return an error.
+Sizes with one or both dimensions &ge;&nbsp;<B>max-thumbnail-size</B> (usually 1920) are clamped to
+<B>max-thumbnail-size</B> pixels (see <B>thumbnailer-settings</B>(7)).
 
 Original images are never scaled up, so the returned thumbnail may be smaller than its requested size.
 
@@ -131,9 +143,27 @@ class Q_DECL_EXPORT Thumbnailer final
 public:
     /// @cond
     Q_DISABLE_COPY(Thumbnailer)
+    /// @endcond
 
+    /**
+    \brief Constructs a thumbnailer instance.
+
+    A default-constructed Thumbnailer instance communicates with the
+    thumbnailer service via the session bus.
+    */
     Thumbnailer();
+
+    /**
+    \brief Constructs a thumbnailer instance, using the supplied DBus connection.
+
+    Instead of connecting to the session bus, this constructor uses the
+    supplied DBus connection to contact the thumbnailer service.
+
+    \param connection The DBus connection via which to send requests.
+    */
     explicit Thumbnailer(QDBusConnection const& connection);
+
+    /// @endcond
     ~Thumbnailer();
     /// @endcond
 

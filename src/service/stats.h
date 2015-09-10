@@ -44,6 +44,8 @@ struct CacheStats
     qint64 misses_since_last_hit;
     qint64 longest_hit_run;
     qint64 longest_miss_run;
+    double avg_hit_run_length;
+    double avg_miss_run_length;
     qint64 ttl_evictions;
     qint64 lru_evictions;
     std::chrono::time_point<std::chrono::system_clock> most_recent_hit_time;

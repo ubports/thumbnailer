@@ -24,7 +24,14 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
 #include <gst/gst.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include <gio/gio.h>
 #include <glib.h>
 #pragma GCC diagnostic pop
