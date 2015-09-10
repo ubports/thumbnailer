@@ -37,7 +37,7 @@ namespace internal
 // Helper class to wrap access to a persistent cache. We use this
 // to handle database corruption: if the DB reports that it is corrupt
 // with code 666), we delete the cache files and re-create the cache,
-// the retry the call one more time.
+// then retry the call one more time.
 //
 // In addition, the constructor also deals with caches that are re-sized when opened.
 //
