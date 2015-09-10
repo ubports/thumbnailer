@@ -275,22 +275,18 @@ string RequestBase::thumbnail()
             requested_size_.setWidth(128);
             requested_size_.setHeight(128);
         }
-        QSize target_size = requested_size_;
-        if (requested_size_ != QSize(0, 0))
+
+        // Enforce size limitation.
+        auto target_size = QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
+        if (requested_size_.width() != 0)
         {
-            // Enforce size limitation.
-            target_size = QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
-            if (requested_size_.width() != 0)
-            {
-                target_size.setWidth(min(requested_size_.width(), thumbnailer_->max_size_));
-            }
-            if (requested_size_.height() != 0)
-            {
-                target_size.setHeight(min(requested_size_.height(), thumbnailer_->max_size_));
-            }
+            target_size.setWidth(min(requested_size_.width(), thumbnailer_->max_size_));
+        }
+        if (requested_size_.height() != 0)
+        {
+            target_size.setHeight(min(requested_size_.height(), thumbnailer_->max_size_));
         }
 
-        // target_size is (0,0) if the caller wants original size.
         string sized_key = key_;
         sized_key += '\0';
         sized_key += to_string(target_size.width());

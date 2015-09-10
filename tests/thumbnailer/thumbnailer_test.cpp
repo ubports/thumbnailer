@@ -157,11 +157,11 @@ TEST_F(ThumbnailerTest, basic)
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
 
-    request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // unconstrained, so will not be trimmed down
+    request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // Will be trimmed down
     thumb = request->thumbnail();
     img = Image(thumb);
-    EXPECT_EQ(2731, img.width());
-    EXPECT_EQ(2048, img.height());
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
 }
 
 TEST_F(ThumbnailerTest, changed_size)
