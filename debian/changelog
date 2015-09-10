@@ -6,6 +6,9 @@ thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
   * Removed a bunch of lintian warnings and errors.
   * Removed source for persistent cache.
   * Added average hit and miss run length to stats returned by thumbnailer-admin.
+  * Changed semantics for requests with (0,0) size. All requests are now
+    clamped to a 1920x1920 bounding box.
+  * Fixed incorrect timeout semantics for unexpected network errors.
 
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
 
