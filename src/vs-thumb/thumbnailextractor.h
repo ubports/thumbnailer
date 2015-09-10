@@ -18,24 +18,6 @@
 
 #pragma once
 
-#include <internal/gobj_memory.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wcast-align"
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wparentheses-equality"
-#endif
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#include <gst/gst.h>
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-#pragma GCC diagnostic pop
-
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -50,32 +32,21 @@ namespace internal
 
 class ThumbnailExtractor final
 {
+    struct Private;
+
 public:
     ThumbnailExtractor();
     ~ThumbnailExtractor();
 
-    void extract(std::string const& uri, std::function<void(GdkPixbuf* const)> callback);
     void reset();
-
-private:
-    gobj_ptr<GstElement> playbin_;
-    gobj_ptr<GstBus> bus_;
-    unsigned int bus_watch_id_ = 0;
-    bool is_seeking_ = false;
-
-    std::function<void(GdkPixbuf* const)> callback_;
-
-    void finished(GdkPixbuf* const thumbnail);
     void set_uri(const std::string& uri);
     bool has_video();
-    void extract_video_frame();
-    void extract_audio_cover_art();
-    void save_screenshot(GstSample* sample, GdkPixbufRotation rotation, bool raw);
+    bool extract_video_frame();
+    bool extract_audio_cover_art();
+    void save_screenshot(const std::string& filename);
 
-    static gboolean on_new_message(GstBus *bus, GstMessage *message, void *user_data);
-    void state_changed(GstState state);
-    void bus_error(GError *error);
-    void seek_done();
+private:
+    std::unique_ptr<Private> p;
 };
 
 }  // namespace internal
