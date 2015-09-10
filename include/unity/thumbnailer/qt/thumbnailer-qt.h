@@ -124,9 +124,11 @@ database of albums and musicians.
 
 The requested size for a thumbnail specifies a bounding box (in pixels) of type `QSize` to which
 the thumbnail will be scaled.
-(The aspect ratio of the original image is preserved.) Passing a `QSize(0, `<i>n</i>`)` or `QSize(`<i>n</i>`, 0)`
-defines a square bounding box of <i>n</i> pixels. To obtain an image in its original size, pass `QSize(0, 0)`.
-Sizes with one or both dimensions less than zero return an error.
+(The aspect ratio of the original image is preserved.) Passing `QSize(0,`<i>n</i>`)` or `QSize(`<i>n</i>`,0)`
+defines a square bounding box of <i>n</i> pixels.
+Sizes with one or both dimensions &lt;&nbsp;0 return an error.
+Sizes with one or both dimensions &ge;&nbsp;<B>max-thumbnail-size</B> (usually 1920) are clamped to
+<B>max-thumbnail-size</B> pixels (see <B>thumbnailer-settings</B>(7)).
 
 Original images are never scaled up, so the returned thumbnail may be smaller than its requested size.
 
