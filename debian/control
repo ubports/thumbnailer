@@ -6,6 +6,7 @@ Standards-Version: 3.9.6
 Build-Depends: cmake,
                cmake-extras (>= 0.4),
                debhelper (>= 9),
+               google-mock,
                gstreamer1.0-plugins-good,
                libapparmor-dev,
                libboost-filesystem-dev,

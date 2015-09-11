@@ -132,13 +132,14 @@ add_subdirectory(doc)
 
 enable_coverage_report(
     TARGETS
-        thumbnailer-static
-        thumbnailer-qt
-        thumbnailer-admin
-        thumbnailer-service
-        thumbnailer-qml
-        vs-thumb
+        recovery_test         # Need to turn on coverage for this, to get the helper template instrumented.
         testutils
+        thumbnailer-admin
+        thumbnailer-qml
+        thumbnailer-qt
+        thumbnailer-service
+        thumbnailer-static
+        vs-thumb
     FILTER
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*
