@@ -35,11 +35,12 @@ namespace qml
 class ArtistArtGenerator : public QQuickAsyncImageProvider
 {
 private:
-    std::unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
-    unity::thumbnailer::RateLimiter backlog_limiter;
+    std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
+    std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter;
 
 public:
-    ArtistArtGenerator();
+    ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter);
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
 };
 }

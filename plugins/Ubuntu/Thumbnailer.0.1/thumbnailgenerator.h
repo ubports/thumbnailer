@@ -37,11 +37,12 @@ namespace qml
 class ThumbnailGenerator : public QQuickAsyncImageProvider
 {
 private:
-    std::unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
-    unity::thumbnailer::RateLimiter backlog_limiter;
+    std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
+    std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter;
 
 public:
-    ThumbnailGenerator();
+    ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter);
     ThumbnailGenerator(const ThumbnailGenerator& other) = delete;
     const ThumbnailGenerator& operator=(const ThumbnailGenerator& other) = delete;
     ThumbnailGenerator(ThumbnailGenerator&& other) = delete;

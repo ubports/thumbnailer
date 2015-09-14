@@ -18,7 +18,6 @@
 
 #include "thumbnailgenerator.h"
 
-#include <QDBusConnection>
 #include <QDebug>
 #include <QMimeDatabase>
 #include <QUrl>
@@ -59,9 +58,11 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailGenerator::ThumbnailGenerator()
+ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter)
     : QQuickAsyncImageProvider()
-    , backlog_limiter(Settings().max_backlog())
+    , thumbnailer(thumbnailer)
+    , backlog_limiter(backlog_limiter)
 {
 }
 
@@ -87,21 +88,12 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
 
-    if (!thumbnailer)
-    {
-        // Create connection here and not on the constructor, so it belongs to the proper thread.
-        thumbnailer.reset(
-            new unity::thumbnailer::qt::Thumbnailer(
-                QDBusConnection::connectToBus(
-                    QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-    }
-
     // Schedule dbus call
     auto job = [this, src_path, size]
     {
         return thumbnailer->getThumbnail(src_path, size);
     };
-    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), &backlog_limiter, job);
+    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), backlog_limiter.get(), job);
 }
 
 }  // namespace qml
