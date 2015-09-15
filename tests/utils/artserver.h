@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <unity/util/ResourcePtr.h>
+
 #include <string>
 #include <QProcess>
 
@@ -27,8 +29,15 @@ public:
     ~ArtServer();
 
     std::string const& apiroot() const;
+    void block_access();
+    void unblock_access();
 
 private:
     QProcess server_;
+    unity::util::ResourcePtr<int, void(*)(int)> socket_;
     std::string apiroot_;
+    std::string blocked_apiroot_;
+    bool blocked_ = false;
+
+    void update_env();
 };
