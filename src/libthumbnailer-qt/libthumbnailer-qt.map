@@ -1,0 +1,14 @@
+{
+global:
+    extern "C++" {
+        unity::thumbnailer::qt::[!i]*;
+        typeinfo?for?unity::thumbnailer::qt::[!i]*;
+        typeinfo?name?for?unity::thumbnailer::qt::[!i]*;
+        vtable?for?unity::thumbnailer::qt::[!i]*;
+        VTT?for?unity::thumbnailer::qt::[!i]*;
+    };
+local:
+    extern "C++" {
+        *;
+    };
+};

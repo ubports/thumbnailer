@@ -295,16 +295,45 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
     setenv("THUMBNAILER_MAX_IDLE", "bad_value", true);
-    unique_ptr<DBusServer> dbus(new DBusServer());
-
-    auto process = const_cast<QProcess*>(&dbus->service_process());
-    if (process->state() != QProcess::NotRunning)
+    try
     {
-        EXPECT_EQ(process->waitForFinished(), true);
+        unique_ptr<DBusServer> dbus(new DBusServer());
+        FAIL();
     }
-    EXPECT_EQ(process->exitCode(), 1);
+    catch (std::logic_error const& e)
+    {
+        string err = e.what();
+        EXPECT_TRUE(err.find("failed to appear on bus"));
+    }
+    unsetenv("THUMBNAILER_MAX_IDLE");
+}
+
+TEST(DBusTestBadIdle, env_variable_out_of_range)
+{
+    QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
+    setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
+
+    setenv("THUMBNAILER_MAX_IDLE", "999", true);
+    try
+    {
+        unique_ptr<DBusServer> dbus(new DBusServer());
+        FAIL();
+    }
+    catch (std::logic_error const& e)
+    {
+        string err = e.what();
+        EXPECT_TRUE(err.find("failed to appear on bus"));
+    }
+    unsetenv("THUMBNAILER_MAX_IDLE");
+}
+
+TEST(DBusTestBadIdle, default_timeout)
+{
+    QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
+    setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
     unsetenv("THUMBNAILER_MAX_IDLE");
+    unique_ptr<DBusServer> dbus(new DBusServer());  // For coverage with default timeout.
 }
 
 bool near_current_time(chrono::system_clock::time_point& t)
@@ -377,6 +406,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(0, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(0.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -427,6 +458,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(2, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -456,6 +489,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(2, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -487,6 +522,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, s.misses_since_last_hit);
         EXPECT_EQ(1, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(1.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_TRUE(near_current_time(s.most_recent_hit_time));

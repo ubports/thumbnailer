@@ -19,9 +19,8 @@
 #pragma once
 
 #include <internal/artdownloader.h>
+#include <internal/cachehelper.h>
 
-#include <core/persistent_cache_stats.h>
-#include <core/persistent_string_cache.h>
 #include <QObject>
 #include <QSize>
 
@@ -145,16 +144,17 @@ private:
         return downloader_.get();
     }
 
-    typedef std::vector<core::PersistentStringCache*> CacheVec;
+    typedef std::vector<PersistentCacheHelper*> CacheVec;
     CacheVec select_caches(CacheSelector selector) const;
 
-    core::PersistentStringCache::UPtr full_size_cache_;  // Small cache of full (original) size images.
-    core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.
-    core::PersistentStringCache::UPtr failure_cache_;    // Cache for failed attempts (value is always empty).
-    int max_size_;                                       // Max thumbnail size in pixels.
-    int retry_not_found_hours_;                          // Retry wait time for authoritative "no artwork" answer.
-    int retry_error_hours_;                              // Retry wait time for unexpected server errors.
-    std::chrono::milliseconds extraction_timeout_;       // How long to wait before giving up during extraction.
+    PersistentCacheHelper::UPtr full_size_cache_;         // Small cache of full (original) size images.
+    PersistentCacheHelper::UPtr thumbnail_cache_;         // Large cache of scaled images.
+    PersistentCacheHelper::UPtr failure_cache_;           // Cache for failed attempts (value is always empty).
+    int max_size_;                                        // Max thumbnail size in pixels.
+    int retry_not_found_hours_;                           // Retry wait time for authoritative "no artwork" answer.
+    int retry_error_hours_;                               // Retry wait time for unexpected server errors.
+    std::chrono::milliseconds extraction_timeout_;        // How long to wait before giving up during extraction.
+    std::chrono::system_clock::time_point nw_fail_time_;  // Last time we had transient network error.
     std::unique_ptr<ArtDownloader> downloader_;
 
     friend class RequestBase;

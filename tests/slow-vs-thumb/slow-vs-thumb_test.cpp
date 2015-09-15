@@ -20,8 +20,10 @@
 
 #include <testsetup.h>
 
+#include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <unity/UnityExceptions.h>
 
 using namespace std;
@@ -29,7 +31,38 @@ using namespace unity::thumbnailer::internal;
 
 #define TEST_SONG TESTDATADIR "/testsong.ogg"
 
-TEST(ThumbnailerTest, slow_vs_thumb)
+// The thumbnailer uses g_get_user_cache_dir() to get the cache dir, and
+// glib remembers that value, so changing XDG_CACHE_HOME later has no effect.
+
+static auto set_tempdir = []()
+{
+    auto dir = new QTemporaryDir(TESTBINDIR "/test-dir.XXXXXX");
+    setenv("XDG_CACHE_HOME", dir->path().toUtf8().data(), true);
+    return dir;
+};
+static unique_ptr<QTemporaryDir> tempdir(set_tempdir());
+
+class ThumbnailerTest : public ::testing::Test
+{
+public:
+    static string tempdir_path()
+    {
+        return tempdir->path().toStdString();
+    }
+
+protected:
+    virtual void SetUp() override
+    {
+        mkdir(tempdir_path().c_str(), 0700);
+    }
+
+    virtual void TearDown() override
+    {
+        boost::filesystem::remove_all(tempdir_path());
+    }
+};
+
+TEST_F(ThumbnailerTest, slow_vs_thumb)
 {
     Thumbnailer tn;
 

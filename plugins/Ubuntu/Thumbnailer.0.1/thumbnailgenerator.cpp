@@ -18,8 +18,11 @@
 
 #include "thumbnailgenerator.h"
 
-#include "artgeneratorcommon.h"
-#include <service/dbus_names.h>
+#include <QDebug>
+#include <QMimeDatabase>
+#include <QUrl>
+
+#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace
@@ -55,8 +58,11 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailGenerator::ThumbnailGenerator()
+ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter)
     : QQuickAsyncImageProvider()
+    , thumbnailer(thumbnailer)
+    , backlog_limiter(backlog_limiter)
 {
 }
 
@@ -68,8 +74,7 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
     {
         qWarning().nospace() << "ThumbnailGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
+        // Size will be adjusted by the service to 128x128.
     }
 
     /* Allow appending a query string (e.g. ?something=timestamp)
@@ -83,18 +88,12 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
 
-    if (!connection)
+    // Schedule dbus call
+    auto job = [this, src_path, size]
     {
-        // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
-    }
-
-    auto reply = iface->GetThumbnail(src_path, size);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(
-        new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), std::move(watcher));
+        return thumbnailer->getThumbnail(src_path, size);
+    };
+    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), backlog_limiter.get(), job);
 }
 
 }  // namespace qml

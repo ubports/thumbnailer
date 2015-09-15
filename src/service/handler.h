@@ -19,8 +19,9 @@
 #pragma once
 
 #include "credentialscache.h"
-#include "ratelimiter.h"
+#include "inactivityhandler.h"
 #include <internal/thumbnailer.h>
+#include <ratelimiter.h>
 
 #include <memory>
 #include <string>
@@ -35,8 +36,10 @@ class QThreadPool;
 
 namespace unity
 {
+
 namespace thumbnailer
 {
+
 namespace service
 {
 
@@ -52,6 +55,7 @@ public:
             std::shared_ptr<QThreadPool> create_pool,
             RateLimiter& limiter,
             CredentialsCache& creds,
+            InactivityHandler& inactivity_handler,
             std::unique_ptr<internal::ThumbnailRequest>&& request,
             QString const& details);
     ~Handler();
@@ -86,6 +90,9 @@ private:
 
     std::unique_ptr<HandlerPrivate> p;
 };
-}
-}
-}
+
+}  // namespace unity
+
+}  // namespace thumbnailer
+
+}  // namespace service

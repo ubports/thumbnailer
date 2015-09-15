@@ -175,6 +175,8 @@ void ShowStats::show_stats(service::CacheStats const& st)
     printf("    Misses_since_last_hit: %" PRId64 "\n", int64_t(st.misses_since_last_hit));
     printf("    Longest hit run:       %" PRId64 "\n", int64_t(st.longest_hit_run));
     printf("    Longest miss run:      %" PRId64 "\n", int64_t(st.longest_miss_run));
+    printf("    Avg hit run length:    %.02f\n", st.avg_hit_run_length);
+    printf("    Avg miss run length:   %.02f\n", st.avg_miss_run_length);
     printf("    TTL evictions:         %" PRId64 "\n", int64_t(st.ttl_evictions));
     printf("    LRU evictions:         %" PRId64 "\n", int64_t(st.lru_evictions));
     printf("    Most-recent hit time:  %s", to_time_string(st.most_recent_hit_time));

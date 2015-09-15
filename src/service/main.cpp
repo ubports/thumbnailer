@@ -35,6 +35,8 @@ using namespace unity::thumbnailer::service;
 
 int main(int argc, char** argv)
 {
+    TraceMessageHandler message_handler("thumbnailer-service");
+
     int rc = 1;
     try
     {
@@ -42,12 +44,14 @@ int main(int argc, char** argv)
 
         QCoreApplication app(argc, argv);
 
+        InactivityHandler inactivity_handler([&]{ qDebug() << "Idle timeout reached."; app.quit(); });
+
         auto thumbnailer = make_shared<Thumbnailer>();
 
-        unity::thumbnailer::service::DBusInterface server(thumbnailer);
+        unity::thumbnailer::service::DBusInterface server(thumbnailer, inactivity_handler);
         new ThumbnailerAdaptor(&server);
 
-        unity::thumbnailer::service::AdminInterface admin_server(thumbnailer);
+        unity::thumbnailer::service::AdminInterface admin_server(thumbnailer, inactivity_handler);
         new ThumbnailerAdminAdaptor(&admin_server);
 
         auto bus = QDBusConnection::sessionBus();
@@ -60,8 +64,6 @@ int main(int argc, char** argv)
         {
             throw runtime_error(string("thumbnailer-service: could not acquire DBus name ") + BUS_NAME);
         }
-
-        new InactivityHandler(server);
 
         qDebug() << "Ready";
         rc = app.exec();
