@@ -18,9 +18,12 @@
 
 #include "plugin.h"
 
+#include <settings.h>
 #include "albumartgenerator.h"
 #include "artistartgenerator.h"
 #include "thumbnailgenerator.h"
+
+#include <memory>
 
 namespace unity
 {
@@ -41,9 +44,14 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 {
     QQmlExtensionPlugin::initializeEngine(engine, uri);
 
+    auto thumbnailer = std::make_shared<unity::thumbnailer::qt::Thumbnailer>();
+    auto backlog_limiter = std::make_shared<unity::thumbnailer::RateLimiter>(
+        Settings().max_backlog());
+
     try
     {
-        engine->addImageProvider("albumart", new AlbumArtGenerator());
+        engine->addImageProvider("albumart", new AlbumArtGenerator(
+                                     thumbnailer, backlog_limiter));
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
@@ -59,7 +67,8 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("artistart", new ArtistArtGenerator());
+        engine->addImageProvider("artistart", new ArtistArtGenerator(
+                                     thumbnailer, backlog_limiter));
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
@@ -75,7 +84,8 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("thumbnailer", new ThumbnailGenerator());
+        engine->addImageProvider("thumbnailer", new ThumbnailGenerator(
+                                     thumbnailer, backlog_limiter));
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)

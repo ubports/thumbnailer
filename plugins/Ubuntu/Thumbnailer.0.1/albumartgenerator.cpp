@@ -19,8 +19,9 @@
 
 #include "albumartgenerator.h"
 
-#include "artgeneratorcommon.h"
-#include <service/dbus_names.h>
+#include <QDebug>
+#include <QUrlQuery>
+
 #include "thumbnailerimageresponse.h"
 
 namespace
@@ -39,8 +40,11 @@ namespace thumbnailer
 namespace qml
 {
 
-AlbumArtGenerator::AlbumArtGenerator()
+AlbumArtGenerator::AlbumArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                                     std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter)
     : QQuickAsyncImageProvider()
+    , thumbnailer(thumbnailer)
+    , backlog_limiter(backlog_limiter)
 {
 }
 
@@ -52,8 +56,7 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     {
         qWarning().nospace() << "AlbumArtGenerator::requestImageResponse(): deprecated invalid QSize: "
                              << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
+        // Size will be adjusted by the service to 128x128.
     }
 
     QUrlQuery query(id);
@@ -63,22 +66,15 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
         return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART);
     }
 
-    if (!connection)
-    {
-        // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
-    }
-
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
     const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
 
-    // perform dbus call
-    auto reply = iface->GetAlbumArt(artist, album, size);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(
-        new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, std::move(watcher));
+    // Schedule dbus call
+    auto job = [this, artist, album, size]
+    {
+        return thumbnailer->getAlbumArt(artist, album, size);
+    };
+    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, backlog_limiter.get(), job);
 }
 
 }  // namespace qml

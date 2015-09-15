@@ -1,4 +1,4 @@
 add_executable(safe_strerror_test safe_strerror_test.cpp)
 qt5_use_modules(safe_strerror_test Network)
-target_link_libraries(safe_strerror_test thumbnailer Qt5::Network gtest)
+target_link_libraries(safe_strerror_test thumbnailer-static Qt5::Network gtest gtest_main)
 add_test(safe_strerror safe_strerror_test)

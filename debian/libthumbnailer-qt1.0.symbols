@@ -1,0 +1,22 @@
+libthumbnailer-qt.so.1.0 libthumbnailer-qt1.0 #MINVER#
+ (c++)"typeinfo for unity::thumbnailer::qt::Request@Base" 0replaceme
+ (c++)"typeinfo name for unity::thumbnailer::qt::Request@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::cancel()@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::errorMessage() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::finished()@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::image() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::isFinished() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::isValid() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::metaObject() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::qt_metacall(QMetaObject::Call, int, void**)@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::qt_metacast(char const*)@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::staticMetaObject@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::waitForFinished()@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::~Request()@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::Thumbnailer()@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::Thumbnailer(QDBusConnection const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::getAlbumArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::getArtistArt(QString const&, QString const&, QSize const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::getThumbnail(QString const&, QSize const&)@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Thumbnailer::~Thumbnailer()@Base" 0replaceme
+ (c++)"vtable for unity::thumbnailer::qt::Request@Base" 0replaceme

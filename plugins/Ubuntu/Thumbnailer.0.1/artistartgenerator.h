@@ -18,8 +18,10 @@
 
 #pragma once
 
+#include <ratelimiter.h>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
+
 #include <QQuickImageProvider>
-#include <thumbnailerinterface.h>
 
 #include <memory>
 
@@ -33,11 +35,12 @@ namespace qml
 class ArtistArtGenerator : public QQuickAsyncImageProvider
 {
 private:
-    std::unique_ptr<QDBusConnection> connection;
-    std::unique_ptr<ThumbnailerInterface> iface;
+    std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
+    std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter;
 
 public:
-    ArtistArtGenerator();
+    ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter);
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
 };
 }

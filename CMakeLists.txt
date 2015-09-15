@@ -17,13 +17,13 @@ string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower) # Build types shoul
 
 set(ACCEPTED_BUILD_TYPES "" none release debug relwithdebinfo coverage)
 list(FIND ACCEPTED_BUILD_TYPES "${cmake_build_type_lower}" IS_BUILD_TYPE_ACCEPTED)
-if(${IS_BUILD_TYPE_ACCEPTED} EQUAL -1)
+if (${IS_BUILD_TYPE_ACCEPTED} EQUAL -1)
     message(FATAL_ERROR "Invalid CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}\nValid types are: ${ACCEPTED_BUILD_TYPES}")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -pedantic -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -Wall -pedantic -Wextra -fvisibility=hidden")
 
 # Some additional warnings not included by the general flags set above.
 set(EXTRA_C_WARNINGS "-Wcast-align -Wcast-qual -Wformat -Wredundant-decls -Wswitch-default")
@@ -46,6 +46,14 @@ if (${Werror})
 endif()
 
 add_definitions(-DQT_NO_KEYWORDS)
+
+# libthumbnailer-qt version
+set(LIBTHUMBNAILER_QT thumbnailer-qt)
+set(LIBTHUMBNAILER_QT_SO_VERSION_MAJOR "1")
+set(LIBTHUMBNAILER_QT_SO_VERSION_MINOR "0")
+set(LIBTHUMBNAILER_QT_SO_VERSION_MICRO "0")
+set(LIBTHUMBNAILER_QT_SO_VERSION ${LIBTHUMBNAILER_QT_SO_VERSION_MAJOR}.${LIBTHUMBNAILER_QT_SO_VERSION_MINOR})
+set(LIBTHUMBNAILER_QT_HDR_INSTALL_DIR include/${LIBTHUMBNAILER_QT}-${LIBTHUMBNAILER_QT_SO_VERSION}/unity/thumbnailer/qt)
 
 # Flags for thread/address sanitizer
 set(SANITIZER "" CACHE STRING "Build with -fsanitize=<value> (legal values: thread, address)")
@@ -94,6 +102,7 @@ find_package(Boost COMPONENTS filesystem regex system REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5DBus REQUIRED)
+find_package(Qt5Gui REQUIRED)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_DEPS REQUIRED gstreamer-1.0 gstreamer-plugins-base-1.0 gstreamer-tag-1.0)
@@ -102,6 +111,7 @@ pkg_check_modules(GIO_DEPS REQUIRED gio-2.0 gio-unix-2.0)
 pkg_check_modules(IMG_DEPS REQUIRED gdk-pixbuf-2.0 libexif)
 pkg_check_modules(UNITY_API_DEPS REQUIRED libunity-api)
 pkg_check_modules(APPARMOR_DEPS REQUIRED libapparmor)
+pkg_check_modules(CACHE_DEPS REQUIRED libpersistent-cache-cpp)
 
 include_directories(${GST_DEPS_INCLUDE_DIRS})
 include_directories(${GOBJ_DEPS_INCLUDE_DIRS})
@@ -117,17 +127,20 @@ add_subdirectory(data)
 add_subdirectory(plugins/Ubuntu/Thumbnailer.0.1)
 add_subdirectory(tests)
 add_subdirectory(include)
+add_subdirectory(man)
+add_subdirectory(doc)
 
 enable_coverage_report(
     TARGETS
-        thumbnailer
-        thumbnailer-admin
-        thumbnailer-service
-        thumbnailer-qml
-        vs-thumb
+        recovery_test         # Need to turn on coverage for this, to get the helper template instrumented.
         testutils
+        thumbnailer-admin
+        thumbnailer-qml
+        thumbnailer-qt
+        thumbnailer-service
+        thumbnailer-static
+        vs-thumb
     FILTER
-        ${CMAKE_SOURCE_DIR}/include/core/*
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*
     TESTS

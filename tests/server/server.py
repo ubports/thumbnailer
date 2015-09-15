@@ -48,6 +48,9 @@ class UbuntuAlbumImagesProvider(FileReaderProvider):
             seconds = int(self.get_argument('album', None))
             time.sleep(seconds)
             self.write("TEST_SLEEP_TEST_%s" % seconds)
+        elif self.get_argument('artist', None) == "generate":
+            file = 'images/coverart'
+            self.read_file(file)
         elif self.get_argument('artist', None) == "error":
             error_code = self.get_argument('album', None)
             self.set_status(int(error_code))
@@ -66,6 +69,9 @@ class UbuntuArtistImagesProvider(FileReaderProvider):
             seconds = int(self.get_argument('album', None))
             time.sleep(seconds)
             self.write("TEST_SLEEP_TEST_%s" % seconds)
+        elif self.get_argument('artist', None) == "generate":
+            file = 'images/coverart'
+            self.read_file(file)
         elif self.get_argument('artist', None) == "error":
             error_code = self.get_argument('album', None)
             self.set_status(int(error_code))

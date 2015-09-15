@@ -62,3 +62,9 @@ QProcess& DBusServer::service_process()
     // Ugly, but we need access to some of the non-const methods
     return const_cast<QProcess&>(service_->underlyingProcess());
 }
+
+
+QDBusConnection const& DBusServer::connection()
+{
+    return runner_->sessionConnection();
+}

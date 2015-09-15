@@ -42,6 +42,8 @@ public:
 
     QProcess& service_process();
 
+    QDBusConnection const& connection();
+
 private:
     std::unique_ptr<QtDBusTest::DBusTestRunner> runner_;
     QSharedPointer<QtDBusTest::QProcessDBusService> service_;
