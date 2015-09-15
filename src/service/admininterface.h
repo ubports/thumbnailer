@@ -19,6 +19,7 @@
 #pragma once
 
 #include <internal/thumbnailer.h>
+#include "inactivityhandler.h"
 #include "stats.h"
 
 #include <QDBusContext>
@@ -37,9 +38,11 @@ class AdminInterface : public QObject, protected QDBusContext
     Q_OBJECT
 public:
     AdminInterface(std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer,
+                   InactivityHandler& inactivity_handler,
                    QObject* parent = nullptr)
         : QObject(parent)
         , thumbnailer_(thumbnailer)
+        , inactivity_handler_(inactivity_handler)
     {
     }
     ~AdminInterface() = default;  // LCOV_EXCL_LINE  // False negative from gcovr.
@@ -54,12 +57,9 @@ public Q_SLOTS:
     void Compact(int cache_id);
     void Shutdown();
 
-Q_SIGNALS:
-    void endInactivity();
-    void startInactivity();
-
 private:
     std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
+    InactivityHandler& inactivity_handler_;
 };
 
 }  // namespace service

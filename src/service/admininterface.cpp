@@ -22,7 +22,6 @@
 
 #include <QCoreApplication>
 
-
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
@@ -87,26 +86,26 @@ CacheStats to_cache_stats(core::PersistentCacheStats const& st)
 class ActivityNotifier
 {
 public:
-    ActivityNotifier(AdminInterface* ai)
-        : ai_(ai)
+    ActivityNotifier(InactivityHandler& iah)
+        : iah_(iah)
     {
-        Q_EMIT ai_->endInactivity();
+        iah_.request_started();
     }
 
     ~ActivityNotifier()
     {
-        Q_EMIT ai_->startInactivity();
+        iah_.request_completed();
     }
 
 private:
-    AdminInterface* ai_;
+    InactivityHandler& iah_;
 };
 
 }  // namespace
 
 unity::thumbnailer::service::AllStats AdminInterface::Stats()
 {
-    ActivityNotifier notifier(this);
+    ActivityNotifier notifier(inactivity_handler_);
 
     auto const st = thumbnailer_->stats();
     AllStats all;
@@ -118,7 +117,7 @@ unity::thumbnailer::service::AllStats AdminInterface::Stats()
 
 void AdminInterface::ClearStats(int cache_id)
 {
-    ActivityNotifier notifier(this);
+    ActivityNotifier notifier(inactivity_handler_);
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
@@ -131,7 +130,7 @@ void AdminInterface::ClearStats(int cache_id)
 
 void AdminInterface::Clear(int cache_id)
 {
-    ActivityNotifier notifier(this);
+    ActivityNotifier notifier(inactivity_handler_);
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
@@ -144,7 +143,7 @@ void AdminInterface::Clear(int cache_id)
 
 void AdminInterface::Compact(int cache_id)
 {
-    ActivityNotifier notifier(this);
+    ActivityNotifier notifier(inactivity_handler_);
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
