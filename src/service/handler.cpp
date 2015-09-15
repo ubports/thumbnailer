@@ -121,6 +121,7 @@ struct HandlerPrivate
     shared_ptr<QThreadPool> create_pool;
     RateLimiter& limiter;
     CredentialsCache& creds;
+    InactivityHandler& inactivity_handler;
     unique_ptr<ThumbnailRequest> request;
     chrono::system_clock::time_point start_time;            // Overall start time
     chrono::system_clock::time_point finish_time;           // Overall finish time
@@ -140,6 +141,7 @@ struct HandlerPrivate
                    shared_ptr<QThreadPool> create_pool,
                    RateLimiter& limiter,
                    CredentialsCache& creds,
+                   InactivityHandler& inactivity_handler,
                    unique_ptr<ThumbnailRequest>&& request,
                    QString const& details)
         : bus(bus)
@@ -148,6 +150,7 @@ struct HandlerPrivate
         , create_pool(create_pool)
         , limiter(limiter)
         , creds(creds)
+        , inactivity_handler(inactivity_handler)
         , request(move(request))
         , details(details)
     {
@@ -161,13 +164,18 @@ Handler::Handler(QDBusConnection const& bus,
                  shared_ptr<QThreadPool> create_pool,
                  RateLimiter& limiter,
                  CredentialsCache& creds,
+                 InactivityHandler& inactivity_handler,
                  unique_ptr<ThumbnailRequest>&& request,
                  QString const& details)
-    : p(new HandlerPrivate(bus, message, check_pool, create_pool, limiter, creds, move(request), details))
+    : p(new HandlerPrivate(bus, message,
+                           check_pool, create_pool,
+                           limiter, creds, inactivity_handler,
+                           move(request), details))
 {
     connect(&p->checkWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::checkFinished);
     connect(p->request.get(), &ThumbnailRequest::downloadFinished, this, &Handler::downloadFinished);
     connect(&p->createWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::createFinished);
+    p->inactivity_handler.request_started();
 }
 
 Handler::~Handler()
@@ -176,6 +184,7 @@ Handler::~Handler()
     // ensure that jobs occurring in the thread pool complete.
     p->checkWatcher.waitForFinished();
     p->createWatcher.waitForFinished();
+    p->inactivity_handler.request_completed();
 }
 
 string const& Handler::key() const

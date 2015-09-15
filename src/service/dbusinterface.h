@@ -41,6 +41,7 @@ class DBusInterface : public QObject, protected QDBusContext
     Q_OBJECT
 public:
     DBusInterface(std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer,
+                  InactivityHandler& inactivity_handler,
                   QObject* parent = nullptr);
     ~DBusInterface();
 
@@ -60,13 +61,14 @@ private Q_SLOTS:
     void requestFinished();
 
 Q_SIGNALS:
-    void endInactivity();
-    void startInactivity();
+    void startedRequest();
+    void stoppedRequest();
 
 private:
     CredentialsCache& credentials();
 
     std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
+    InactivityHandler& inactivity_handler_;
     std::shared_ptr<QThreadPool> check_thread_pool_;
     std::shared_ptr<QThreadPool> create_thread_pool_;
     std::unique_ptr<CredentialsCache> credentials_;
