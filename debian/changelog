@@ -9,6 +9,8 @@ thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
   * Changed semantics for requests with (0,0) size. All requests are now
     clamped to a 1920x1920 bounding box.
   * Fixed incorrect timeout semantics for unexpected network errors.
+  * vs-thumb now correctly extracts images from video and audo files
+    that only contain a preview image (but not a normal image).
 
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
 
