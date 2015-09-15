@@ -687,6 +687,12 @@ protected:
         art_server_.reset();
     }
 
+    virtual void SetUp() override
+    {
+        ThumbnailerTest::SetUp();
+        art_server_->unblock_access();
+    }
+
     static unique_ptr<ArtServer> art_server_;
 };
 
@@ -867,6 +873,49 @@ TEST_F(RemoteServer, server_error)
                             msg,
                             "unity::ResourceException: RequestBase::thumbnail(): key = error")) << msg;
         }
+    }
+}
+
+TEST_F(RemoteServer, network_error)
+{
+    Thumbnailer tn;
+
+    art_server_->block_access();
+    {
+        auto request = tn.get_album_art("metallica", "load", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+        request->download();
+        ASSERT_TRUE(spy.wait(15000));
+
+        try
+        {
+            request->thumbnail();
+            FAIL();
+        }
+        catch (unity::ResourceException const& e)
+        {
+            string msg = e.to_string();
+            EXPECT_TRUE(boost::contains(
+                            msg,
+                            "fetch() failed")) << msg;
+        }
+    }
+
+    art_server_->unblock_access();
+    {
+        auto request = tn.get_album_art("metallica", "load", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+        request->download();
+        ASSERT_TRUE(spy.wait(15000));
+
+        auto thumb = request->thumbnail();
+        Image img(thumb);
+        EXPECT_EQ(10, img.width());
+        EXPECT_EQ(10, img.height());
     }
 }
 
