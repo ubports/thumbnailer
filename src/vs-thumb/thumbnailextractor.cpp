@@ -332,8 +332,12 @@ bool ThumbnailExtractor::extract_audio_cover_art()
         GstSample* sample;
         if (!gst_tag_list_get_sample_index(tags, GST_TAG_IMAGE, i, &sample))
         {
-            break;
+            if (!gst_tag_list_get_sample_index(tags, GST_TAG_PREVIEW_IMAGE, i, &sample))
+            {
+                break;
+            }
         }
+        assert(sample);
         // Check the type of this image
         auto caps = gst_sample_get_caps(sample);
         auto structure = gst_caps_get_structure(caps, 0);
