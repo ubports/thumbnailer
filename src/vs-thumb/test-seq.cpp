@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Canonical Ltd.
+ * Copyright (C) 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: Jussi Pakkanen <jussi.pakkanen@canonical.com>
+ * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
 #include <cstdio>
@@ -24,14 +24,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wparentheses-equality"
-#endif
 #include <gst/gst.h>
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 #include <gio/gio.h>
 #include <glib.h>
 #pragma GCC diagnostic pop
@@ -61,60 +54,47 @@ string command_line_arg_to_uri(string const& arg)
     return uri;
 }
 
-bool extract_thumbnail(string const& uri, string const& ofname)
-{
-    ThumbnailExtractor extractor;
-
-    extractor.set_uri(uri);
-    if (extractor.has_video())
-    {
-        if (!extractor.extract_video_frame())
-        {
-            return false;
-        }
-    }
-    else
-    {
-        if (!extractor.extract_audio_cover_art())
-        {
-            return false;
-        }
-    }
-    extractor.save_screenshot(ofname);
-    return true;
-}
 }
 
 int main(int argc, char** argv)
 {
     gst_init(&argc, &argv);
-    if (argc != 3)
-    {
-        fprintf(stderr, "%s <source file> <output file>\n", argv[0]);
-        return 1;
-    }
-    string uri;
-    string outfile(argv[2]);
-    bool success = false;
 
-    try
+    std::unique_ptr<GMainLoop, decltype(&g_main_loop_unref)> main_loop(
+        g_main_loop_new(nullptr, false), g_main_loop_unref);
+    bool success = true;
+    ThumbnailExtractor extractor;
+    for (int i = 1; i < argc; i++)
     {
-        uri = command_line_arg_to_uri(argv[1]);
-    }
-    catch (exception const& e)
-    {
-        fprintf(stderr, "Error parsing \"%s\": %s\n", argv[1], e.what());
-        return 1;
-    }
-
-    try
-    {
-        success = extract_thumbnail(uri, outfile);
-    }
-    catch (exception const& e)
-    {
-        fprintf(stderr, "Error creating thumbnail: %s\n", e.what());
-        return 2;
+        string uri;
+        try
+        {
+            uri = command_line_arg_to_uri(argv[i]);
+        }
+        catch (exception const& e)
+        {
+            fprintf(stderr, "Error parsing \"%s\": %s\n", argv[i], e.what());
+            return 1;
+        }
+        printf("Extracting from %s\n", uri.c_str());
+        try
+        {
+            extractor.set_uri(uri);
+            if (extractor.has_video())
+            {
+                success = extractor.extract_video_frame();
+            }
+            else
+            {
+                success = extractor.extract_audio_cover_art();
+            }
+        }
+        catch (exception const& e)
+        {
+            fprintf(stderr, "Error extracting content \"%s\": %s\n", argv[1], e.what());
+            return 1;
+        }
+        if (!success) break;
     }
 
     return success ? 0 : 1;
