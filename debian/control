@@ -50,6 +50,19 @@ Description: D-Bus service for out of process thumbnailing
 Package: qtdeclarative5-ubuntu-thumbnailer0.1
 Architecture: any
 Multi-Arch: same
+Section: oldlibs
+Depends: qml-module-ubuntu-thumbnailer0.1,
+         ${misc:Depends},
+Description: transitional dummy package for QML interface for the thumbnailer.
+ This package provides image providers that allow access to the
+ thumbnailer from Qt Quick 2 / QML applications
+ .
+ This is a transitional dummy package for qml-module-ubuntu-thumbnailer0.1
+ which can be safely removed.
+
+Package: qml-module-ubuntu-thumbnailer0.1
+Architecture: any
+Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
@@ -58,6 +71,8 @@ Depends: ${misc:Depends},
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
 Recommends: thumbnailer-service (= ${binary:Version}),
+Breaks: qtdeclarative5-ubuntu-thumbnailer0.1 (<< 2.3~)
+Replaces: qtdeclarative5-ubuntu-thumbnailer0.1 (<< 2.3~)
 Description: QML interface for the thumbnailer.
  This package provides image providers that allow access to the
  thumbnailer from Qt Quick 2 / QML applications.

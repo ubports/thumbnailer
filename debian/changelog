@@ -9,10 +9,24 @@ thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
     exits after 30 seconds if it is started only to, for example,
     retrieve the stats. Activity on the admin interface now keeps
     the service alive the same way activity on the thumbnailer interface does.
-  * Added average hit and miss run length to stats returned by thumbnailer-admin.
+  * Added average hit and miss run length to stats returned by
+    thumbnailer-admin.
   * Changed semantics for requests with (0,0) size. All requests are now
     clamped to a 1920x1920 bounding box.
   * Fixed incorrect timeout semantics for unexpected network errors.
+
+  [ James Henstridge ]
+  * Renamed QML package to qml-module-XXX format and add transitional
+    package. (LP: #1342031)
+  * Port QML module to use libthumbnailer-qt.
+
+  [ Xavi Garcia ]
+  * Add new libthumbnailer-qt1.0 library, providing a C++ client API.
+
+  [ Albert Astals Cid ]
+  * In QML image provider, only create QQuickTextureFactory when
+    needed, fixing a memory leak when requests are cancelled. (LP:
+    #1484914)
 
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
 
