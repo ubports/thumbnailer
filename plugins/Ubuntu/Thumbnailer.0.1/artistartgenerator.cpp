@@ -20,11 +20,9 @@
 
 #include "artistartgenerator.h"
 
-#include <QDBusConnection>
 #include <QDebug>
 #include <QUrlQuery>
 
-#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace
@@ -43,9 +41,11 @@ namespace thumbnailer
 namespace qml
 {
 
-ArtistArtGenerator::ArtistArtGenerator()
+ArtistArtGenerator::ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
+                                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter)
     : QQuickAsyncImageProvider()
-    , backlog_limiter(Settings().max_backlog())
+    , thumbnailer(thumbnailer)
+    , backlog_limiter(backlog_limiter)
 {
 }
 
@@ -67,15 +67,6 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
         return new ThumbnailerImageResponse(requestedSize, DEFAULT_ARTIST_ART);
     }
 
-    if (!thumbnailer)
-    {
-        // Create connection here and not on the constructor, so it belongs to the proper thread.
-        thumbnailer.reset(
-            new unity::thumbnailer::qt::Thumbnailer(
-                QDBusConnection::connectToBus(
-                    QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-    }
-
     const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
     const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
 
@@ -84,7 +75,7 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     {
         return thumbnailer->getArtistArt(artist, album, size);
     };
-    return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, &backlog_limiter, job);
+    return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, backlog_limiter.get(), job);
 }
 
 }  // namespace qml
