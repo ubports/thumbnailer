@@ -10,6 +10,10 @@ thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
     clamped to a 1920x1920 bounding box.
   * Fixed incorrect timeout semantics for unexpected network errors.
 
+  [ James Henstridge ]
+  * Renamed QML package to qml-module-XXX format and add transitional
+    package. (LP: #1342031)
+
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
 
 thumbnailer (2.2+15.10.20150801-0ubuntu1) wily; urgency=medium
