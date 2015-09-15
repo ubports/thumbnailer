@@ -406,6 +406,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(0, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(0.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -456,6 +458,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(2, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -485,6 +489,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(2, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -516,6 +522,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, s.misses_since_last_hit);
         EXPECT_EQ(1, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(1.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_TRUE(near_current_time(s.most_recent_hit_time));

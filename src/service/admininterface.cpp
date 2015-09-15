@@ -73,6 +73,8 @@ CacheStats to_cache_stats(core::PersistentCacheStats const& st)
         qint64(st.misses_since_last_hit()),
         qint64(st.longest_hit_run()),
         qint64(st.longest_miss_run()),
+        st.avg_hit_run_length(),
+        st.avg_miss_run_length(),
         qint64(st.ttl_evictions()),
         qint64(st.lru_evictions()),
         st.most_recent_hit_time(),

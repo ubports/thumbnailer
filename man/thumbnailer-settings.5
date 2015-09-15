@@ -23,8 +23,8 @@ The size (in megabytes) of the failure cache that stores media keys for media wi
 .TP
 .B max\-thumbnail\-size \fR(int)\fP
 Requests for thumbnails larger than this will automatically reduce the thumbnail to \fBmax\-thumbnail\-size\fP
-(in pixels) in the larger dimension. An exception are requests for thumbnails with size zero,
-which return a thumbnail in original size.
+(in pixels) in the larger dimension. Requests for thumbnails with size zero are interpreted as requests
+for \fBmax\-thumbnail\-size\fP. The default is 1920 pixels.
 .TP
 .B retry\-not\-found\-hours \fR(int)\fP
 If artwork cannot be retrieved because the remote server authoritavely confirmed that no artwork exists for

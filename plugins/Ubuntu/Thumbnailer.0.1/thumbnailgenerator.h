@@ -19,7 +19,7 @@
 #pragma once
 
 #include <ratelimiter.h>
-#include <thumbnailerinterface.h>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <QQuickImageProvider>
 
@@ -37,8 +37,7 @@ namespace qml
 class ThumbnailGenerator : public QQuickAsyncImageProvider
 {
 private:
-    std::unique_ptr<QDBusConnection> connection;
-    std::unique_ptr<ThumbnailerInterface> iface;
+    std::unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
     unity::thumbnailer::RateLimiter backlog_limiter;
 
 public:
