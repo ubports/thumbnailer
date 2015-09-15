@@ -14,6 +14,15 @@ thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
   [ James Henstridge ]
   * Renamed QML package to qml-module-XXX format and add transitional
     package. (LP: #1342031)
+  * Port QML module to use libthumbnailer-qt.
+
+  [ Xavi Garcia ]
+  * Add new libthumbnailer-qt1.0 library, providing a C++ client API.
+
+  [ Albert Astals Cid ]
+  * In QML image provider, only create QQuickTextureFactory when
+    needed, fixing a memory leak when requests are cancelled. (LP:
+    #1484914)
 
  -- Michi Henning <michi.henning@canonical.com>  Thu, 06 Aug 2015 15:13:17 +1000
 
