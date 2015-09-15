@@ -889,18 +889,8 @@ TEST_F(RemoteServer, network_error)
         request->download();
         ASSERT_TRUE(spy.wait(15000));
 
-        try
-        {
-            request->thumbnail();
-            FAIL();
-        }
-        catch (unity::ResourceException const& e)
-        {
-            string msg = e.to_string();
-            EXPECT_TRUE(boost::contains(
-                            msg,
-                            "fetch() failed")) << msg;
-        }
+        // Still fails
+        EXPECT_EQ("", request->thumbnail());
     }
 
     art_server_->unblock_access();
