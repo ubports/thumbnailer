@@ -71,6 +71,8 @@ Depends: ${misc:Depends},
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
 Recommends: thumbnailer-service (= ${binary:Version}),
+Breaks: qtdeclarative5-ubuntu-thumbnailer0.1 (<< 2.3~)
+Replaces: qtdeclarative5-ubuntu-thumbnailer0.1 (<< 2.3~)
 Description: QML interface for the thumbnailer.
  This package provides image providers that allow access to the
  thumbnailer from Qt Quick 2 / QML applications.
