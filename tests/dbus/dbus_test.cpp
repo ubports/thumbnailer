@@ -295,16 +295,45 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
     setenv("THUMBNAILER_MAX_IDLE", "bad_value", true);
-    unique_ptr<DBusServer> dbus(new DBusServer());
-
-    auto process = const_cast<QProcess*>(&dbus->service_process());
-    if (process->state() != QProcess::NotRunning)
+    try
     {
-        EXPECT_EQ(process->waitForFinished(), true);
+        unique_ptr<DBusServer> dbus(new DBusServer());
+        FAIL();
     }
-    EXPECT_EQ(process->exitCode(), 1);
+    catch (std::logic_error const& e)
+    {
+        string err = e.what();
+        EXPECT_TRUE(err.find("failed to appear on bus"));
+    }
+    unsetenv("THUMBNAILER_MAX_IDLE");
+}
+
+TEST(DBusTestBadIdle, env_variable_out_of_range)
+{
+    QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
+    setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
+
+    setenv("THUMBNAILER_MAX_IDLE", "999", true);
+    try
+    {
+        unique_ptr<DBusServer> dbus(new DBusServer());
+        FAIL();
+    }
+    catch (std::logic_error const& e)
+    {
+        string err = e.what();
+        EXPECT_TRUE(err.find("failed to appear on bus"));
+    }
+    unsetenv("THUMBNAILER_MAX_IDLE");
+}
+
+TEST(DBusTestBadIdle, default_timeout)
+{
+    QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
+    setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
     unsetenv("THUMBNAILER_MAX_IDLE");
+    unique_ptr<DBusServer> dbus(new DBusServer());  // For coverage with default timeout.
 }
 
 bool near_current_time(chrono::system_clock::time_point& t)

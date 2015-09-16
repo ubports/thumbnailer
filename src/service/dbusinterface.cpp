@@ -127,9 +127,12 @@ int adjusted_limit(int limit)
 
 }
 
-DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject* parent)
+DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
+                             InactivityHandler& inactivity_handler,
+                             QObject* parent)
     : QObject(parent)
     , thumbnailer_(thumbnailer)
+    , inactivity_handler_(inactivity_handler)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
     , download_limiter_(settings_.max_downloads())
@@ -179,7 +182,7 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(),
+                                 download_limiter_, credentials(), inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -205,7 +208,7 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(),
+                                 download_limiter_, credentials(), inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -233,7 +236,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 *extraction_limiter_, credentials(),
+                                 *extraction_limiter_, credentials(), inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)
@@ -248,7 +251,6 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
 void DBusInterface::queueRequest(Handler* handler)
 {
     requests_.emplace(handler, std::unique_ptr<Handler>(handler));
-    Q_EMIT endInactivity();
     connect(handler, &Handler::finished, this, &DBusInterface::requestFinished);
     setDelayedReply(true);
 
@@ -264,7 +266,7 @@ void DBusInterface::queueRequest(Handler* handler)
         /* There are other requests for this item, so chain this
          * request to wait for them to complete first.  This way we
          * can take advantage of any cached downloads or failures. */
-        // TODO: should record tiem spent in queue
+        // TODO: should record time spent in queue
         connect(requests_for_key.back(), &Handler::finished,
                 handler, &Handler::begin);
     }
@@ -297,10 +299,6 @@ void DBusInterface::requestFinished()
         request_keys_.erase(handler->key());
     }
 
-    if (requests_.empty())
-    {
-        Q_EMIT startInactivity();
-    }
     // Queue deletion of handler when we re-enter the event loop.
     handler->deleteLater();
 

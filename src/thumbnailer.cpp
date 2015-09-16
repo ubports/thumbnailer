@@ -629,6 +629,7 @@ RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
         Image full_size(string(raw_data.data(), raw_data.size()));
         return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
     }
+    qDebug() << "common_fetch(): Request failed:" << artreply->error_string();
     if (artreply->not_found_error())
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::not_found, Location::remote);
@@ -685,23 +686,6 @@ void ArtistRequest::download(chrono::milliseconds timeout)
 
 namespace
 {
-
-core::PersistentStringCache::UPtr init_cache(string const& path,
-                                             int64_t size,
-                                             core::CacheDiscardPolicy policy)
-{
-    try
-    {
-        return core::PersistentStringCache::open(path, size, policy);
-    }
-    catch (logic_error const&)
-    {
-        // Cache size has changed.
-        auto cache = core::PersistentStringCache::open(path);
-        cache->resize(size);
-        return cache;
-    }
-}
 
 // Key under which we store the last time we had a network failure.
 // No entry in the failure cache ever has this key because keys for

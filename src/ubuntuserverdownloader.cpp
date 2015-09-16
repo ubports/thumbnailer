@@ -81,6 +81,7 @@ bool network_down_error(QNetworkReply::NetworkError error)
     switch (error)
     {
         // add here all the cases that you consider as network errors
+        case QNetworkReply::ConnectionRefusedError:
         case QNetworkReply::HostNotFoundError:
         case QNetworkReply::OperationCanceledError:
         case QNetworkReply::TemporaryNetworkFailureError:

@@ -22,7 +22,6 @@
 
 #include <QCoreApplication>
 
-
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
@@ -86,10 +85,30 @@ CacheStats to_cache_stats(core::PersistentCacheStats const& st)
     };
 }
 
+class ActivityNotifier
+{
+public:
+    ActivityNotifier(InactivityHandler& iah)
+        : iah_(iah)
+    {
+        iah_.request_started();
+    }
+
+    ~ActivityNotifier()
+    {
+        iah_.request_completed();
+    }
+
+private:
+    InactivityHandler& iah_;
+};
+
 }  // namespace
 
 unity::thumbnailer::service::AllStats AdminInterface::Stats()
 {
+    ActivityNotifier notifier(inactivity_handler_);
+
     auto const st = thumbnailer_->stats();
     AllStats all;
     all.full_size_stats = to_cache_stats(st.full_size_stats);
@@ -100,6 +119,8 @@ unity::thumbnailer::service::AllStats AdminInterface::Stats()
 
 void AdminInterface::ClearStats(int cache_id)
 {
+    ActivityNotifier notifier(inactivity_handler_);
+
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
         sendErrorReply(ADMIN_ERROR, QString("ClearStats(): invalid cache selector: ") + QString::number(cache_id));
@@ -111,6 +132,8 @@ void AdminInterface::ClearStats(int cache_id)
 
 void AdminInterface::Clear(int cache_id)
 {
+    ActivityNotifier notifier(inactivity_handler_);
+
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
         sendErrorReply(ADMIN_ERROR, QString("Clear(): invalid cache selector: ") + QString::number(cache_id));
@@ -122,6 +145,8 @@ void AdminInterface::Clear(int cache_id)
 
 void AdminInterface::Compact(int cache_id)
 {
+    ActivityNotifier notifier(inactivity_handler_);
+
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
         sendErrorReply(ADMIN_ERROR, QString("Compact(): invalid cache selector: ") + QString::number(cache_id));

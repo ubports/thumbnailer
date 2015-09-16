@@ -14,18 +14,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #include "inactivityhandler.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 
+#include <cassert>
 #include <sstream>
 #include <string>
 
 const int MAX_INACTIVITY_TIME = 30000;  // max inactivity time before exiting the app, in milliseconds
 
-using namespace unity::thumbnailer::service;
+namespace
+{
 
 int get_env_inactivity_time(int default_value)
 {
@@ -36,26 +40,92 @@ int get_env_inactivity_time(int default_value)
         try
         {
             int env_value = std::stoi(str_idle_time);
+            if (env_value < 1000)
+            {
+                std::ostringstream s;
+                s << "InactivityHandler::InactivityHandler(): Value for env variable THUMBNAILER_MAX_IDLE \""
+                  << env_value << "\" must be >= 1000.";
+                throw std::invalid_argument(s.str());
+            }
             return env_value;
         }
         catch (std::exception& e)
         {
             std::ostringstream s;
             s << "InactivityHandler::InactivityHandler(): Value for env variable THUMBNAILER_MAX_IDLE \""
-              << str_idle_time << "\" is not correct. It must be an integer.";
+              << str_idle_time << "\" must be >= 1000.";
             throw std::invalid_argument(s.str());
         }
     }
     return default_value;
 }
 
-InactivityHandler::InactivityHandler(DBusInterface& iface)
-    : QObject(&iface)
-{
-    timer_.setInterval(get_env_inactivity_time(MAX_INACTIVITY_TIME));
+}  // namespace
 
-    // connect dbus interface inactivity signals to the QTimer start and stop
-    connect(&iface, &DBusInterface::endInactivity, &timer_, &QTimer::stop);
-    connect(&iface, &DBusInterface::startInactivity, &timer_, static_cast<void (QTimer::*)()>(&QTimer::start));
-    connect(&timer_, &QTimer::timeout, QCoreApplication::instance(), &QCoreApplication::quit);
+namespace unity
+{
+
+namespace thumbnailer
+{
+
+namespace service
+{
+
+InactivityHandler::InactivityHandler(std::function<void()> timer_func)
+    : timer_func_(timer_func)
+    , num_active_requests_(0)
+{
+    assert(timer_func);
+    connect(&timer_, &QTimer::timeout, this, &InactivityHandler::timer_expired);
+    timer_.setInterval(get_env_inactivity_time(MAX_INACTIVITY_TIME));
 }
+
+InactivityHandler::~InactivityHandler()
+{
+    assert(num_active_requests_ == 0);
+    timer_.stop();
+}
+
+void InactivityHandler::request_started()
+{
+    assert(num_active_requests_ >= 0);
+
+    if (num_active_requests_++ == 0)
+    {
+        timer_.stop();
+    }
+}
+
+void InactivityHandler::request_completed()
+{
+    assert(num_active_requests_ > 0);
+
+    if (--num_active_requests_ == 0)
+    {
+        timer_.start();
+    }
+}
+
+void InactivityHandler::timer_expired()
+{
+    try
+    {
+        timer_func_();
+    }
+    // LCOV_EXCL_START
+    catch (std::exception const& e)
+    {
+        qCritical() << "Inactivity handler::timer_expired: timer_func threw an exception:" << e.what();
+    }
+    catch (...)
+    {
+        qCritical() << "Inactivity handler::timer_expired: timer_func threw an unknown exception";
+    }
+    // LCOV_EXCL_STOP
+}
+
+}  // namespace service
+
+}  // namespace thumbnailer
+
+}  // namespace unity
