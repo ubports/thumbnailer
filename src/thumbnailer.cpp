@@ -629,7 +629,6 @@ RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
         Image full_size(string(raw_data.data(), raw_data.size()));
         return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
     }
-    qDebug() << "common_fetch(): Request failed:" << artreply->error_string();
     if (artreply->not_found_error())
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::not_found, Location::remote);
@@ -638,6 +637,7 @@ RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::no_network, Location::remote);
     }
+    qCritical() << "common_fetch(): Request failed:" << artreply->error_string();
     return RequestBase::ImageData(RequestBase::FetchStatus::error, Location::remote);
 }
 
