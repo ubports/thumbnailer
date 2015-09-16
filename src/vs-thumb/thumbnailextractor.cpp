@@ -202,8 +202,7 @@ void ThumbnailExtractor::Private::find_audio_cover(GstTagList* tags, const char*
         }
         assert(s);
         // Check the type of this image
-        auto caps = gst_sample_get_caps(s);
-        auto structure = gst_caps_get_structure(caps, 0);
+        auto structure = gst_sample_get_info(s);
         int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
         gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
         if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
@@ -337,6 +336,7 @@ bool ThumbnailExtractor::extract_video_frame()
     g_signal_emit_by_name(p->playbin.get(), "get-video-tags", 0, &tags);
     if (tags)
     {
+        // TODO: The "flip-rotate-*" transforms defined in gst/gsttaglist.h need to be added here.
         char* orientation = nullptr;
         if (gst_tag_list_get_string_index(tags, GST_TAG_IMAGE_ORIENTATION, 0, &orientation) && orientation != nullptr)
         {
