@@ -22,6 +22,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wparentheses-equality"
 #include <gst/gst.h>
 #pragma GCC diagnostic pop
 
