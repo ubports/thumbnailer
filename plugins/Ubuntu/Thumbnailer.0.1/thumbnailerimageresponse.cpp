@@ -40,7 +40,6 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
     , default_image_(default_image)
 {
     Q_ASSERT(request);
-
     connect(request_.data(), &thumb_qt::Request::finished, this, &ThumbnailerImageResponse::requestFinished);
 }
 
@@ -55,12 +54,18 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
 
 ThumbnailerImageResponse::~ThumbnailerImageResponse()
 {
-    request_->cancel();
+    // TODO: Once we remove fallback image support, this test for request_ != nullptr
+    //       (here and elsewhere) needs to be removed because request_ is nullptr
+    //       only if the default image constructor above was called.
+    if (request_)
+    {
+        request_->cancel();
+    }
 }
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
-    if (request_->isValid())
+    if (request_ && request_->isValid())
     {
         return QQuickTextureFactory::textureFactoryForImage(request_->image());
     }
@@ -75,12 +80,14 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
-    request_->cancel();
+    if (request_)
+    {
+        request_->cancel();
+    }
 }
 
 void ThumbnailerImageResponse::requestFinished()
 {
-    qDebug() << "request finished";
     if (!request_->isValid())
     {
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << request_->errorMessage();
