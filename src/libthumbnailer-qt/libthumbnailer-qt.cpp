@@ -87,6 +87,7 @@ public:
         {
             cancel_func_();
             watcher_.reset(new QDBusPendingCallWatcher(job_()));
+            connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
         }
         watcher_->waitForFinished();
     }
@@ -171,6 +172,7 @@ void RequestImpl::dbusCallFinished()
         is_valid_ = true;
         error_message_ = "";
         Q_ASSERT(public_request_);
+        qDebug() << "emitting finished";
         Q_EMIT public_request_->finished();
         limiter_->done();
         return;
@@ -198,6 +200,7 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     image_ = QImage();
     qWarning() << error_message_;
     Q_ASSERT(public_request_);
+    qDebug() << "emitting error finished";
     Q_EMIT public_request_->finished();
     limiter_->done();
 }

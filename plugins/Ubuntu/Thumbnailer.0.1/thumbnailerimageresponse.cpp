@@ -34,27 +34,20 @@ namespace qml
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image,
-                                                   RateLimiter* backlog_limiter,
-                                                   std::function<QSharedPointer<thumb_qt::Request>()> job)
+                                                   QSharedPointer<thumb_qt::Request> const& request)
     : requested_size_(requested_size)
-    , backlog_limiter_(backlog_limiter)
-    , job_(job)
+    , request_(request)
     , default_image_(default_image)
 {
-    auto send_request = [this, job]
-    {
-        using namespace std;
-        request_ = job();
-        connect(request_.data(), &thumb_qt::Request::finished, this, &ThumbnailerImageResponse::requestFinished);
-    };
-    cancel_func_ = backlog_limiter_->schedule(send_request);
+    Q_ASSERT(request);
+
+    connect(request_.data(), &thumb_qt::Request::finished, this, &ThumbnailerImageResponse::requestFinished);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image)
     : requested_size_(requested_size)
     , default_image_(default_image)
-    , cancel_func_([]{})
 {
     // Queue the signal emission so there is time for the caller to connect.
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
@@ -62,15 +55,12 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
 
 ThumbnailerImageResponse::~ThumbnailerImageResponse()
 {
-    if (request_)
-    {
-        request_->cancel();
-    }
+    request_->cancel();
 }
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
-    if (request_ && request_->isValid())
+    if (request_->isValid())
     {
         return QQuickTextureFactory::textureFactoryForImage(request_->image());
     }
@@ -85,23 +75,12 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
-    // Remove request from queue if it is still in there.
-    cancel_func_();
-
-    if (request_)
-    {
-        request_->cancel();
-    }
+    request_->cancel();
 }
 
 void ThumbnailerImageResponse::requestFinished()
 {
-    if (!finished_)
-    {
-        backlog_limiter_->done();
-        finished_ = true;
-    }
-
+    qDebug() << "request finished";
     if (!request_->isValid())
     {
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << request_->errorMessage();

@@ -63,7 +63,7 @@ public:
 
     /**
     \brief Returns the thumbnail.
-    \return A valid QImage if the request was successful and an empty `QImage`, otherwise.
+    \return A valid `QImage` if the request was successful and an empty `QImage`, otherwise.
     */
     QImage image() const;
 

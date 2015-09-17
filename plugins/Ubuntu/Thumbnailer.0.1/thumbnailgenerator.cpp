@@ -58,11 +58,9 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
-                                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter)
+ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer)
     : QQuickAsyncImageProvider()
     , thumbnailer(thumbnailer)
-    , backlog_limiter(backlog_limiter)
 {
 }
 
@@ -88,12 +86,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
 
-    // Schedule dbus call
-    auto job = [this, src_path, size]
-    {
-        return thumbnailer->getThumbnail(src_path, size);
-    };
-    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), backlog_limiter.get(), job);
+    auto request = thumbnailer->getThumbnail(src_path, size);
+    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), request);
 }
 
 }  // namespace qml
