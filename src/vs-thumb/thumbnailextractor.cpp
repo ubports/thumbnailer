@@ -202,9 +202,12 @@ void ThumbnailExtractor::Private::find_audio_cover(GstTagList* tags, const char*
         }
         assert(s);
         // Check the type of this image
-        auto structure = gst_sample_get_info(s);
         int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
-        gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
+        auto structure = gst_sample_get_info(s);
+        if (structure)
+        {
+            gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
+        }
         if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
         {
             sample.reset(gst_sample_ref(s));
