@@ -73,11 +73,6 @@ public:
 
     void waitForFinished()
     {
-        if (finished_)
-        {
-            return;
-        }
-
         // If we are called before the request made it out of the limiter queue,
         // we have not sent the request yet and, therefore, don't have a watcher.
         // In that case we send the request right here after removing it
@@ -113,6 +108,7 @@ private:
     QString error_message_;
     bool finished_;
     bool is_valid_;
+    bool request_sent_;  // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
 };
@@ -143,18 +139,23 @@ RequestImpl::RequestImpl(QSize const& requested_size,
     , job_(job)
     , finished_(false)
     , is_valid_(false)
+    , request_sent_(false)
     , public_request_(nullptr)
 {
+    // The limiter does not call send_request until the request can be sent
+    // without exceeding max_backlog().
     auto send_request = [this, job]
     {
         watcher_.reset(new QDBusPendingCallWatcher(job()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
+        request_sent_ = true;
     };
     cancel_func_ = limiter_->schedule(send_request);
 }
 
 void RequestImpl::dbusCallFinished()
 {
+qDebug() << "DBUS call finished";
     Q_ASSERT(watcher_);
 
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
@@ -174,7 +175,10 @@ void RequestImpl::dbusCallFinished()
         Q_ASSERT(public_request_);
         qDebug() << "emitting finished";
         Q_EMIT public_request_->finished();
-        limiter_->done();
+        if (request_sent_)
+        {
+            limiter_->done();
+        }
         return;
     }
     // LCOV_EXCL_START
@@ -200,9 +204,12 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     image_ = QImage();
     qWarning() << error_message_;
     Q_ASSERT(public_request_);
-    qDebug() << "emitting error finished";
+    qDebug() << "emitting ERROR finished";
     Q_EMIT public_request_->finished();
-    limiter_->done();
+    if (request_sent_)
+    {
+        limiter_->done();
+    }
 }
 
 void RequestImpl::cancel()

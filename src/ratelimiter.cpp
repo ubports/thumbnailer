@@ -20,6 +20,7 @@
 #include "ratelimiter.h"
 
 #include <cassert>
+#include <iostream>  // TODO: remove this
 
 using namespace std;
 
@@ -34,6 +35,7 @@ RateLimiter::RateLimiter(int concurrency)
     , running_(0)
 {
     assert(concurrency > 0);
+    cerr << "CONCURRENCY: " << concurrency << endl;
 }
 
 RateLimiter::~RateLimiter()
@@ -48,10 +50,12 @@ function<void() noexcept> RateLimiter::schedule(function<void()> job)
     if (running_ < concurrency_)
     {
         running_++;
+        cerr << "calling job, queue size: " << queue_.size() << ", running: " << running_ << endl;
         job();
         return []{};  // Wasn't queued, so cancel does nothing.
     }
 
+    cerr << "queuing job, queue size: " << queue_.size() + 1 << endl;
     shared_ptr<function<void()>> job_p(new function<void()>(move(job)));
     queue_.emplace(job_p);
 
@@ -85,6 +89,7 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
+        cerr << "calling queued job, queue size: " << queue_.size() << endl;
         (*job_p)();
     }
     else if (queue_.empty())
