@@ -420,6 +420,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // Saving as TIFF with no compression here to avoid artefacts due to converting to jpg twice.
     // (The main thumbnailer saves as jpg.) By staying lossless here, we
     // keep all the policy decisions about image quality in the main thumbnailer.
+    // "compression", "1" means "no compression" for tiff files.
     fprintf(stderr, "Saving pixbuf to tiff\n");
     GError* error = nullptr;
     if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
