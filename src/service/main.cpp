@@ -63,7 +63,7 @@ void show_stats(shared_ptr<Thumbnailer> const& thumbnailer)
     qDebug() << qUtf8Printable("image cache:     " + get_summary(stats.full_size_stats));
     qDebug() << qUtf8Printable("thumbnail cache: " + get_summary(stats.thumbnail_stats));
     qDebug() << qUtf8Printable("failure cache:   " + get_summary(stats.failure_stats));
-} 
+}
 
 }
 
