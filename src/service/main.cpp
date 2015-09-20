@@ -65,6 +65,24 @@ int main(int argc, char** argv)
             throw runtime_error(string("thumbnailer-service: could not acquire DBus name ") + BUS_NAME);
         }
 
+        // Print basic cache stats on start-up. This is useful when examining log entries.
+        {
+            auto stats = thumbnailer->stats();
+            QString msg;
+            msg = QString("image cache: %1 entries, %2 bytes")
+                    .arg(stats.full_size_stats.size())
+                    .arg(stats.full_size_stats.size_in_bytes());
+            qDebug() << qUtf8Printable(msg);
+            msg = QString("thumbnail cache: %1 entries, %2 bytes")
+                    .arg(stats.thumbnail_stats.size())
+                    .arg(stats.thumbnail_stats.size_in_bytes());
+            qDebug() << qUtf8Printable(msg);
+            msg = QString("failure cache: %1 entries, %2 bytes")
+                    .arg(stats.failure_stats.size())
+                    .arg(stats.failure_stats.size_in_bytes());
+            qDebug() << qUtf8Printable(msg);
+        }
+
         qDebug() << "Ready";
         rc = app.exec();
 

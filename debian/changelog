@@ -1,6 +1,7 @@
 thumbnailer (2.3-0ubuntu1) UNRELEASED; urgency=medium
 
   [ Michi Henning ]
+  * "thumbnailer-admin clear f" now also resets the network retry timeout.
   * Added man pages for thumbnailer-admin, thumbnailer-service,
     thumbnailer-settings, and vs-thumb.
   * Removed a bunch of lintian warnings and errors.
