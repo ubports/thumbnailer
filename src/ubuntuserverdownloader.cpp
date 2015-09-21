@@ -192,8 +192,10 @@ public Q_SLOTS:
         //       reply_ is nullptr only if the network is down.
         if (!reply_)
         {
-            Q_EMIT finished();  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            Q_EMIT finished();
             return;
+            // LCOV_EXCL_STOP
         }
 
         timer_.stop();
