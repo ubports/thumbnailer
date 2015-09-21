@@ -73,6 +73,11 @@ public:
 
     void waitForFinished()
     {
+        if (finished_)
+        {
+            return;
+        }
+
         // If we are called before the request made it out of the limiter queue,
         // we have not sent the request yet and, therefore, don't have a watcher.
         // In that case we send the request right here after removing it
@@ -171,6 +176,7 @@ void RequestImpl::dbusCallFinished()
         finished_ = true;
         is_valid_ = true;
         error_message_ = "";
+        watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
         if (request_sent_)
@@ -201,6 +207,7 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     is_valid_ = false;
     image_ = QImage();
     qWarning() << error_message_;
+    watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
     if (request_sent_)

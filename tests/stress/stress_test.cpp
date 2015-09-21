@@ -45,6 +45,83 @@
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
+// Simple counter class that we use to count all the signals
+// from the async provider instances. This allows us to use
+// a single QSignalSpy to wait for the completion of an
+// arbitrary number of requests.
+
+class Counter : public QObject
+{
+    Q_OBJECT
+public:
+    Counter(int limit)
+        : limit_(limit)
+        , count_(0)
+    {
+    }
+
+Q_SIGNALS:
+    void counterDone();
+
+public Q_SLOTS:
+    void thumbnailComplete()
+    {
+        if (++count_ == limit_)
+        {
+            Q_EMIT counterDone();
+        }
+    }
+
+private:
+    int limit_;
+    int count_;
+};
+
+// Class to run a single request and check that it completed OK.
+// Notifies the counter on request completion.
+
+class AsyncThumbnailProvider : public QObject
+{
+    Q_OBJECT
+public:
+    AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer* tn, Counter& counter)
+        : thumbnailer_(tn)
+        , counter_(counter)
+    {
+        assert(tn);
+    }
+
+    void getThumbnail(QString const& path, QSize const& size)
+    {
+        request_ = thumbnailer_->getThumbnail(path, size);
+        connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
+                this, &AsyncThumbnailProvider::requestFinished);
+    }
+
+    void getAlbumArt(QString const& artist, QString const& album, QSize const& size)
+    {
+        request_ = thumbnailer_->getAlbumArt(artist, album, size);
+        connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
+                this, &AsyncThumbnailProvider::requestFinished);
+    }
+
+public Q_SLOTS:
+    void requestFinished()
+    {
+        EXPECT_TRUE(request_->isValid()) << request_->errorMessage().toStdString();
+        if (!request_->isValid())
+        {
+            abort();
+        }
+        counter_.thumbnailComplete();
+    }
+
+private:
+    unity::thumbnailer::qt::Thumbnailer* thumbnailer_;
+    Counter& counter_;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
+};
+
 class StressTest : public ::testing::Test
 {
 protected:
@@ -79,6 +156,24 @@ protected:
     static string temp_dir()
     {
         return tempdir->path().toStdString();
+    }
+
+    void run_requests(int num, string const& target_dir, string const& source)
+    {
+        vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+        Counter counter(num);
+        QSignalSpy spy(&counter, &Counter::counterDone);
+
+        for (int i = 0; i < num; i++)
+        {
+            QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+            unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+            provider->getThumbnail(path, QSize(512, 512));
+            providers.emplace_back(move(provider));
+        }
+        ASSERT_TRUE(spy.wait(10000));
+        ASSERT_EQ(1, spy.count());
     }
 
     static void add_stats(int N_REQUESTS,
@@ -157,13 +252,11 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
 
 typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
 
-// Test for synchronous wait. We only do 400 requests to avoid
-// overrunning DBus.
+// Test for synchronous wait.
 
-#if 0
 TEST_F(StressTest, photo_waitForFinished)
 {
-    int const N_REQUESTS = 400;
+    int const N_REQUESTS = 1000;
 
     string source = "Photo-with-exif.jpg";
     string target_dir = temp_dir() + "/Pictures";
@@ -185,80 +278,6 @@ TEST_F(StressTest, photo_waitForFinished)
 
     add_stats(N_REQUESTS, start, finish);
 }
-#endif
-
-// Simple counter class that we use to count all the signals
-// from the async provider instances. This allows us to use
-// a single QSignalSpy to wait for the completion of an
-// arbitrary number of requests.
-
-class Counter : public QObject
-{
-    Q_OBJECT
-public:
-    Counter(int limit)
-        : limit_(limit)
-        , count_(0)
-    {
-    }
-
-Q_SIGNALS:
-    void counterDone();
-
-public Q_SLOTS:
-    void thumbnailComplete()
-    {
-        cerr << "request done: " << count_ << endl;
-        if (++count_ == limit_)
-        {
-            Q_EMIT counterDone();
-        }
-    }
-
-private:
-    int limit_;
-    int count_;
-};
-
-// Class to run a single request and check that it completed OK.
-// Notifies the counter on request completion.
-
-class AsyncThumbnailProvider : public QObject
-{
-    Q_OBJECT
-public:
-    AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer* tn, Counter& counter)
-        : thumbnailer_(tn)
-        , counter_(counter)
-    {
-        assert(tn);
-    }
-
-    void getThumbnail(QString const& path, QSize const& size)
-    {
-        request_ = thumbnailer_->getThumbnail(path, size);
-        connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
-                this, &AsyncThumbnailProvider::requestFinished);
-    }
-
-public Q_SLOTS:
-    void requestFinished()
-    {
-        EXPECT_TRUE(request_->isValid()) << request_->errorMessage().toStdString();
-        if (!request_->isValid())
-        {
-            abort();
-        }
-        counter_.thumbnailComplete();
-    }
-
-private:
-    unity::thumbnailer::qt::Thumbnailer* thumbnailer_;
-    Counter& counter_;
-    QSharedPointer<unity::thumbnailer::qt::Request> request_;
-};
-
-typedef vector<unique_ptr<AsyncThumbnailProvider>> ProviderVec;
 
 TEST_F(StressTest, photo)
 {
@@ -268,27 +287,13 @@ TEST_F(StressTest, photo)
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    ProviderVec providers;
-
-    Counter counter(N_REQUESTS);
-    QSignalSpy spy(&counter, &Counter::counterDone);
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
-        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
-        provider->getThumbnail(path, QSize(512, 512));
-        providers.emplace_back(move(provider));
-    }
-    ASSERT_TRUE(spy.wait(10000));
-    ASSERT_EQ(N_REQUESTS, spy.count());
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
 }
 
-#if 0
 TEST_F(StressTest, photo_no_exif)
 {
     int const N_REQUESTS = 200;
@@ -297,18 +302,8 @@ TEST_F(StressTest, photo_no_exif)
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
-    }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -328,18 +323,8 @@ TEST_F(StressTest, mp3)
     string target_dir = temp_dir() + "/Music";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
-    }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -359,18 +344,8 @@ TEST_F(StressTest, video)
     string target_dir = temp_dir() + "/Videos";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
-    }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -378,25 +353,26 @@ TEST_F(StressTest, video)
 
 TEST_F(StressTest, album_art)
 {
-    int const N_REQUESTS = 300;
+    int const N_REQUESTS = 2000;
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers.emplace_back(get_album_art("generate", to_string(i), 512));
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        provider->getAlbumArt("metallica", "load", QSize(i + 1, i + 1));
+        providers.emplace_back(move(provider));
     }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    ASSERT_TRUE(spy.wait(10000));
+    ASSERT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
 }
-#endif
 
 int main(int argc, char** argv)
 {
