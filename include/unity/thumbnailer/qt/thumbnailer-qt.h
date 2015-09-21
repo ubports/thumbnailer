@@ -90,7 +90,7 @@ public:
 
     \warning Calling waitForFinished() may cause the request to be scheduled out of order. This means
     that, if you send requests for thumbnails A, B, and C (in that order) and then call waitForFinished()
-    on C, you _cannot_ assume that A and B have also finished.
+    on C, you _cannot_ assume that A and B have also finished once waitForFinsished() returns.
     */
     void waitForFinished();
 
