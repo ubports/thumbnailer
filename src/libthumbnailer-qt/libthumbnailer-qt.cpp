@@ -155,7 +155,6 @@ RequestImpl::RequestImpl(QSize const& requested_size,
 
 void RequestImpl::dbusCallFinished()
 {
-qDebug() << "DBUS call finished";
     Q_ASSERT(watcher_);
 
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
@@ -173,7 +172,6 @@ qDebug() << "DBUS call finished";
         is_valid_ = true;
         error_message_ = "";
         Q_ASSERT(public_request_);
-        qDebug() << "emitting finished";
         Q_EMIT public_request_->finished();
         if (request_sent_)
         {
@@ -204,7 +202,6 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     image_ = QImage();
     qWarning() << error_message_;
     Q_ASSERT(public_request_);
-    qDebug() << "emitting ERROR finished";
     Q_EMIT public_request_->finished();
     if (request_sent_)
     {

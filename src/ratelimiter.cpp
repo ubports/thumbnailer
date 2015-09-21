@@ -35,7 +35,6 @@ RateLimiter::RateLimiter(int concurrency)
     , running_(0)
 {
     assert(concurrency > 0);
-    cerr << "CONCURRENCY: " << concurrency << endl;
 }
 
 RateLimiter::~RateLimiter()
@@ -89,7 +88,7 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
-        cerr << "calling queued job, queue size: " << queue_.size() << endl;
+        cerr << "calling queued job, queue size: " << queue_.size() << ", running: " << running_ << endl;
         (*job_p)();
     }
     else if (queue_.empty())

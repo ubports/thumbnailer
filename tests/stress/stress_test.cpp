@@ -128,7 +128,7 @@ unique_ptr<unity::thumbnailer::qt::Thumbnailer> StressTest::thumbnailer_;
 unique_ptr<ArtServer> StressTest::art_server_;
 string StressTest::stats_;
 
-// Little helper function to hard-link a single image a number of times
+// Little helper function to hard-link a single file a number of times
 // under different names, so we can have lots of files without consuming
 // tons of disk space.
 
@@ -156,6 +156,9 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
 }
 
 typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
+
+// Test for synchronous wait. We only do 400 requests to avoid
+// overrunning DBus.
 
 #if 0
 TEST_F(StressTest, photo_waitForFinished)
@@ -205,6 +208,7 @@ Q_SIGNALS:
 public Q_SLOTS:
     void thumbnailComplete()
     {
+        cerr << "request done: " << count_ << endl;
         if (++count_ == limit_)
         {
             Q_EMIT counterDone();
@@ -227,6 +231,7 @@ public:
         : thumbnailer_(tn)
         , counter_(counter)
     {
+        assert(tn);
     }
 
     void getThumbnail(QString const& path, QSize const& size)
@@ -239,10 +244,10 @@ public:
 public Q_SLOTS:
     void requestFinished()
     {
-        qDebug() << "request finished";
+        EXPECT_TRUE(request_->isValid()) << request_->errorMessage().toStdString();
         if (!request_->isValid())
         {
-            FAIL() << request_->errorMessage().toStdString();
+            abort();
         }
         counter_.thumbnailComplete();
     }
@@ -253,9 +258,8 @@ private:
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
 };
 
-typedef vector<unique_ptr<AsyncThumbnailProvider>> providers;
+typedef vector<unique_ptr<AsyncThumbnailProvider>> ProviderVec;
 
-#if 0
 TEST_F(StressTest, photo)
 {
     int const N_REQUESTS = 1000;
@@ -263,6 +267,8 @@ TEST_F(StressTest, photo)
     string source = "Photo-with-exif.jpg";
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    ProviderVec providers;
 
     Counter counter(N_REQUESTS);
     QSignalSpy spy(&counter, &Counter::counterDone);
@@ -273,6 +279,7 @@ TEST_F(StressTest, photo)
         QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
         unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
         provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
     }
     ASSERT_TRUE(spy.wait(10000));
     ASSERT_EQ(N_REQUESTS, spy.count());
@@ -280,7 +287,6 @@ TEST_F(StressTest, photo)
 
     add_stats(N_REQUESTS, start, finish);
 }
-#endif
 
 #if 0
 TEST_F(StressTest, photo_no_exif)
@@ -394,7 +400,7 @@ TEST_F(StressTest, album_art)
 
 int main(int argc, char** argv)
 {
-    // Need this because we are using a static test fixture and can't rely an global constructor order.
+    // Need this because we are using a static test fixture and can't rely on global constructor order.
     gst_init(&argc, &argv);
 
     QCoreApplication app(argc, argv);
