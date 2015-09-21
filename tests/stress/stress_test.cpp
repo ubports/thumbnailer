@@ -172,7 +172,7 @@ protected:
             provider->getThumbnail(path, QSize(512, 512));
             providers.emplace_back(move(provider));
         }
-        ASSERT_TRUE(spy.wait(10000));
+        ASSERT_TRUE(spy.wait(60000));
         ASSERT_EQ(1, spy.count());
     }
 
