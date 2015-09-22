@@ -172,7 +172,7 @@ protected:
             provider->getThumbnail(path, QSize(512, 512));
             providers.emplace_back(move(provider));
         }
-        ASSERT_TRUE(spy.wait(60000));
+        ASSERT_TRUE(spy.wait(120000));
         ASSERT_EQ(1, spy.count());
     }
 
@@ -279,6 +279,8 @@ TEST_F(StressTest, photo_waitForFinished)
     add_stats(N_REQUESTS, start, finish);
 }
 
+// Asynchronous tests.
+
 TEST_F(StressTest, photo)
 {
     int const N_REQUESTS = 1000;
@@ -367,7 +369,7 @@ TEST_F(StressTest, album_art)
         provider->getAlbumArt("metallica", "load", QSize(i + 1, i + 1));
         providers.emplace_back(move(provider));
     }
-    ASSERT_TRUE(spy.wait(10000));
+    ASSERT_TRUE(spy.wait(120000));
     ASSERT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();
 

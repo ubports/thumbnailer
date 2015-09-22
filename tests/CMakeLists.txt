@@ -34,7 +34,7 @@ set(unit_test_dirs
 
 set(slow_test_dirs
     slow-vs-thumb
-    #stress
+    stress
 )
 
 set(UNIT_TEST_TARGETS "")

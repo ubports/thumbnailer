@@ -69,7 +69,7 @@ string hardware()
     // LCOV_EXCL_START
     catch (runtime_error const& e)
     {
-        qDebug() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
+        qWarning() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
         return "";
     }
     // LCOV_EXCL_STOP

@@ -536,7 +536,6 @@ void LocalThumbnailRequest::check_client_credentials(uid_t user,
 
 }
 
-
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
 {
     if (image_extractor_)
