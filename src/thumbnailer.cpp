@@ -861,6 +861,12 @@ void Thumbnailer::clear(CacheSelector selector)
     {
         c->invalidate();
     }
+    if (selector == Thumbnailer::CacheSelector::failure_cache)
+    {
+        // Force retry on next remote retrieval even if we
+        // are still within the timeout period.
+        nw_fail_time_ = chrono::system_clock::time_point();
+    }
 }
 
 void Thumbnailer::compact(CacheSelector selector)
