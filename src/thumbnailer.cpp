@@ -565,6 +565,29 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
         return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
     }
 
+    if (content_type == "application/octet-stream") {
+        // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
+        // for all files without an extension (as it only uses the extension to
+        // determine file type), in these cases we fall back to the full content
+        // type detector.
+        gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
+                                                        G_FILE_QUERY_INFO_NONE,
+                                                        /* cancellable */ NULL,
+                                                        /* error */ NULL));
+
+        if (!full_info)
+        {
+            return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+        }
+
+        content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
+        if (content_type.empty())
+        {
+            return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+        }
+
+    }
+
     // Call the appropriate image extractor and return the image data as JPEG (not scaled).
     // We indicate that full-size images are to be cached only for audio and video files,
     // for which extraction is expensive. For local images, we don't cache full size.
