@@ -565,16 +565,16 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
         return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
     }
 
-    if (content_type == "application/octet-stream") {
+    if (content_type == "application/octet-stream")
+    {
         // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
         // for all files without an extension (as it only uses the extension to
-        // determine file type), in these cases we fall back to the full content
+        // determine file type). In these cases, we fall back to the full content
         // type detector.
         gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
                                                         G_FILE_QUERY_INFO_NONE,
                                                         /* cancellable */ NULL,
                                                         /* error */ NULL));
-
         if (!full_info)
         {
             return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
@@ -585,7 +585,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
         {
             return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
         }
-
     }
 
     // Call the appropriate image extractor and return the image data as JPEG (not scaled).
