@@ -21,7 +21,7 @@ The image cache stores images that are expensive to retrieve (namely
 images downloaded from the image server (dash.ubuntu.com) or extracted from audio
 or video files). Images in the this cache are kept at high resolution,
 up to a limit of \fBmax\-thumbnail\-size\fP (usually 1920) pixels in the larger dimension (see
-\fBthumbnailer\-settings\fR(5)\fP). The image cache
+\fBthumbnailer\-settings\fR(5)). The image cache
 is used to create thumbnails at smaller sizes that are then inserted
 into the thumbnail cache (to avoid repeated download or extraction
 of the original images).
@@ -37,7 +37,7 @@ could be generated, either because a local file does not contain artwork, or bec
 the image server has returned an authoritative answer that no image is available.
 If a client asks for an image that is in the failure cache, the service does not
 try to create a thumbnail for some period of time, to avoid expensive repeated
-attempts to artwork that does not exist.
+attempts to retrieve artwork that does not exist.
 .P
 Commands that can selectively be applied to these caches use the following \fIcache\-id\fP:
 .TP
@@ -61,7 +61,7 @@ Scaling always maintains the aspect ratio of the original image, and ensures tha
 has a size of at least one pixel in the smaller dimension.
 .IP
 Specifying a size of zero (or not specifying any size) is equivalent to specifying \fBmax\-thumbnail\-size\fP
-(see \fBthumbnailer\-settings\fR(5)\fP).
+(see \fBthumbnailer\-settings\fR(5)).
 .IP
 Requests for thumbnails that are larger than the original image are automatically reduced to the original
 image size, that is, original artwork is never scaled up.
