@@ -81,8 +81,8 @@ QString command_summary()
 void parse_and_execute()
 {
     QCommandLineParser parser;
-    parser.setApplicationDescription("Thumbnailer administrative tool");
-    parser.addPositionalArgument("command", "The command to execute.");
+    parser.setApplicationDescription(QStringLiteral("Thumbnailer administrative tool"));
+    parser.addPositionalArgument(QStringLiteral("command"), QStringLiteral("The command to execute."));
     parser.parse(QCoreApplication::arguments());
 
     auto args = parser.positionalArguments();

@@ -36,11 +36,11 @@ QString default_image_based_on_mime(QString const &id)
     QMimeDatabase db;
     QMimeType mime = db.mimeTypeForFile(id);
 
-    if (mime.name().contains("audio"))
+    if (mime.name().contains(QStringLiteral("audio")))
     {
         return DEFAULT_ALBUM_ART;
     }
-    else if (mime.name().contains("video"))
+    else if (mime.name().contains(QStringLiteral("video")))
     {
         return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
     }
@@ -58,8 +58,8 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
-                                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter)
+ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer,
+                                       std::shared_ptr<unity::thumbnailer::RateLimiter> const& backlog_limiter)
     : QQuickAsyncImageProvider()
     , thumbnailer(thumbnailer)
     , backlog_limiter(backlog_limiter)

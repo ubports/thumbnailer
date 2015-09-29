@@ -39,8 +39,8 @@ private:
     std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter;
 
 public:
-    ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
-                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter);
+    ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer,
+                       std::shared_ptr<unity::thumbnailer::RateLimiter> const& backlog_limiter);
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
 };
 }

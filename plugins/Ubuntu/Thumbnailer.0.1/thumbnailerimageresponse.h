@@ -50,7 +50,7 @@ public:
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image,
                              unity::thumbnailer::RateLimiter* rate_limiter,
-                             std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> reply);
+                             std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> const& reply);
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();

@@ -43,9 +43,9 @@ QString get_summary(core::PersistentCacheStats const& stats)
     double hit_rate = (hits + misses == 0) ? 0.0 : hits / (hits + misses);
     auto entries = stats.size();
     auto size_in_bytes = stats.size_in_bytes();
-    QString entry_str = entries == 1 ? "entry" : "entries";
+    QString entry_str = entries == 1 ? QStringLiteral("entry") : QStringLiteral("entries");
     QString summary;
-    summary = QString("%1 %2, %3 bytes, hit rate %5 (%6/%7), avg hit run %8, avg miss run %9")
+    summary = QStringLiteral("%1 %2, %3 bytes, hit rate %5 (%6/%7), avg hit run %8, avg miss run %9")
         .arg(entries)
         .arg(entry_str)
         .arg(size_in_bytes)

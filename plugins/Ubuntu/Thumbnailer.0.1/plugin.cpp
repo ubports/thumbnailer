@@ -37,7 +37,7 @@ namespace qml
 void ThumbnailerPlugin::registerTypes(const char* uri)
 {
     qmlRegisterTypeNotAvailable(uri, 0, 1, "__ThumbnailerIgnoreMe",
-                                "Ignore this: QML plugins must contain at least one type");
+                                QStringLiteral("Ignore this: QML plugins must contain at least one type"));
 }
 
 void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
@@ -50,7 +50,7 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("albumart", new AlbumArtGenerator(
+        engine->addImageProvider(QStringLiteral("albumart"), new AlbumArtGenerator(
                                      thumbnailer, backlog_limiter));
     }
     // LCOV_EXCL_START
@@ -67,7 +67,7 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("artistart", new ArtistArtGenerator(
+        engine->addImageProvider(QStringLiteral("artistart"), new ArtistArtGenerator(
                                      thumbnailer, backlog_limiter));
     }
     // LCOV_EXCL_START
@@ -84,7 +84,7 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("thumbnailer", new ThumbnailGenerator(
+        engine->addImageProvider(QStringLiteral("thumbnailer"), new ThumbnailGenerator(
                                      thumbnailer, backlog_limiter));
     }
     // LCOV_EXCL_START
