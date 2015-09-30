@@ -123,7 +123,7 @@ void AdminInterface::ClearStats(int cache_id)
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
-        sendErrorReply(ADMIN_ERROR, QString("ClearStats(): invalid cache selector: ") + QString::number(cache_id));
+        sendErrorReply(ADMIN_ERROR, QStringLiteral("ClearStats(): invalid cache selector: ") + QString::number(cache_id));
         return;
     }
     auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
@@ -136,7 +136,7 @@ void AdminInterface::Clear(int cache_id)
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
-        sendErrorReply(ADMIN_ERROR, QString("Clear(): invalid cache selector: ") + QString::number(cache_id));
+        sendErrorReply(ADMIN_ERROR, QStringLiteral("Clear(): invalid cache selector: ") + QString::number(cache_id));
         return;
     }
     auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);
@@ -149,7 +149,7 @@ void AdminInterface::Compact(int cache_id)
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
-        sendErrorReply(ADMIN_ERROR, QString("Compact(): invalid cache selector: ") + QString::number(cache_id));
+        sendErrorReply(ADMIN_ERROR, QStringLiteral("Compact(): invalid cache selector: ") + QString::number(cache_id));
         return;
     }
     auto selector = static_cast<Thumbnailer::CacheSelector>(cache_id);

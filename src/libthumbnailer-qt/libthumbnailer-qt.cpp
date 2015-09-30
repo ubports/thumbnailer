@@ -105,7 +105,7 @@ public:
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
-    QSharedPointer<Request> createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> reply,
+    QSharedPointer<Request> createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> const& reply,
                                           QSize const& requested_size);
     std::unique_ptr<ThumbnailerInterface> iface_;
 };
@@ -135,7 +135,7 @@ void RequestImpl::dbusCallFinished()
         image_ = unity::thumbnailer::internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         finished_ = true;
         is_valid_ = true;
-        error_message_ = "";
+        error_message_ = QLatin1String("");
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
         return;
@@ -148,10 +148,10 @@ void RequestImpl::dbusCallFinished()
     }
     catch (...)
     {
-        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception");
+        finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception"));
     }
 
-    finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown error");
+    finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown error"));
     // LCOV_EXCL_STOP
 }
 
@@ -173,7 +173,7 @@ void RequestImpl::cancel()
     // are no longer interested in the reply.  The destruction will
     // also clear up the signal connections.
     watcher_.reset();
-    finishWithError("Request cancelled");
+    finishWithError(QStringLiteral("Request cancelled"));
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
@@ -206,7 +206,7 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
     return createRequest(reply, requestedSize);
 }
 
-QSharedPointer<Request> ThumbnailerImpl::createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> reply,
+QSharedPointer<Request> ThumbnailerImpl::createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> const& reply,
                                                        QSize const& requested_size)
 {
     std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));

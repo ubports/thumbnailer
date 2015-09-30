@@ -51,8 +51,8 @@ class Handler : public QObject
 public:
     Handler(QDBusConnection const& bus,
             QDBusMessage const& message,
-            std::shared_ptr<QThreadPool> check_pool,
-            std::shared_ptr<QThreadPool> create_pool,
+            std::shared_ptr<QThreadPool> const& check_pool,
+            std::shared_ptr<QThreadPool> const& create_pool,
             RateLimiter& limiter,
             CredentialsCache& creds,
             InactivityHandler& inactivity_handler,

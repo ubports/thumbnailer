@@ -35,7 +35,7 @@ namespace qml
 ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
                                                    QString const& default_image,
                                                    RateLimiter* backlog_limiter,
-                                                   std::function<QSharedPointer<thumb_qt::Request>()> job)
+                                                   std::function<QSharedPointer<thumb_qt::Request>()> const& job)
     : requested_size_(requested_size)
     , backlog_limiter_(backlog_limiter)
     , job_(job)

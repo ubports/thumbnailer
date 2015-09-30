@@ -59,7 +59,7 @@ public:
     CredentialsCache& operator=(CredentialsCache const&) = delete;
 
     // Retrieve the security credentials for the given D-Bus peer.
-    void get(QString const& peer, Callback callback);
+    void get(QString const& peer, Callback const& callback);
 
 private:
     struct Request;
@@ -71,7 +71,7 @@ private:
     std::map<QString,Credentials> old_cache_;
     std::map<QString,std::unique_ptr<Request>> pending_;
 
-    void received_credentials(QString const& peer, QDBusPendingReply<QVariantMap> reply);
+    void received_credentials(QString const& peer, QDBusPendingReply<QVariantMap> const& reply);
 };
 
 }  // namespace service
