@@ -23,6 +23,19 @@
 #include <utils/dbusserver.h>
 #include <utils/supports_decoder.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
+#include <gst/gst.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+#pragma GCC diagnostic pop
+
 #include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
 #include <QSignalSpy>
@@ -296,6 +309,9 @@ TEST_F(StressTest, album_art)
 
 int main(int argc, char** argv)
 {
+    // Need this because we are using a static test fixture and can't rely an global constructor order.
+    gst_init(&argc, &argv);
+
     QCoreApplication app(argc, argv);
 
     setenv("GSETTINGS_BACKEND", "memory", true);

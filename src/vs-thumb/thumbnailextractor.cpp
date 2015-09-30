@@ -171,13 +171,58 @@ private:
 
 struct ThumbnailExtractor::Private
 {
+    void find_audio_cover(GstTagList* tags, char const* tag_name);
+
+    enum ImageType { cover, other };
+
     gobj_ptr<GstElement> playbin;
     gint64 duration = -1;
 
     std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample{nullptr, gst_sample_unref};
     GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
     bool sample_raw = true;
+    ImageType image_type;
 };
+
+// Look for an image with the specified tag. If we find a cover image, image_type is set to cover,
+// and sample points at the image. If we find some other (non-cover) image, image_type is set to other,
+// and sample points at the image. Otherwise, if we can't find any image at all, sample is set to nullptr.
+
+void ThumbnailExtractor::Private::find_audio_cover(GstTagList* tags, const char* tag_name)
+{
+    image_type = ThumbnailExtractor::Private::other;
+
+    bool found_cover = false;
+    for (int i = 0; !found_cover; i++)
+    {
+        GstSample* s;
+        if (!gst_tag_list_get_sample_index(tags, tag_name, i, &s))
+        {
+            break;
+        }
+        assert(s);
+        // Check the type of this image
+        int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
+        auto structure = gst_sample_get_info(s);
+        if (structure)
+        {
+            gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
+        }
+        if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
+        {
+            sample.reset(gst_sample_ref(s));
+            found_cover = true;
+            image_type = ThumbnailExtractor::Private::cover;
+        }
+        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample)
+        {
+            // Save the first unknown image tag, but continue scanning
+            // in case there is one marked as the cover.
+            sample.reset(gst_sample_ref(s));
+        }
+        gst_sample_unref(s);
+    }
+}
 
 /* GstPlayFlags flags from playbin.
  *
@@ -294,6 +339,7 @@ bool ThumbnailExtractor::extract_video_frame()
     g_signal_emit_by_name(p->playbin.get(), "get-video-tags", 0, &tags);
     if (tags)
     {
+        // TODO: The "flip-rotate-*" transforms defined in gst/gsttaglist.h need to be added here.
         char* orientation = nullptr;
         if (gst_tag_list_get_string_index(tags, GST_TAG_IMAGE_ORIENTATION, 0, &orientation) && orientation != nullptr)
         {
@@ -326,32 +372,26 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     p->sample.reset();
     p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
     p->sample_raw = false;
-    bool found_cover = false;
-    for (int i = 0; !found_cover; i++)
+
+    p->find_audio_cover(tags, GST_TAG_IMAGE);
+    if (!p->sample || p->image_type == ThumbnailExtractor::Private::other)
     {
-        GstSample* sample;
-        if (!gst_tag_list_get_sample_index(tags, GST_TAG_IMAGE, i, &sample))
+        // Save whatever the first look-up returned (possibly nothing).
+        auto provisional_sample = std::move(p->sample);
+
+        // We didn't find a full-size image, or we found an image that is not marked as the cover.
+        // Try to find a preview image instead.
+        p->find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
+        if (p->image_type == ThumbnailExtractor::Private::other && provisional_sample)
         {
-            break;
+            // We found a preview image that is *not* a cover, and the
+            // first look-up for a normal image returned something
+            // full-size that is *also* not a cover. Return the image
+            // from the first look-up in preference to this one.
+            p->sample = std::move(provisional_sample);
         }
-        // Check the type of this image
-        auto caps = gst_sample_get_caps(sample);
-        auto structure = gst_caps_get_structure(caps, 0);
-        int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
-        gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
-        if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
-        {
-            p->sample.reset(gst_sample_ref(sample));
-            found_cover = true;
-        }
-        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !p->sample)
-        {
-            // Save the first unknown image tag, but continue scanning
-            // in case there is one marked as the cover.
-            p->sample.reset(gst_sample_ref(sample));
-        }
-        gst_sample_unref(sample);
     }
+
     gst_tag_list_unref(tags);
     return bool(p->sample);
 }
