@@ -71,7 +71,7 @@ namespace thumbnailer
 namespace service
 {
 
-InactivityHandler::InactivityHandler(std::function<void()> timer_func)
+InactivityHandler::InactivityHandler(std::function<void()> const& timer_func)
     : timer_func_(timer_func)
     , num_active_requests_(0)
 {

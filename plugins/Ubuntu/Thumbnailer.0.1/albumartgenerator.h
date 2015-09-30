@@ -40,7 +40,7 @@ private:
     std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
 
 public:
-    AlbumArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer);
+    AlbumArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer);
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
 };
 

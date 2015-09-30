@@ -47,7 +47,7 @@ class RequestImpl : public QObject
 public:
     RequestImpl(QSize const& requested_size,
                 RateLimiter* limiter,
-                std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job);
+                std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
 
     ~RequestImpl() = default;
 
@@ -131,14 +131,14 @@ public:
 
 private:
     QSharedPointer<Request> createRequest(QSize const& requested_size,
-                                          std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job);
+                                          std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
     RateLimiter limiter_;
 };
 
 RequestImpl::RequestImpl(QSize const& requested_size,
                          RateLimiter* limiter,
-                         std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job)
+                         std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
     : requested_size_(requested_size)
     , limiter_(limiter)
     , job_(job)
@@ -175,7 +175,7 @@ void RequestImpl::dbusCallFinished()
         image_ = unity::thumbnailer::internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
         finished_ = true;
         is_valid_ = true;
-        error_message_ = "";
+        error_message_ = QLatin1String("");
         watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
@@ -193,10 +193,10 @@ void RequestImpl::dbusCallFinished()
     }
     catch (...)
     {
-        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception");
+        finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception"));
     }
 
-    finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): unknown error");
+    finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown error"));
     // LCOV_EXCL_STOP
 }
 
@@ -228,7 +228,7 @@ void RequestImpl::cancel()
         // also clear up the signal connections.
         watcher_.reset();
 
-        finishWithError("Request cancelled");
+        finishWithError(QStringLiteral("Request cancelled"));
     }
 }
 
@@ -270,7 +270,7 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
 }
 
 QSharedPointer<Request> ThumbnailerImpl::createRequest(QSize const& requested_size,
-                                                       std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job)
+                                                       std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
 {
     //std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
     auto request_impl = new RequestImpl(requested_size, &limiter_, job);

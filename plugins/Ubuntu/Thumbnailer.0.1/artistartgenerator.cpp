@@ -41,7 +41,7 @@ namespace thumbnailer
 namespace qml
 {
 
-ArtistArtGenerator::ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer)
+ArtistArtGenerator::ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer)
     : QQuickAsyncImageProvider()
     , thumbnailer(thumbnailer)
 {
@@ -59,14 +59,14 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     }
 
     QUrlQuery query(id);
-    if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
+    if (!query.hasQueryItem(QStringLiteral("artist")) || !query.hasQueryItem(QStringLiteral("album")))
     {
         qWarning() << "ArtistArtGenerator::requestImageResponse(): Invalid artistart uri:" << id;
         return new ThumbnailerImageResponse(requestedSize, DEFAULT_ARTIST_ART);
     }
 
-    const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
-    const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
+    const QString artist = query.queryItemValue(QStringLiteral("artist"), QUrl::FullyDecoded);
+    const QString album = query.queryItemValue(QStringLiteral("album"), QUrl::FullyDecoded);
 
     auto request = thumbnailer->getArtistArt(artist, album, size);
     return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, request);

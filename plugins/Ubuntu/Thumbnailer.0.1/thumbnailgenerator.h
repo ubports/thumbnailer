@@ -39,7 +39,7 @@ private:
     std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
 
 public:
-    ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer);
+    ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer);
     ThumbnailGenerator(const ThumbnailGenerator& other) = delete;
     const ThumbnailGenerator& operator=(const ThumbnailGenerator& other) = delete;
     ThumbnailGenerator(ThumbnailGenerator&& other) = delete;

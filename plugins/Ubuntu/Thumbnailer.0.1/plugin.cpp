@@ -37,7 +37,7 @@ namespace qml
 void ThumbnailerPlugin::registerTypes(const char* uri)
 {
     qmlRegisterTypeNotAvailable(uri, 0, 1, "__ThumbnailerIgnoreMe",
-                                "Ignore this: QML plugins must contain at least one type");
+                                QStringLiteral("Ignore this: QML plugins must contain at least one type"));
 }
 
 void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)

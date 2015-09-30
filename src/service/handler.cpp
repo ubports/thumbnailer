@@ -137,8 +137,8 @@ struct HandlerPrivate
 
     HandlerPrivate(QDBusConnection const& bus,
                    QDBusMessage const& message,
-                   shared_ptr<QThreadPool> check_pool,
-                   shared_ptr<QThreadPool> create_pool,
+                   shared_ptr<QThreadPool> const& check_pool,
+                   shared_ptr<QThreadPool> const& create_pool,
                    RateLimiter& limiter,
                    CredentialsCache& creds,
                    InactivityHandler& inactivity_handler,
@@ -160,8 +160,8 @@ struct HandlerPrivate
 
 Handler::Handler(QDBusConnection const& bus,
                  QDBusMessage const& message,
-                 shared_ptr<QThreadPool> check_pool,
-                 shared_ptr<QThreadPool> create_pool,
+                 shared_ptr<QThreadPool> const& check_pool,
+                 shared_ptr<QThreadPool> const& create_pool,
                  RateLimiter& limiter,
                  CredentialsCache& creds,
                  InactivityHandler& inactivity_handler,
@@ -365,7 +365,7 @@ void Handler::createFinished()
     // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        sendError(QString("Handler::createFinished(): ") + details() + ": " + e.what());
+        sendError(QStringLiteral("Handler::createFinished(): ") + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isEmpty())
@@ -435,21 +435,21 @@ QString Handler::status() const
     switch (p->request->status())
     {
     case ThumbnailRequest::FetchStatus::cache_hit:
-        return "HIT";
+        return QStringLiteral("HIT");
     case ThumbnailRequest::FetchStatus::scaled_from_fullsize:
-        return "FULL-SIZE HIT";
+        return QStringLiteral("FULL-SIZE HIT");
     case ThumbnailRequest::FetchStatus::cached_failure:
-        return "FAILED PREVIOUSLY";
+        return QStringLiteral("FAILED PREVIOUSLY");
     case ThumbnailRequest::FetchStatus::needs_download:
-        return "NEEDS DOWNLOAD";  // LCOV_EXCL_LINE
+        return QStringLiteral("NEEDS DOWNLOAD");  // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::downloaded:
-        return "MISS";
+        return QStringLiteral("MISS");
     case ThumbnailRequest::FetchStatus::not_found:
-        return "NO ARTWORK";
+        return QStringLiteral("NO ARTWORK");
     case ThumbnailRequest::FetchStatus::no_network:
-        return "NETWORK DOWN";  // LCOV_EXCL_LINE
+        return QStringLiteral("NETWORK DOWN");  // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::error:
-        return "ERROR";  // LCOV_EXCL_LINE
+        return QStringLiteral("ERROR");  // LCOV_EXCL_LINE
     default:
         abort();  // LCOV_EXCL_LINE  // Impossible.
     }

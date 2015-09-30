@@ -53,7 +53,7 @@ struct CredentialsCache::Request
     QDBusPendingCallWatcher watcher;
     std::vector<CredentialsCache::Callback> callbacks;
 
-    Request(QDBusPendingReply<QVariantMap> call) : watcher(call) {}
+    Request(QDBusPendingReply<QVariantMap> const& call) : watcher(call) {}
 };
 
 CredentialsCache::CredentialsCache(QDBusConnection const& bus)
@@ -64,7 +64,7 @@ CredentialsCache::CredentialsCache(QDBusConnection const& bus)
 
 CredentialsCache::~CredentialsCache() = default;
 
-void CredentialsCache::get(QString const& peer, Callback callback)
+void CredentialsCache::get(QString const& peer, Callback const& callback)
 {
     // Return the credentials directly if they are cached
     try
@@ -122,7 +122,7 @@ void CredentialsCache::get(QString const& peer, Callback callback)
     pending_.emplace(peer, std::move(request));
 }
 
-void CredentialsCache::received_credentials(QString const& peer, QDBusPendingReply<QVariantMap> reply)
+void CredentialsCache::received_credentials(QString const& peer, QDBusPendingReply<QVariantMap> const& reply)
 {
     Credentials credentials;
     if (reply.isError())

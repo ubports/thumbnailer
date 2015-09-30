@@ -63,7 +63,7 @@ void ImageExtractor::extract()
     // external helper library.
     char* utildir = getenv("TN_UTILDIR");
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
-    exe_path_ += "/vs-thumb";
+    exe_path_ += QLatin1String("/vs-thumb");
 
     if (!tmpfile_.open())
     {
