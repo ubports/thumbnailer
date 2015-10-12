@@ -14,7 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Jussi Pakkanen <jussi.pakkanen@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
+
+#include <internal/trace.h>
 
 #include <cstdio>
 #include <string>
@@ -83,37 +86,43 @@ bool extract_thumbnail(string const& uri, string const& ofname)
     extractor.save_screenshot(ofname);
     return true;
 }
-}
+
+}  // namespace
 
 int main(int argc, char** argv)
 {
+    char const * const progname = basename(argv[0]);
+
+    TraceMessageHandler message_handler("vs-thumb");
+
     gst_init(&argc, &argv);
+
     if (argc != 3)
     {
-        fprintf(stderr, "%s <source file> <output file>\n", argv[0]);
+        fprintf(stderr, "%s <source file> <output file>\n", progname);
         return 1;
     }
-    string uri;
-    string outfile(argv[2]);
-    bool success = false;
 
+    string uri;
     try
     {
         uri = command_line_arg_to_uri(argv[1]);
     }
     catch (exception const& e)
     {
-        fprintf(stderr, "Error parsing \"%s\": %s\n", argv[1], e.what());
+        fprintf(stderr, "%s: Error parsing \"%s\": %s\n", progname, argv[1], e.what());
         return 1;
     }
 
+    string outfile(argv[2]);
+    bool success = false;
     try
     {
         success = extract_thumbnail(uri, outfile);
     }
     catch (exception const& e)
     {
-        fprintf(stderr, "Error creating thumbnail: %s\n", e.what());
+        fprintf(stderr, "%s: Error creating thumbnail: %s\n", progname, e.what());
         return 2;
     }
 

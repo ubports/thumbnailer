@@ -224,10 +224,11 @@ void ThumbnailExtractor::Private::find_audio_cover(GstTagList* tags, const char*
     }
 }
 
-/* GstPlayFlags flags from playbin.
- *
- * GStreamer does not install headers for the enums of individual
- * elements anywhere, but they make up part of its ABI. */
+// GstPlayFlags flags from playbin.
+//
+// GStreamer does not install headers for the enums of individual
+// elements anywhere, but they make up part of its ABI.
+
 typedef enum
 {
     GST_PLAY_FLAG_VIDEO             = (1 << 0),

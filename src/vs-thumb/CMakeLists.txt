@@ -3,7 +3,7 @@ add_executable(vs-thumb
   thumbnailextractor.cpp
 )
 
-target_link_libraries(vs-thumb ${GST_DEPS_LDFLAGS} ${IMG_DEPS_LDFLAGS} ${GIO_DEPS_LDFLAGS})
+target_link_libraries(vs-thumb thumbnailer-static ${GST_DEPS_LDFLAGS} ${IMG_DEPS_LDFLAGS} ${GIO_DEPS_LDFLAGS})
 
 install(
   TARGETS vs-thumb
