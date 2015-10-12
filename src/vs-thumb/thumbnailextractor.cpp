@@ -14,33 +14,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: James Henstridge <james.henstridge@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #include "thumbnailextractor.h"
+
+#include <QDebug>
 
 #include <cassert>
 #include <cstdio>
 #include <stdexcept>
 #include <cstring>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wcast-align"
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wparentheses-equality"
-#endif
-
-#include <gdk-pixbuf/gdk-pixbuf.h>
-#include <gst/gst.h>
-#include <gst/tag/tag.h>
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-#include <internal/gobj_memory.h>
 
 namespace unity
 {
@@ -65,8 +49,12 @@ void throw_error(const char* msg, GError* error = nullptr)
         message += error->message;
         g_error_free(error);
     }
+    qCritical() << message.c_str();
     throw std::runtime_error(message);
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 
 void change_state(GstElement* element, GstState state)
 {
@@ -121,6 +109,8 @@ void change_state(GstElement* element, GstState state)
     }
 }
 
+#pragma GCC diagnostic pop
+
 class BufferMap final
 {
 public:
@@ -167,63 +157,6 @@ private:
     GstMapInfo info;
 };
 
-}  // namespace
-
-struct ThumbnailExtractor::Private
-{
-    void find_audio_cover(GstTagList* tags, char const* tag_name);
-
-    enum ImageType { cover, other };
-
-    gobj_ptr<GstElement> playbin;
-    gint64 duration = -1;
-
-    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample{nullptr, gst_sample_unref};
-    GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    bool sample_raw = true;
-    ImageType image_type;
-};
-
-// Look for an image with the specified tag. If we find a cover image, image_type is set to cover,
-// and sample points at the image. If we find some other (non-cover) image, image_type is set to other,
-// and sample points at the image. Otherwise, if we can't find any image at all, sample is set to nullptr.
-
-void ThumbnailExtractor::Private::find_audio_cover(GstTagList* tags, const char* tag_name)
-{
-    image_type = ThumbnailExtractor::Private::other;
-
-    bool found_cover = false;
-    for (int i = 0; !found_cover; i++)
-    {
-        GstSample* s;
-        if (!gst_tag_list_get_sample_index(tags, tag_name, i, &s))
-        {
-            break;
-        }
-        assert(s);
-        // Check the type of this image
-        int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
-        auto structure = gst_sample_get_info(s);
-        if (structure)
-        {
-            gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
-        }
-        if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
-        {
-            sample.reset(gst_sample_ref(s));
-            found_cover = true;
-            image_type = ThumbnailExtractor::Private::cover;
-        }
-        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample)
-        {
-            // Save the first unknown image tag, but continue scanning
-            // in case there is one marked as the cover.
-            sample.reset(gst_sample_ref(s));
-        }
-        gst_sample_unref(s);
-    }
-}
-
 // GstPlayFlags flags from playbin.
 //
 // GStreamer does not install headers for the enums of individual
@@ -245,15 +178,73 @@ typedef enum
     GST_PLAY_FLAG_FORCE_FILTERS     = (1 << 11),
 } GstPlayFlags;
 
+}  // namespace
+
+#if 0
+struct ThumbnailExtractor::Private
+{
+    void find_audio_cover(GstTagList* tags, char const* tag_name);
+
+    enum ImageType { cover, other };
+
+    gobj_ptr<GstElement> playbin;
+    gint64 duration = -1;
+
+    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample{nullptr, gst_sample_unref};
+    GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
+    bool sample_raw = true;
+    ImageType image_type;
+};
+#endif
+
+// Look for an image with the specified tag. If we find a cover image, image_type_ is set to cover,
+// and sample_ points at the image. If we find some other (non-cover) image, image_type_ is set to other,
+// and sample_ points at the image. Otherwise, if we can't find any image at all, sample_ is set to nullptr.
+
+void ThumbnailExtractor::find_audio_cover(GstTagList* tags, const char* tag_name)
+{
+    image_type_ = other;
+
+    bool found_cover = false;
+    for (int i = 0; !found_cover; i++)
+    {
+        GstSample* s;
+        if (!gst_tag_list_get_sample_index(tags, tag_name, i, &s))
+        {
+            break;
+        }
+        assert(s);
+        // Check the type of this image
+        int type = GST_TAG_IMAGE_TYPE_UNDEFINED;
+        auto structure = gst_sample_get_info(s);
+        if (structure)
+        {
+            gst_structure_get_enum(structure, "image-type", GST_TYPE_TAG_IMAGE_TYPE, &type);
+        }
+        if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
+        {
+            sample_.reset(gst_sample_ref(s));
+            found_cover = true;
+            image_type_ = cover;
+        }
+        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample_)
+        {
+            // Save the first unknown image tag, but continue scanning
+            // in case there is one marked as the cover.
+            sample_.reset(gst_sample_ref(s));
+        }
+        gst_sample_unref(s);
+    }
+}
+
 ThumbnailExtractor::ThumbnailExtractor()
-    : p(new Private)
 {
     GstElement* pb = gst_element_factory_make("playbin", "playbin");
     if (!pb)
     {
         throw_error("ThumbnailExtractor(): Could not create playbin");
     }
-    p->playbin.reset(static_cast<GstElement*>(g_object_ref_sink(pb)));
+    playbin_.reset(static_cast<GstElement*>(g_object_ref_sink(pb)));
 
     GstElement* audio_sink = gst_element_factory_make("fakesink", "audio-fake-sink");
     if (!audio_sink)
@@ -268,7 +259,7 @@ ThumbnailExtractor::ThumbnailExtractor()
     }
 
     g_object_set(video_sink, "sync", TRUE, nullptr);
-    g_object_set(p->playbin.get(), "audio-sink", audio_sink, "video-sink", video_sink, "flags",
+    g_object_set(playbin_.get(), "audio-sink", audio_sink, "video-sink", video_sink, "flags",
                  GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO, nullptr);
 }
 
@@ -279,65 +270,66 @@ ThumbnailExtractor::~ThumbnailExtractor()
 
 void ThumbnailExtractor::reset()
 {
-    change_state(p->playbin.get(), GST_STATE_NULL);
-    p->sample.reset();
-    p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    p->sample_raw = true;
+    change_state(playbin_.get(), GST_STATE_NULL);
+    sample_.reset();
+    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    sample_raw_ = true;
 }
 
 void ThumbnailExtractor::set_uri(const std::string& uri)
 {
     reset();
-    g_object_set(p->playbin.get(), "uri", uri.c_str(), nullptr);
-    fprintf(stderr, "Changing to state PAUSED\n");
-    change_state(p->playbin.get(), GST_STATE_PAUSED);
+    g_object_set(playbin_.get(), "uri", uri.c_str(), nullptr);
+    qDebug() << "Changing to state PAUSED";
+    change_state(playbin_.get(), GST_STATE_PAUSED);
 
-    if (!gst_element_query_duration(p->playbin.get(), GST_FORMAT_TIME, &p->duration))
+    if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration_))
     {
-        p->duration = -1;
+        duration_ = -1;
     }
 }
 
 bool ThumbnailExtractor::has_video()
 {
     int n_video = 0;
-    g_object_get(p->playbin.get(), "n-video", &n_video, nullptr);
+    g_object_get(playbin_.get(), "n-video", &n_video, nullptr);
     return n_video > 0;
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 
 bool ThumbnailExtractor::extract_video_frame()
 {
     gint64 seek_point = 10 * GST_SECOND;
-    if (p->duration >= 0)
+    if (duration_ >= 0)
     {
-        seek_point = 2 * p->duration / 7;
+        seek_point = 2 * duration_ / 7;
     }
-    fprintf(stderr, "Seeking to position %d\n", (int)(seek_point / GST_SECOND));
-    gst_element_seek_simple(p->playbin.get(), GST_FORMAT_TIME,
+    qDebug() << "Seeking to position" << int(seek_point / GST_SECOND);
+    gst_element_seek_simple(playbin_.get(), GST_FORMAT_TIME,
                             static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), seek_point);
-    fprintf(stderr, "Waiting for seek to complete\n");
-    gst_element_get_state(p->playbin.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
-    fprintf(stderr, "Done.\n");
+    gst_element_get_state(playbin_.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
 
     // Retrieve sample from the playbin
-    fprintf(stderr, "Requesting sample frame.\n");
+    qDebug() << "Requesting sample frame.";
     std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
         gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", "pixel-aspect-ratio", GST_TYPE_FRACTION, 1,
                             1, nullptr),
         gst_caps_unref);
     GstSample* s;
-    g_signal_emit_by_name(p->playbin.get(), "convert-sample", desired_caps.get(), &s);
+    g_signal_emit_by_name(playbin_.get(), "convert-sample", desired_caps.get(), &s);
     if (!s)
     {
         return false;
     }
-    p->sample.reset(s);
-    p->sample_raw = true;
+    sample_.reset(s);
+    sample_raw_ = true;
 
     // Does the sample need to be rotated?
-    p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
+    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     GstTagList* tags = nullptr;
-    g_signal_emit_by_name(p->playbin.get(), "get-video-tags", 0, &tags);
+    g_signal_emit_by_name(playbin_.get(), "get-video-tags", 0, &tags);
     if (tags)
     {
         // TODO: The "flip-rotate-*" transforms defined in gst/gsttaglist.h need to be added here.
@@ -346,15 +338,15 @@ bool ThumbnailExtractor::extract_video_frame()
         {
             if (!strcmp(orientation, "rotate-90"))
             {
-                p->sample_rotation = GDK_PIXBUF_ROTATE_CLOCKWISE;
+                sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
             }
             else if (!strcmp(orientation, "rotate-180"))
             {
-                p->sample_rotation = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
+                sample_rotation_ = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
             }
             else if (!strcmp(orientation, "rotate-270"))
             {
-                p->sample_rotation = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
+                sample_rotation_ = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
             }
         }
         gst_tag_list_unref(tags);
@@ -362,55 +354,57 @@ bool ThumbnailExtractor::extract_video_frame()
     return true;
 }
 
+#pragma GCC diagnostic pop
+
 bool ThumbnailExtractor::extract_audio_cover_art()
 {
     GstTagList* tags = nullptr;
-    g_signal_emit_by_name(p->playbin.get(), "get-audio-tags", 0, &tags);
+    g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
     if (!tags)
     {
         return false;
     }
-    p->sample.reset();
-    p->sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    p->sample_raw = false;
+    sample_.reset();
+    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    sample_raw_ = false;
 
-    p->find_audio_cover(tags, GST_TAG_IMAGE);
-    if (!p->sample || p->image_type == ThumbnailExtractor::Private::other)
+    find_audio_cover(tags, GST_TAG_IMAGE);
+    if (!sample_ || image_type_ == other)
     {
         // Save whatever the first look-up returned (possibly nothing).
-        auto provisional_sample = std::move(p->sample);
+        auto provisional_sample = std::move(sample_);
 
         // We didn't find a full-size image, or we found an image that is not marked as the cover.
         // Try to find a preview image instead.
-        p->find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
-        if (p->image_type == ThumbnailExtractor::Private::other && provisional_sample)
+        find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
+        if (image_type_ == other && provisional_sample)
         {
             // We found a preview image that is *not* a cover, and the
             // first look-up for a normal image returned something
             // full-size that is *also* not a cover. Return the image
             // from the first look-up in preference to this one.
-            p->sample = std::move(provisional_sample);
+            sample_ = std::move(provisional_sample);
         }
     }
 
     gst_tag_list_unref(tags);
-    return bool(p->sample);
+    return bool(sample_);
 }
 
 void ThumbnailExtractor::save_screenshot(const std::string& filename)
 {
-    if (!p->sample)
+    if (!sample_)
     {
         throw_error("save_screenshot(): Could not retrieve screenshot");
     }
 
     // Construct a pixbuf from the sample
-    fprintf(stderr, "Creating pixbuf from sample\n");
+    qDebug() << "Saving screenshot";
     BufferMap buffermap;
     gobj_ptr<GdkPixbuf> image;
-    if (p->sample_raw)
+    if (sample_raw_)
     {
-        GstCaps* sample_caps = gst_sample_get_caps(p->sample.get());
+        GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
         if (!sample_caps)
         {
             throw_error("save_screenshot(): Could not retrieve caps for sample buffer");
@@ -424,7 +418,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
             throw_error("save_screenshot(): Could not retrieve image dimensions");
         }
 
-        buffermap.map(gst_sample_get_buffer(p->sample.get()));
+        buffermap.map(gst_sample_get_buffer(sample_.get()));
         image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
                                              GST_ROUND_UP_4(width * 3), nullptr, nullptr));
     }
@@ -432,7 +426,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     {
         gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
 
-        buffermap.map(gst_sample_get_buffer(p->sample.get()));
+        buffermap.map(gst_sample_get_buffer(sample_.get()));
         GError* error = nullptr;
         if (gdk_pixbuf_loader_write(loader.get(), buffermap.data(), buffermap.size(), &error) &&
             gdk_pixbuf_loader_close(loader.get(), &error))
@@ -449,9 +443,9 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         }
     }
 
-    if (p->sample_rotation != GDK_PIXBUF_ROTATE_NONE)
+    if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
     {
-        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), p->sample_rotation);
+        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
         if (rotated)
         {
             image.reset(rotated);
@@ -462,13 +456,12 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // (The main thumbnailer saves as jpg.) By staying lossless here, we
     // keep all the policy decisions about image quality in the main thumbnailer.
     // "compression", "1" means "no compression" for tiff files.
-    fprintf(stderr, "Saving pixbuf to tiff\n");
     GError* error = nullptr;
     if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
     {
         throw_error("save_screenshot(): saving image", error);
     }
-    fprintf(stderr, "Done.\n");
+    qDebug() << "Done.";
 }
 
 }  // namespace internal
@@ -476,5 +469,3 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
 }  // namespace thumbnailer
 
 }  // namespace unity
-
-#pragma GCC diagnostic pop
