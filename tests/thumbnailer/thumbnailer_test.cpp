@@ -85,7 +85,6 @@ protected:
     }
 };
 
-#if 0
 TEST_F(ThumbnailerTest, basic)
 {
     Thumbnailer tn;
@@ -673,7 +672,6 @@ TEST_F(ThumbnailerTest, empty_file)
         EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
     }
 }
-#endif
 
 class RemoteServer : public ThumbnailerTest
 {
@@ -718,7 +716,6 @@ TEST_F(RemoteServer, basic)
         EXPECT_EQ(48, img.height());
     }
 
-#if 0
     {
         auto request = tn.get_artist_art("metallica", "load", QSize(0, 0));
         EXPECT_EQ("", request->thumbnail());
@@ -747,10 +744,8 @@ TEST_F(RemoteServer, basic)
         EXPECT_EQ(1920, img.width());
         EXPECT_EQ(1439, img.height());
     }
-#endif
 }
 
-#if 0
 TEST_F(RemoteServer, no_such_album)
 {
     Thumbnailer tn;
@@ -953,7 +948,6 @@ TEST_F(DeadServer, errors)
 
     EXPECT_EQ("", request->thumbnail());
 }
-#endif
 
 int main(int argc, char** argv)
 {

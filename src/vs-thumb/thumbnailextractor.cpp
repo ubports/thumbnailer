@@ -180,23 +180,6 @@ typedef enum
 
 }  // namespace
 
-#if 0
-struct ThumbnailExtractor::Private
-{
-    void find_audio_cover(GstTagList* tags, char const* tag_name);
-
-    enum ImageType { cover, other };
-
-    gobj_ptr<GstElement> playbin;
-    gint64 duration = -1;
-
-    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample{nullptr, gst_sample_unref};
-    GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
-    bool sample_raw = true;
-    ImageType image_type;
-};
-#endif
-
 // Look for an image with the specified tag. If we find a cover image, image_type_ is set to cover,
 // and sample_ points at the image. If we find some other (non-cover) image, image_type_ is set to other,
 // and sample_ points at the image. Otherwise, if we can't find any image at all, sample_ is set to nullptr.
@@ -399,7 +382,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     }
 
     // Construct a pixbuf from the sample
-    qDebug() << "Saving screenshot";
+    qDebug() << "Saving image";
     BufferMap buffermap;
     gobj_ptr<GdkPixbuf> image;
     if (sample_raw_)

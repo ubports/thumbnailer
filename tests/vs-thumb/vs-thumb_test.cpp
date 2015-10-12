@@ -41,7 +41,6 @@
 
 #include <testsetup.h>
 #include <internal/gobj_memory.h>
-#include <internal/trace.h>
 #include <utils/supports_decoder.h>
 #include "../src/vs-thumb/thumbnailextractor.h"
 
@@ -235,7 +234,6 @@ TEST_F(ExtractorTest, file_not_found)
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
-    TraceMessageHandler message_handler("vs-thumb");
     gst_init(&argc, &argv);
     return RUN_ALL_TESTS();
 }
