@@ -63,18 +63,15 @@ public:
     bool extract_audio_cover_art();
     void save_screenshot(const std::string& filename);
 
+    typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
+
 private:
-    void find_audio_cover(GstTagList* tags, char const* tag_name);
-
-    enum ImageType { cover, other };
-
     gobj_ptr<GstElement> playbin_;
     gint64 duration_ = -1;
 
-    std::unique_ptr<GstSample, decltype(&gst_sample_unref)> sample_{nullptr, gst_sample_unref};
+    SampleUPtr sample_{nullptr, gst_sample_unref};
     GdkPixbufRotation sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     bool sample_raw_ = true;
-    ImageType image_type_;
 };
 
 }  // namespace internal

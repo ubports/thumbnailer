@@ -178,15 +178,20 @@ typedef enum
     GST_PLAY_FLAG_FORCE_FILTERS     = (1 << 11),
 } GstPlayFlags;
 
-}  // namespace
-
-// Look for an image with the specified tag. If we find a cover image, image_type_ is set to cover,
-// and sample_ points at the image. If we find some other (non-cover) image, image_type_ is set to other,
-// and sample_ points at the image. Otherwise, if we can't find any image at all, sample_ is set to nullptr.
-
-void ThumbnailExtractor::find_audio_cover(GstTagList* tags, const char* tag_name)
+enum ImageType { cover, other };
+struct CoverImage
 {
-    image_type_ = other;
+    ImageType type;
+    ThumbnailExtractor::SampleUPtr sample;
+};
+
+// Look for an image with the specified tag. If we find a cover image, CoverImage.type is set to cover,
+// and CoverImage.sample points at the image. If we find some other (non-cover) image, type is set to other,
+// and sample points at the image. Otherwise, if we can't find any image at all, sample is set to nullptr.
+
+CoverImage find_audio_cover(GstTagList* tags, const char* tag_name)
+{
+    CoverImage ci{other, {nullptr, gst_sample_unref}};
 
     bool found_cover = false;
     for (int i = 0; !found_cover; i++)
@@ -206,19 +211,22 @@ void ThumbnailExtractor::find_audio_cover(GstTagList* tags, const char* tag_name
         }
         if (type == GST_TAG_IMAGE_TYPE_FRONT_COVER)
         {
-            sample_.reset(gst_sample_ref(s));
+            ci.sample.reset(gst_sample_ref(s));
             found_cover = true;
-            image_type_ = cover;
+            ci.type = cover;
         }
-        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !sample_)
+        else if (type == GST_TAG_IMAGE_TYPE_UNDEFINED && !ci.sample)
         {
             // Save the first unknown image tag, but continue scanning
             // in case there is one marked as the cover.
-            sample_.reset(gst_sample_ref(s));
+            ci.sample.reset(gst_sample_ref(s));
         }
         gst_sample_unref(s);
     }
+    return ci;
 }
+
+}  // namespace
 
 ThumbnailExtractor::ThumbnailExtractor()
 {
@@ -351,24 +359,33 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     sample_raw_ = false;
 
-    find_audio_cover(tags, GST_TAG_IMAGE);
-    if (!sample_ || image_type_ == other)
+    // Look for a normal image (cover or other image).
+    auto image = std::move(find_audio_cover(tags, GST_TAG_IMAGE));
+    if (image.sample && image.type == cover)
     {
-        // Save whatever the first look-up returned (possibly nothing).
-        auto provisional_sample = std::move(sample_);
-
-        // We didn't find a full-size image, or we found an image that is not marked as the cover.
-        // Try to find a preview image instead.
-        find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
-        if (image_type_ == other && provisional_sample)
-        {
-            // We found a preview image that is *not* a cover, and the
-            // first look-up for a normal image returned something
-            // full-size that is *also* not a cover. Return the image
-            // from the first look-up in preference to this one.
-            sample_ = std::move(provisional_sample);
-        }
+        // Found a normal cover image.
+        sample_ = std::move(image.sample);
+        return true;
     }
+
+    // We didn't find a full-size cover image. Try to find a preview image instead.
+    auto preview_image = find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
+    if (preview_image.sample && preview_image.type == cover)
+    {
+        // Found a preview cover image.
+        sample_ = std::move(preview_image.sample);
+        return true;
+    }
+
+    // See if we found some other normal image.
+    if (image.sample)
+    {
+        sample_ = std::move(image.sample);
+        return true;
+    }
+
+    // We might have found a non-cover preview image.
+    sample_ = std::move(preview_image.sample);
 
     gst_tag_list_unref(tags);
     return bool(sample_);
