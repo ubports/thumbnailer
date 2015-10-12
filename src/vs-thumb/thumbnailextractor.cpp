@@ -40,77 +40,6 @@ namespace
 
 const std::string class_name = "ThumbnailExtractor";
 
-void throw_error(const char* msg, GError* error = nullptr)
-{
-    std::string message = class_name + ": " + msg;
-    if (error != nullptr)
-    {
-        message += ": ";
-        message += error->message;
-        g_error_free(error);
-    }
-    qCritical() << message.c_str();
-    throw std::runtime_error(message);
-}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-
-void change_state(GstElement* element, GstState state)
-{
-    GstStateChangeReturn ret = gst_element_set_state(element, state);
-    switch (ret)
-    {
-        case GST_STATE_CHANGE_NO_PREROLL:
-        case GST_STATE_CHANGE_SUCCESS:
-            return;
-        case GST_STATE_CHANGE_ASYNC:
-            // The change is happening in a background thread, which we
-            // will wait on below.
-            break;
-        case GST_STATE_CHANGE_FAILURE:
-        default:
-            throw_error("change_state(): Could not change element state");
-    }
-
-    // We're in the async case here, so pop messages off the bus until
-    // it is done.
-    gobj_ptr<GstBus> bus(gst_element_get_bus(element));
-    while (true)
-    {
-        std::unique_ptr<GstMessage, decltype(&gst_message_unref)> message(
-            gst_bus_timed_pop_filtered(bus.get(), GST_CLOCK_TIME_NONE,
-                                       static_cast<GstMessageType>(GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR)),
-            gst_message_unref);
-        if (!message)
-        {
-            break;
-        }
-
-        switch (GST_MESSAGE_TYPE(message.get()))
-        {
-            case GST_MESSAGE_ASYNC_DONE:
-                if (GST_MESSAGE_SRC(message.get()) == GST_OBJECT(element))
-                {
-                    return;
-                }
-                break;
-            case GST_MESSAGE_ERROR:
-            {
-                GError* error = nullptr;
-                gst_message_parse_error(message.get(), &error, nullptr);
-                throw_error("change_state(): reading async messages", error);
-                break;
-            }
-            default:
-                /* ignore other message types */
-                ;
-        }
-    }
-}
-
-#pragma GCC diagnostic pop
-
 class BufferMap final
 {
 public:
@@ -269,7 +198,9 @@ void ThumbnailExtractor::reset()
 
 void ThumbnailExtractor::set_uri(const std::string& uri)
 {
+    assert(!uri.empty());
     reset();
+    uri_= uri;
     g_object_set(playbin_.get(), "uri", uri.c_str(), nullptr);
     qDebug() << "Changing to state PAUSED";
     change_state(playbin_.get(), GST_STATE_PAUSED);
@@ -462,6 +393,77 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         throw_error("save_screenshot(): saving image", error);
     }
     qDebug() << "Done.";
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+
+void ThumbnailExtractor::change_state(GstElement* element, GstState state)
+{
+    GstStateChangeReturn ret = gst_element_set_state(element, state);
+    switch (ret)
+    {
+        case GST_STATE_CHANGE_NO_PREROLL:
+        case GST_STATE_CHANGE_SUCCESS:
+            return;
+        case GST_STATE_CHANGE_ASYNC:
+            // The change is happening in a background thread, which we
+            // will wait on below.
+            break;
+        case GST_STATE_CHANGE_FAILURE:
+        default:
+            throw_error("change_state(): Could not change element state");
+    }
+
+    // We're in the async case here, so pop messages off the bus until
+    // it is done.
+    gobj_ptr<GstBus> bus(gst_element_get_bus(element));
+    while (true)
+    {
+        std::unique_ptr<GstMessage, decltype(&gst_message_unref)> message(
+            gst_bus_timed_pop_filtered(bus.get(), GST_CLOCK_TIME_NONE,
+                                       static_cast<GstMessageType>(GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR)),
+            gst_message_unref);
+        if (!message)
+        {
+            break;
+        }
+
+        switch (GST_MESSAGE_TYPE(message.get()))
+        {
+            case GST_MESSAGE_ASYNC_DONE:
+                if (GST_MESSAGE_SRC(message.get()) == GST_OBJECT(element))
+                {
+                    return;
+                }
+                break;
+            case GST_MESSAGE_ERROR:
+            {
+                GError* error = nullptr;
+                gst_message_parse_error(message.get(), &error, nullptr);
+                throw_error("change_state(): reading async messages", error);
+                break;
+            }
+            default:
+                /* ignore other message types */
+                ;
+        }
+    }
+}
+
+#pragma GCC diagnostic pop
+
+void ThumbnailExtractor::throw_error(const char* msg, GError* error)
+{
+    std::string message = class_name + ": " + msg + ", uri: " + uri_;
+    if (error != nullptr)
+    {
+        message += ": ";
+        message += error->message;
+        g_error_free(error);
+    }
+    qCritical() << message.c_str();
+    throw std::runtime_error(message);
 }
 
 }  // namespace internal

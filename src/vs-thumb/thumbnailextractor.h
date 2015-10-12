@@ -66,9 +66,13 @@ public:
     typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
 
 private:
+    void change_state(GstElement* element, GstState state);
+    void throw_error(const char* msg, GError* error = nullptr);
+
     gobj_ptr<GstElement> playbin_;
     gint64 duration_ = -1;
 
+    std::string uri_;
     SampleUPtr sample_{nullptr, gst_sample_unref};
     GdkPixbufRotation sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     bool sample_raw_ = true;
