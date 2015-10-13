@@ -118,13 +118,13 @@ TEST_F(ExtractorTest, extract_theora)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out";  // vs-thumb appens ".tiff"
     extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.save_screenshot(outfile);
 
-    auto image = load_image(outfile);
+    auto image = load_image(outfile + ".tiff");
     EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
 }
@@ -138,7 +138,7 @@ TEST_F(ExtractorTest, extract_mp4)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_LANDSCAPE_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
@@ -158,7 +158,7 @@ TEST_F(ExtractorTest, extract_mp4_rotation)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_PORTRAIT_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.save_screenshot(outfile);
@@ -172,7 +172,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
 {
     ThumbnailExtractor extractor;
 
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_audio_cover_art());
@@ -193,7 +193,7 @@ TEST_F(ExtractorTest, extract_aac_cover_art)
 
     ThumbnailExtractor extractor;
 
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_audio_cover_art());
@@ -214,7 +214,7 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
 
     ThumbnailExtractor extractor;
 
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_audio_cover_art());

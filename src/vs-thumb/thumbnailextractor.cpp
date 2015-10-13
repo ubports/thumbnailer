@@ -19,6 +19,7 @@
 
 #include "thumbnailextractor.h"
 
+#include <boost/algorithm/string.hpp>
 #include <QDebug>
 
 #include <cassert>
@@ -243,7 +244,8 @@ bool ThumbnailExtractor::extract_video_frame()
     g_signal_emit_by_name(playbin_.get(), "convert-sample", desired_caps.get(), &s);
     if (!s)
     {
-        return false;
+        return false;  // TODO: Dubious, should at least report an error here because we should
+                       //       always get a still frame from a video.
     }
     sample_.reset(s);
     sample_raw_ = true;
@@ -270,6 +272,11 @@ bool ThumbnailExtractor::extract_video_frame()
             {
                 sample_rotation_ = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
             }
+            else
+            {
+                qCritical() << "extract_video_frame(): unknown rotation value:" << orientation;
+                // No error here, a flipped/rotated image is better than none.
+            }
         }
         gst_tag_list_unref(tags);
     }
@@ -294,7 +301,6 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     auto image = std::move(find_audio_cover(tags, GST_TAG_IMAGE));
     if (image.sample && image.type == cover)
     {
-        // Found a normal cover image.
         sample_ = std::move(image.sample);
         return true;
     }
@@ -303,7 +309,6 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     auto preview_image = find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
     if (preview_image.sample && preview_image.type == cover)
     {
-        // Found a preview cover image.
         sample_ = std::move(preview_image.sample);
         return true;
     }
@@ -327,6 +332,13 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     if (!sample_)
     {
         throw_error("save_screenshot(): Could not retrieve screenshot");
+    }
+
+    // Append ".tiff" to output file name if it isn't there already.
+    std::string outfile = filename;
+    if (!outfile.empty() && !boost::algorithm::ends_with(filename, ".tiff"))
+    {
+        outfile += ".tiff";
     }
 
     // Construct a pixbuf from the sample
@@ -388,7 +400,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // keep all the policy decisions about image quality in the main thumbnailer.
     // "compression", "1" means "no compression" for tiff files.
     GError* error = nullptr;
-    if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
+    if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
     {
         throw_error("save_screenshot(): saving image", error);
     }
