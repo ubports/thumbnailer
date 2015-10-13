@@ -202,7 +202,7 @@ void ThumbnailExtractor::set_uri(const std::string& uri)
     reset();
     uri_= uri;
     g_object_set(playbin_.get(), "uri", uri.c_str(), nullptr);
-    qDebug() << "Changing to state PAUSED";
+    qDebug().nospace() << uri_.c_str() << ": Changing to state PAUSED";
     change_state(playbin_.get(), GST_STATE_PAUSED);
 
     if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration_))
@@ -228,13 +228,13 @@ bool ThumbnailExtractor::extract_video_frame()
     {
         seek_point = 2 * duration_ / 7;
     }
-    qDebug() << "Seeking to position" << int(seek_point / GST_SECOND);
+    qDebug().nospace() << uri_.c_str() << ": Seeking to position " << int(seek_point / GST_SECOND);
     gst_element_seek_simple(playbin_.get(), GST_FORMAT_TIME,
                             static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), seek_point);
     gst_element_get_state(playbin_.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
 
     // Retrieve sample from the playbin
-    qDebug() << "Requesting sample frame.";
+    qDebug().nospace() << uri_.c_str() << ": Requesting sample frame";
     std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
         gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", "pixel-aspect-ratio", GST_TYPE_FRACTION, 1,
                             1, nullptr),
@@ -330,7 +330,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     }
 
     // Construct a pixbuf from the sample
-    qDebug() << "Saving image";
+    qDebug().nospace() << uri_.c_str() << ": Saving image";
     BufferMap buffermap;
     gobj_ptr<GdkPixbuf> image;
     if (sample_raw_)
@@ -392,7 +392,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     {
         throw_error("save_screenshot(): saving image", error);
     }
-    qDebug() << "Done.";
+    qDebug().nospace() << uri_.c_str() << ": Done";
 }
 
 #pragma GCC diagnostic push
