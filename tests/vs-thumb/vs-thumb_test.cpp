@@ -47,8 +47,10 @@
 using namespace unity::thumbnailer::internal;
 
 const char THEORA_TEST_FILE[] = TESTDATADIR "/testvideo.ogg";
-const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/gegl-landscape.mp4";
-const char MP4_PORTRAIT_TEST_FILE[] = TESTDATADIR "/gegl-portrait.mp4";
+const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/testvideo.mp4";
+const char MP4_ROTATE_90_TEST_FILE[] = TESTDATADIR "/testvideo-90.mp4";
+const char MP4_ROTATE_180_TEST_FILE[] = TESTDATADIR "/testvideo-180.mp4";
+const char MP4_ROTATE_270_TEST_FILE[] = TESTDATADIR "/testvideo-270.mp4";
 const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
 const char AAC_TEST_FILE[] = TESTDATADIR "/testsong.m4a";
 const char MP3_TEST_FILE[] = TESTDATADIR "/testsong.mp3";
@@ -125,8 +127,8 @@ TEST_F(ExtractorTest, extract_theora)
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile + ".tiff");
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
+    EXPECT_EQ(1920, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(1080, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, extract_mp4)
@@ -145,11 +147,11 @@ TEST_F(ExtractorTest, extract_mp4)
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
+    EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
 }
 
-TEST_F(ExtractorTest, extract_mp4_rotation)
+TEST_F(ExtractorTest, extract_mp4_rotate_90)
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -159,13 +161,51 @@ TEST_F(ExtractorTest, extract_mp4_rotation)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP4_PORTRAIT_TEST_FILE));
+    extractor.set_uri(filename_to_uri(MP4_ROTATE_90_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 720);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1280);
+    EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_mp4_rotate_180)
+{
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP4_ROTATE_180_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_video_frame());
+    extractor.save_screenshot(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_mp4_rotate_270)
+{
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP4_ROTATE_270_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_video_frame());
+    extractor.save_screenshot(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, extract_vorbis_cover_art)
@@ -179,8 +219,8 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, extract_aac_cover_art)
@@ -200,8 +240,8 @@ TEST_F(ExtractorTest, extract_aac_cover_art)
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, extract_mp3_cover_art)
@@ -221,8 +261,8 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, file_not_found)

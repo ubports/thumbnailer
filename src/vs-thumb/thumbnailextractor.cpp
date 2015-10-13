@@ -335,6 +335,7 @@ extern "C"
 gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer data)
 {
     int fd = *reinterpret_cast<int*>(data);
+    errno = 0;
     int rc = write(fd, buf, count);
     if (rc != int(count))
     {
@@ -408,6 +409,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
 
     if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
     {
+qDebug() << "rotate:" << sample_rotation_;
         GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
         if (rotated)
         {
@@ -422,7 +424,6 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     GError* error = nullptr;
     if (outfile.empty())
     {
-qDebug() << "writing to stdout";
         // Write to stdout.
         int fd = 1;
         if (!gdk_pixbuf_save_to_callback(image.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
@@ -432,7 +433,6 @@ qDebug() << "writing to stdout";
     }
     else
     {
-qDebug() << "saving file";
         if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
         {
             throw_error("save_screenshot(): cannot save image", error);

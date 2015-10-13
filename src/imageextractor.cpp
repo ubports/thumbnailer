@@ -81,7 +81,7 @@ string ImageExtractor::data()
     {
         throw runtime_error(string("ImageExtractor::data(): ") + error_);
     }
-    return read_file(tmpfile_.fileName().toStdString());
+    return read_file(tmpfile_.fileName().toStdString() + ".tiff");
 }
 
 void ImageExtractor::processFinished()
