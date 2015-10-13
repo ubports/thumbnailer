@@ -260,6 +260,7 @@ bool ThumbnailExtractor::extract_video_frame()
         char* orientation = nullptr;
         if (gst_tag_list_get_string_index(tags, GST_TAG_IMAGE_ORIENTATION, 0, &orientation) && orientation != nullptr)
         {
+qDebug() << "rotating:" << orientation;
             if (!strcmp(orientation, "rotate-90"))
             {
                 sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
@@ -325,6 +326,25 @@ bool ThumbnailExtractor::extract_audio_cover_art()
 
     gst_tag_list_unref(tags);
     return bool(sample_);
+}
+
+namespace
+{
+
+extern "C"
+gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer data)
+{
+    int fd = *reinterpret_cast<int*>(data);
+    int rc = write(fd, buf, count);
+    if (rc != int(count))
+    {
+        g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(errno),
+                    "cannot write image data %s", g_strerror(errno));
+        return false;
+    }
+    return true;
+}
+
 }
 
 void ThumbnailExtractor::save_screenshot(const std::string& filename)
@@ -400,9 +420,23 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // keep all the policy decisions about image quality in the main thumbnailer.
     // "compression", "1" means "no compression" for tiff files.
     GError* error = nullptr;
-    if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
+    if (outfile.empty())
     {
-        throw_error("save_screenshot(): saving image", error);
+qDebug() << "writing to stdout";
+        // Write to stdout.
+        int fd = 1;
+        if (!gdk_pixbuf_save_to_callback(image.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
+        {
+            throw_error("save_screenshot(): cannot write image", error);
+        }
+    }
+    else
+    {
+qDebug() << "saving file";
+        if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
+        {
+            throw_error("save_screenshot(): cannot save image", error);
+        }
     }
     qDebug().nospace() << uri_.c_str() << ": Done";
 }
