@@ -378,7 +378,6 @@ TEST_F(StressTest, album_art)
 
 int main(int argc, char** argv)
 {
-    // Need this because we are using a static test fixture and can't rely on global constructor order.
     gst_init(&argc, &argv);
 
     QCoreApplication app(argc, argv);

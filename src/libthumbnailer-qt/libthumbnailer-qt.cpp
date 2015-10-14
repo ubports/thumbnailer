@@ -113,7 +113,7 @@ private:
     QString error_message_;
     bool finished_;
     bool is_valid_;
-    bool request_sent_;  // Becomes true once rate limiter has given the request to DBus.
+    bool sent_via_limiter_;  // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
 };
@@ -144,7 +144,7 @@ RequestImpl::RequestImpl(QSize const& requested_size,
     , job_(job)
     , finished_(false)
     , is_valid_(false)
-    , request_sent_(false)
+    , sent_via_limiter_(false)
     , public_request_(nullptr)
 {
     // The limiter does not call send_request until the request can be sent
@@ -153,7 +153,7 @@ RequestImpl::RequestImpl(QSize const& requested_size,
     {
         watcher_.reset(new QDBusPendingCallWatcher(job()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
-        request_sent_ = true;
+        sent_via_limiter_ = true;
     };
     cancel_func_ = limiter_->schedule(send_request);
 }
@@ -179,7 +179,7 @@ void RequestImpl::dbusCallFinished()
         watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
-        if (request_sent_)
+        if (sent_via_limiter_)
         {
             limiter_->done();
         }
@@ -210,7 +210,7 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
-    if (request_sent_)
+    if (sent_via_limiter_)
     {
         limiter_->done();
     }
