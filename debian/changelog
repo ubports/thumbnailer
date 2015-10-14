@@ -1,4 +1,5 @@
 thumbnailer (2.3+15.10.20150915.1-0ubuntu2) UNRELEASED; urgency=medium
+
   [ Michi Henning ]
   * "thumbnailer-admin clear f" now also resets the network retry timeout.
   * API documentation and man page improvements.
