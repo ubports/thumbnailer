@@ -21,7 +21,6 @@
 #include <internal/imageextractor.h>
 
 #include <internal/config.h>
-#include <internal/file_io.h>
 #include <internal/safe_strerror.h>
 
 #include <QDebug>
@@ -34,7 +33,6 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     , timeout_ms_(timeout.count())
 {
     process_.setStandardInputFile(QProcess::nullDevice());
-    process_.setProcessChannelMode(QProcess::ForwardedChannels);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this,
             &ImageExtractor::processFinished);
     connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error), this,
@@ -64,15 +62,21 @@ void ImageExtractor::extract()
     char* utildir = getenv("TN_UTILDIR");
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
     exe_path_ += QLatin1String("/vs-thumb");
+    process_.start(exe_path_, {QString::fromStdString(filename_)});
 
-    if (!tmpfile_.open())
-    {
-        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileTemplate().toStdString());  // LCOV_EXCL_LINE
-    }
-    process_.start(exe_path_, {QString::fromStdString(filename_), tmpfile_.fileName()});
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
     timer_.setSingleShot(true);
     timer_.start(timeout_ms_);
+}
+
+namespace
+{
+
+string to_string(QByteArray const& array)
+{
+    return string(array.data(), array.size());
+}
+
 }
 
 string ImageExtractor::data()
@@ -81,7 +85,8 @@ string ImageExtractor::data()
     {
         throw runtime_error(string("ImageExtractor::data(): ") + error_);
     }
-    return read_file(tmpfile_.fileName().toStdString() + ".tiff");
+    // TODO: Not nice. This copies the entire thumbnail.
+    return to_string(process_.readAllStandardOutput());
 }
 
 void ImageExtractor::processFinished()
@@ -96,10 +101,10 @@ void ImageExtractor::processFinished()
                     error_ = "";
                     break;
                 case 1:
-                    error_ = "could not extract screenshot";
+                    error_ = string("could not extract screenshot: ") + to_string(process_.readAllStandardError());
                     break;
                 case 2:
-                    error_ = "extractor pipeline failed";
+                    error_ = string("extractor pipeline failed: ") + to_string(process_.readAllStandardError());
                     break;
                 default:
                     error_ = string("unknown exit status ") + to_string(process_.exitCode()) +
@@ -110,7 +115,7 @@ void ImageExtractor::processFinished()
         case QProcess::CrashExit:
             if (error_.empty())
             {
-                // Conditional because, if get a timeout and send a kill,
+                // Conditional because, if we get a timeout and send a kill,
                 // we don't want to overwrite the message set by timeout().
                 error_ = exe_path_.toStdString() + " crashed";
             }

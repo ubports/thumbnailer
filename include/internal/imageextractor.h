@@ -20,7 +20,6 @@
 #pragma once
 
 #include <QProcess>
-#include <QTemporaryFile>
 #include <QTimer>
 
 #include <chrono>
@@ -65,7 +64,6 @@ private:
 
     QProcess process_;
     QTimer timer_;
-    QTemporaryFile tmpfile_;
 };
 
 }  // namespace internal

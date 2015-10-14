@@ -16,12 +16,13 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <cstdio>
-#include <cstdlib>
-#include <memory>
-#include <stdexcept>
-#include <string>
+#include <testsetup.h>
+#include <internal/gobj_memory.h>
+#include <utils/supports_decoder.h>
+#include "../src/vs-thumb/thumbnailextractor.h"
 
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
@@ -39,10 +40,11 @@
 #pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 
-#include <testsetup.h>
-#include <internal/gobj_memory.h>
-#include <utils/supports_decoder.h>
-#include "../src/vs-thumb/thumbnailextractor.h"
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 using namespace unity::thumbnailer::internal;
 
@@ -54,6 +56,7 @@ const char MP4_ROTATE_270_TEST_FILE[] = TESTDATADIR "/testvideo-270.mp4";
 const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
 const char AAC_TEST_FILE[] = TESTDATADIR "/testsong.m4a";
 const char MP3_TEST_FILE[] = TESTDATADIR "/testsong.mp3";
+const char MP3_NO_ARTWORK[] = TESTDATADIR "/no-artwork.mp3";
 
 class ExtractorTest : public ::testing::Test
 {
@@ -265,10 +268,58 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
+TEST_F(ExtractorTest, no_artwork)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP3_NO_ARTWORK));
+    ASSERT_FALSE(extractor.has_video());
+    ASSERT_FALSE(extractor.extract_audio_cover_art());
+}
+
 TEST_F(ExtractorTest, file_not_found)
 {
     ThumbnailExtractor extractor;
     EXPECT_THROW(extractor.set_uri(filename_to_uri(TESTDATADIR "/no-such-file.ogv")), std::runtime_error);
+}
+
+std::string vs_thumb_err_output(std::string const& args)
+{
+    namespace io = boost::iostreams;
+
+    static std::string const cmd = PROJECT_BINARY_DIR "/src/vs-thumb/vs-thumb";
+
+    FILE* p = popen((cmd + " " + args + " 2>&1 >/dev/null").c_str(), "r");
+    io::file_descriptor_source s(fileno(p), io::never_close_handle);
+    std::stringstream err_output;
+    io::copy(s, err_output);
+    pclose(p);
+    return err_output.str();
+}
+
+TEST(ExeTest, usage_1)
+{
+    auto err = vs_thumb_err_output("");
+    EXPECT_EQ("usage: vs-thumb source-file [output-file]\n", err) << err;
+}
+
+TEST(ExeTest, usage_2)
+{
+    auto err = vs_thumb_err_output("arg1 arg2 arg3");
+    EXPECT_EQ("usage: vs-thumb source-file [output-file]\n", err) << err;
+}
+
+TEST(ExeTest, bad_uri)
+{
+    auto err = vs_thumb_err_output("file:///no_such_file");
+    EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
 }
 
 int main(int argc, char** argv)

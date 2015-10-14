@@ -39,7 +39,7 @@ namespace internal
 namespace
 {
 
-const std::string class_name = "ThumbnailExtractor";
+std::string const class_name = "ThumbnailExtractor";
 
 class BufferMap final
 {
@@ -129,6 +129,7 @@ CoverImage find_audio_cover(GstTagList* tags, const char* tag_name)
         GstSample* s;
         if (!gst_tag_list_get_sample_index(tags, tag_name, i, &s))
         {
+
             break;
         }
         assert(s);
@@ -163,20 +164,22 @@ ThumbnailExtractor::ThumbnailExtractor()
     GstElement* pb = gst_element_factory_make("playbin", "playbin");
     if (!pb)
     {
-        throw_error("ThumbnailExtractor(): Could not create playbin");
+        throw_error("ThumbnailExtractor(): Could not create playbin");  // LCOV_EXCL_LINE
     }
     playbin_.reset(static_cast<GstElement*>(g_object_ref_sink(pb)));
 
     GstElement* audio_sink = gst_element_factory_make("fakesink", "audio-fake-sink");
     if (!audio_sink)
     {
-        throw_error("ThumbnailExtractor(): Could not create audio sink");
+        throw_error("ThumbnailExtractor(): Could not create audio sink");  // LCOV_EXCL_LINE
     }
     GstElement* video_sink = gst_element_factory_make("fakesink", "video-fake-sink");
     if (!video_sink)
     {
+        // LCOV_EXCL_START
         g_object_unref(audio_sink);
         throw_error("ThumbnailExtractor(): Could not create video sink");
+        // LCOV_EXCL_STOP
     }
 
     g_object_set(video_sink, "sync", TRUE, nullptr);
@@ -208,7 +211,7 @@ void ThumbnailExtractor::set_uri(const std::string& uri)
 
     if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration_))
     {
-        duration_ = -1;
+        duration_ = -1;  // LCOV_EXCL_LINE
     }
 }
 
@@ -244,8 +247,7 @@ bool ThumbnailExtractor::extract_video_frame()
     g_signal_emit_by_name(playbin_.get(), "convert-sample", desired_caps.get(), &s);
     if (!s)
     {
-        return false;  // TODO: Dubious, should at least report an error here because we should
-                       //       always get a still frame from a video.
+        throw_error("extract_video_frame(): failed to extract still frame");  // LCOV_EXCL_LINE
     }
     sample_.reset(s);
     sample_raw_ = true;
@@ -260,7 +262,6 @@ bool ThumbnailExtractor::extract_video_frame()
         char* orientation = nullptr;
         if (gst_tag_list_get_string_index(tags, GST_TAG_IMAGE_ORIENTATION, 0, &orientation) && orientation != nullptr)
         {
-qDebug() << "rotating:" << orientation;
             if (!strcmp(orientation, "rotate-90"))
             {
                 sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
@@ -275,7 +276,7 @@ qDebug() << "rotating:" << orientation;
             }
             else
             {
-                qCritical() << "extract_video_frame(): unknown rotation value:" << orientation;
+                qCritical() << "extract_video_frame(): unknown rotation value:" << orientation;  // LCOV_EXCL_LINE
                 // No error here, a flipped/rotated image is better than none.
             }
         }
@@ -292,7 +293,7 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
     if (!tags)
     {
-        return false;
+        return false;  // LCOV_EXCL_LINE
     }
     sample_.reset();
     sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
@@ -339,9 +340,11 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
     int rc = write(fd, buf, count);
     if (rc != int(count))
     {
+        // LCOV_EXCL_START
         g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(errno),
                     "cannot write image data %s", g_strerror(errno));
         return false;
+        // LCOV_EXCL_STOP
     }
     return true;
 }
@@ -350,10 +353,7 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
 
 void ThumbnailExtractor::save_screenshot(const std::string& filename)
 {
-    if (!sample_)
-    {
-        throw_error("save_screenshot(): Could not retrieve screenshot");
-    }
+    assert(sample_);
 
     // Append ".tiff" to output file name if it isn't there already.
     std::string outfile = filename;
@@ -371,7 +371,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
         if (!sample_caps)
         {
-            throw_error("save_screenshot(): Could not retrieve caps for sample buffer");
+            throw_error("save_screenshot(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
         }
         GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
         int width = 0, height = 0;
@@ -379,7 +379,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         gst_structure_get_int(sample_struct, "height", &height);
         if (width <= 0 || height <= 0)
         {
-            throw_error("save_screenshot(): Could not retrieve image dimensions");
+            throw_error("save_screenshot(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
         }
 
         buffermap.map(gst_sample_get_buffer(sample_.get()));
@@ -403,13 +403,12 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         }
         else
         {
-            throw_error("save_screenshot(): decoding image", error);
+            throw_error("save_screenshot(): decoding image", error);  // LCOV_EXCL_LINE
         }
     }
 
     if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
     {
-qDebug() << "rotate:" << sample_rotation_;
         GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
         if (rotated)
         {
@@ -428,14 +427,14 @@ qDebug() << "rotate:" << sample_rotation_;
         int fd = 1;
         if (!gdk_pixbuf_save_to_callback(image.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
         {
-            throw_error("save_screenshot(): cannot write image", error);
+            throw_error("save_screenshot(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
         }
     }
     else
     {
         if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
         {
-            throw_error("save_screenshot(): cannot save image", error);
+            throw_error("save_screenshot(): cannot save image", error);  // LCOV_EXCL_LINE
         }
     }
     qDebug().nospace() << uri_.c_str() << ": Done";
@@ -464,7 +463,7 @@ void ThumbnailExtractor::change_state(GstElement* element, GstState state)
     // We're in the async case here, so pop messages off the bus until
     // it is done.
     gobj_ptr<GstBus> bus(gst_element_get_bus(element));
-    while (true)
+    while (true)  // LCOV_EXCL_LINE  // False negative from gcovr.
     {
         std::unique_ptr<GstMessage, decltype(&gst_message_unref)> message(
             gst_bus_timed_pop_filtered(bus.get(), GST_CLOCK_TIME_NONE,
@@ -472,7 +471,7 @@ void ThumbnailExtractor::change_state(GstElement* element, GstState state)
             gst_message_unref);
         if (!message)
         {
-            break;
+            break;  // LCOV_EXCL_LINE
         }
 
         switch (GST_MESSAGE_TYPE(message.get()))
@@ -482,17 +481,17 @@ void ThumbnailExtractor::change_state(GstElement* element, GstState state)
                 {
                     return;
                 }
-                break;
+                break;  // LCOV_EXCL_LINE
             case GST_MESSAGE_ERROR:
             {
                 GError* error = nullptr;
                 gst_message_parse_error(message.get(), &error, nullptr);
                 throw_error("change_state(): reading async messages", error);
-                break;
+                // NOTREACHED
             }
             default:
                 /* ignore other message types */
-                ;
+                break;  // LCOV_EXCL_LINE
         }
     }
 }
