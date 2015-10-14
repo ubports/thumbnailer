@@ -63,7 +63,7 @@ public:
 
     /**
     \brief Returns the thumbnail.
-    \return A valid QImage if the request was successful and an empty `QImage`, otherwise.
+    \return A valid `QImage` if the request was successful and an empty `QImage`, otherwise.
     */
     QImage image() const;
 
@@ -83,7 +83,14 @@ public:
     /**
     \brief Blocks the calling thread until the request completes.
 
+    It is safe to call waitForFinished() on the same request more than once.
+    If called on an already-completed (or cancelled) request, waitForFinished() returns immediately.
+
     \warning Calling this function from the main (GUI) thread might cause your user interface to freeze.
+
+    \warning Calling waitForFinished() may cause the request to be scheduled out of order. This means
+    that, if you send requests for thumbnails A, B, and C (in that order) and then call waitForFinished()
+    on C, you _cannot_ assume that A and B have also finished once waitForFinsished() returns.
     */
     void waitForFinished();
 
@@ -92,7 +99,9 @@ public:
 
     The finished signal will be emitted and the request will be
     considered to be in an invalid state with an error message set.
-     */
+
+    Calling cancel() more than once or on a request that has already completed does nothing.
+    */
     void cancel();
 
 Q_SIGNALS:

@@ -212,6 +212,33 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
     EXPECT_EQ(image.pixel(127, 95), QColor("#81FF81").rgb());
 }
 
+TEST_F(LibThumbnailerTest, chinese_filename)
+{
+    const char* filename = TESTDATADIR "/图片.JPG";
+
+    Thumbnailer thumbnailer(dbus_->connection());
+    auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
+    QSignalSpy spy(reply.data(), &Request::finished);
+    ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
+    // check that we've got exactly one signal
+    ASSERT_EQ(spy.count(), 1);
+
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_TRUE(reply->isValid());
+    EXPECT_EQ(reply->errorMessage(), QString());
+
+    QImage image = reply->image();
+
+    EXPECT_EQ(128, image.width());
+    EXPECT_EQ(96, image.height());
+
+
+    EXPECT_EQ(image.pixel(0, 0), QColor("#FE8081").rgb());
+    EXPECT_EQ(image.pixel(127, 0), QColor("#FFFF80").rgb());
+    EXPECT_EQ(image.pixel(0, 95), QColor("#807FFE").rgb());
+    EXPECT_EQ(image.pixel(127, 95), QColor("#81FF81").rgb());
+}
+
 TEST_F(LibThumbnailerTest, thumbnail_image_sync)
 {
     const char* filename = TESTDATADIR "/orientation-1.jpg";

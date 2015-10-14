@@ -41,7 +41,7 @@ RateLimiter::~RateLimiter()
     assert(running_ == 0);
 }
 
-function<void()> RateLimiter::schedule(function<void()> job)
+function<void() noexcept> RateLimiter::schedule(function<void()> job)
 {
     assert(job);
 
@@ -58,7 +58,7 @@ function<void()> RateLimiter::schedule(function<void()> job)
     // Returned function clears job when called, provided the job is still in the queue.
     // done() removes any cleared jobs from the queue without calling them.
     weak_ptr<function<void()>> weak_p(job_p);
-    return [weak_p]
+    return [weak_p]() noexcept
     {
         auto job_p = weak_p.lock();
         if (job_p)

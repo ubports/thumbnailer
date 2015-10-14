@@ -11,3 +11,6 @@ target_link_libraries(libthumbnailer-qt_test
 )
 add_test(libthumbnailer-qt libthumbnailer-qt_test)
 add_dependencies(libthumbnailer-qt_test thumbnailer-qt)
+list(APPEND UNIT_TEST_TARGETS "libthumbnailer-qt_test")
+
+set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)

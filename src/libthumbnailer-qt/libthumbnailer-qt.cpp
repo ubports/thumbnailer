@@ -14,10 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Authored by: Xavi Garcia <xavi.garcia.mena@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
+#include <ratelimiter.h>
+#include <settings.h>
 #include <thumbnailerinterface.h>
 #include <utils/artgeneratorcommon.h>
 #include <service/dbus_names.h>
@@ -42,7 +45,9 @@ class RequestImpl : public QObject
 {
     Q_OBJECT
 public:
-    RequestImpl(QSize const& requested_size, std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
+    RequestImpl(QSize const& requested_size,
+                RateLimiter* limiter,
+                std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
 
     ~RequestImpl() = default;
 
@@ -68,6 +73,22 @@ public:
 
     void waitForFinished()
     {
+        if (finished_)
+        {
+            return;
+        }
+
+        // If we are called before the request made it out of the limiter queue,
+        // we have not sent the request yet and, therefore, don't have a watcher.
+        // In that case we send the request right here after removing it
+        // from the limiter queue. This guarantees that we always have
+        // a watcher to wait on.
+        if (!watcher_)
+        {
+            cancel_func_();
+            watcher_.reset(new QDBusPendingCallWatcher(job_()));
+            connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
+        }
         watcher_->waitForFinished();
     }
 
@@ -85,10 +106,14 @@ private:
     void finishWithError(QString const& errorMessage);
 
     QSize requested_size_;
+    RateLimiter* limiter_;
+    std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
+    std::function<void()> cancel_func_;
     QString error_message_;
     bool finished_;
     bool is_valid_;
+    bool sent_via_limiter_;  // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
 };
@@ -105,23 +130,38 @@ public:
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
-    QSharedPointer<Request> createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> const& reply,
-                                          QSize const& requested_size);
+    QSharedPointer<Request> createRequest(QSize const& requested_size,
+                                          std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
+    RateLimiter limiter_;
 };
 
-RequestImpl::RequestImpl(QSize const& requested_size, std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
+RequestImpl::RequestImpl(QSize const& requested_size,
+                         RateLimiter* limiter,
+                         std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
     : requested_size_(requested_size)
-    , watcher_(std::move(watcher))
+    , limiter_(limiter)
+    , job_(job)
     , finished_(false)
     , is_valid_(false)
+    , sent_via_limiter_(false)
     , public_request_(nullptr)
 {
-    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
+    // The limiter does not call send_request until the request can be sent
+    // without exceeding max_backlog().
+    auto send_request = [this, job]
+    {
+        watcher_.reset(new QDBusPendingCallWatcher(job()));
+        connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
+        sent_via_limiter_ = true;
+    };
+    cancel_func_ = limiter_->schedule(send_request);
 }
 
 void RequestImpl::dbusCallFinished()
 {
+    Q_ASSERT(watcher_);
+
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
@@ -136,8 +176,13 @@ void RequestImpl::dbusCallFinished()
         finished_ = true;
         is_valid_ = true;
         error_message_ = QLatin1String("");
+        watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
+        if (sent_via_limiter_)
+        {
+            limiter_->done();
+        }
         return;
     }
     // LCOV_EXCL_START
@@ -162,21 +207,33 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     is_valid_ = false;
     image_ = QImage();
     qWarning() << error_message_;
+    watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
+    if (sent_via_limiter_)
+    {
+        limiter_->done();
+    }
 }
 
 void RequestImpl::cancel()
 {
-    // Deleting the pending call watcher (which should hold the only
-    // reference to the pending call at this point) tells Qt that we
-    // are no longer interested in the reply.  The destruction will
-    // also clear up the signal connections.
-    watcher_.reset();
-    finishWithError(QStringLiteral("Request cancelled"));
+    cancel_func_();
+
+    if (!finished_)
+    {
+        // Deleting the pending call watcher (which should hold the only
+        // reference to the pending call at this point) tells Qt that we
+        // are no longer interested in the reply.  The destruction will
+        // also clear up the signal connections.
+        watcher_.reset();
+
+        finishWithError(QStringLiteral("Request cancelled"));
+    }
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
+    : limiter_(Settings().max_backlog())
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
 }
@@ -185,35 +242,40 @@ QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
                                                      QString const& album,
                                                      QSize const& requestedSize)
 {
-    // perform dbus call
-    auto reply = iface_->GetAlbumArt(artist, album, requestedSize);
-    return createRequest(reply, requestedSize);
+    auto job = [this, artist, album, requestedSize]
+    {
+        return iface_->GetAlbumArt(artist, album, requestedSize);
+    };
+    return createRequest(requestedSize, job);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
                                                       QString const& album,
                                                       QSize const& requestedSize)
 {
-    // perform dbus call
-    auto reply = iface_->GetArtistArt(artist, album, requestedSize);
-    return createRequest(reply, requestedSize);
+    auto job = [this, artist, album, requestedSize]
+    {
+        return iface_->GetArtistArt(artist, album, requestedSize);
+    };
+    return createRequest(requestedSize, job);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, QSize const& requestedSize)
 {
-    // perform dbus call
-    auto reply = iface_->GetThumbnail(filename, requestedSize);
-    return createRequest(reply, requestedSize);
+    auto job = [this, filename, requestedSize]
+    {
+        return iface_->GetThumbnail(filename, requestedSize);
+    };
+    return createRequest(requestedSize, job);
 }
 
-QSharedPointer<Request> ThumbnailerImpl::createRequest(QDBusPendingReply<QDBusUnixFileDescriptor> const& reply,
-                                                       QSize const& requested_size)
+QSharedPointer<Request> ThumbnailerImpl::createRequest(QSize const& requested_size,
+                                                       std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
 {
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-    auto request_impl = new RequestImpl(requested_size, std::move(watcher));
+    //std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
+    auto request_impl = new RequestImpl(requested_size, &limiter_, job);
     auto request = QSharedPointer<Request>(new Request(request_impl));
     request_impl->setRequest(request.data());
-
     return request;
 }
 

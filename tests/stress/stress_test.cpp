@@ -19,6 +19,7 @@
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <testsetup.h>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
 #include <utils/supports_decoder.h>
@@ -44,6 +45,83 @@
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
+// Simple counter class that we use to count all the signals
+// from the async provider instances. This allows us to use
+// a single QSignalSpy to wait for the completion of an
+// arbitrary number of requests.
+
+class Counter : public QObject
+{
+    Q_OBJECT
+public:
+    Counter(int limit)
+        : limit_(limit)
+        , count_(0)
+    {
+    }
+
+Q_SIGNALS:
+    void counterDone();
+
+public Q_SLOTS:
+    void thumbnailComplete()
+    {
+        if (++count_ == limit_)
+        {
+            Q_EMIT counterDone();
+        }
+    }
+
+private:
+    int limit_;
+    int count_;
+};
+
+// Class to run a single request and check that it completed OK.
+// Notifies the counter on request completion.
+
+class AsyncThumbnailProvider : public QObject
+{
+    Q_OBJECT
+public:
+    AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer* tn, Counter& counter)
+        : thumbnailer_(tn)
+        , counter_(counter)
+    {
+        assert(tn);
+    }
+
+    void getThumbnail(QString const& path, QSize const& size)
+    {
+        request_ = thumbnailer_->getThumbnail(path, size);
+        connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
+                this, &AsyncThumbnailProvider::requestFinished);
+    }
+
+    void getAlbumArt(QString const& artist, QString const& album, QSize const& size)
+    {
+        request_ = thumbnailer_->getAlbumArt(artist, album, size);
+        connect(request_.data(), &unity::thumbnailer::qt::Request::finished,
+                this, &AsyncThumbnailProvider::requestFinished);
+    }
+
+public Q_SLOTS:
+    void requestFinished()
+    {
+        EXPECT_TRUE(request_->isValid()) << request_->errorMessage().toStdString();
+        if (!request_->isValid())
+        {
+            abort();
+        }
+        counter_.thumbnailComplete();
+    }
+
+private:
+    unity::thumbnailer::qt::Thumbnailer* thumbnailer_;
+    Counter& counter_;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
+};
+
 class StressTest : public ::testing::Test
 {
 protected:
@@ -60,13 +138,14 @@ protected:
         art_server_.reset(new ArtServer());
 
         // start dbus service
-        tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
+        tempdir.reset(new QTemporaryDir(TESTBINDIR "/stress-test.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
         // set 30 seconds as max idle time
         setenv("THUMBNAILER_MAX_IDLE", "30000", true);
 
         dbus_.reset(new DBusServer());
+        thumbnailer_.reset(new unity::thumbnailer::qt::Thumbnailer(dbus_->connection()));
 
         // Set up media directories.
         ASSERT_EQ(0, mkdir((temp_dir() + "/Videos").c_str(), 0700));
@@ -79,28 +158,22 @@ protected:
         return tempdir->path().toStdString();
     }
 
-    unique_ptr<QDBusPendingCallWatcher> get_thumbnail(string const& target_path,
-                                                      int size,
-                                                      std::function<void()> finished = []{})
+    void run_requests(int num, string const& target_dir, string const& source)
     {
-        QString path = QString::fromStdString(target_path);
-        unique_ptr<QDBusPendingCallWatcher> watcher(
-            new QDBusPendingCallWatcher(dbus_->thumbnailer_->GetThumbnail(path, QSize(size, size))));
-        QObject::connect(watcher.get(), &QDBusPendingCallWatcher::finished, finished);
-        return move(watcher);
-    }
+        vector<unique_ptr<AsyncThumbnailProvider>> providers;
 
-    unique_ptr<QDBusPendingCallWatcher> get_album_art(string const& artist,
-                                                      string const& album,
-                                                      int size,
-                                                      std::function<void()> finished = []{})
-    {
-        auto reply = dbus_->thumbnailer_->GetAlbumArt(QString::fromStdString(artist),
-                                                      QString::fromStdString(album),
-                                                      QSize(size, size));
-        unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
-        QObject::connect(watcher.get(), &QDBusPendingCallWatcher::finished, finished);
-        return move(watcher);
+        Counter counter(num);
+        QSignalSpy spy(&counter, &Counter::counterDone);
+
+        for (int i = 0; i < num; i++)
+        {
+            QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+            unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+            provider->getThumbnail(path, QSize(512, 512));
+            providers.emplace_back(move(provider));
+        }
+        ASSERT_TRUE(spy.wait(120000));
+        ASSERT_EQ(1, spy.count());
     }
 
     static void add_stats(int N_REQUESTS,
@@ -126,6 +199,7 @@ protected:
 
     static void TearDownTestCase()
     {
+        thumbnailer_.reset();
         dbus_.reset();
         art_server_.reset();
 
@@ -138,16 +212,18 @@ protected:
 
     static unique_ptr<QTemporaryDir> tempdir;
     static unique_ptr<DBusServer> dbus_;
+    static unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer_;
     static unique_ptr<ArtServer> art_server_;
     static string stats_;
 };
 
 unique_ptr<QTemporaryDir> StressTest::tempdir;
 unique_ptr<DBusServer> StressTest::dbus_;
+unique_ptr<unity::thumbnailer::qt::Thumbnailer> StressTest::thumbnailer_;
 unique_ptr<ArtServer> StressTest::art_server_;
 string StressTest::stats_;
 
-// Little helper function to hard-link a single image a number of times
+// Little helper function to hard-link a single file a number of times
 // under different names, so we can have lots of files without consuming
 // tons of disk space.
 
@@ -170,30 +246,51 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
     for (int i = 1; i < num_copies; ++i)
     {
         string link_name = target_dir + "/" + to_string(i) + filename;
-        ASSERT_EQ(0, link(copied_file.c_str(), link_name.c_str()));
+        ASSERT_TRUE(link(copied_file.c_str(), link_name.c_str()) == 0 || errno == EEXIST) << "errno = " << errno;
     }
 }
 
-TEST_F(StressTest, photo)
+typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
+
+// Test for synchronous wait.
+
+TEST_F(StressTest, photo_waitForFinished)
 {
-    int const N_REQUESTS = 400;
+    int const N_REQUESTS = 1000;
 
     string source = "Photo-with-exif.jpg";
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
+    RequestVec requests;
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
+        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        requests.emplace_back(thumbnailer_->getThumbnail(path, QSize(512, 512)));
     }
-    for (auto const& w : watchers)
+    for (auto&& r : requests)
     {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
+        r->waitForFinished();
     }
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
+// Asynchronous tests.
+
+TEST_F(StressTest, photo)
+{
+    int const N_REQUESTS = 1000;
+
+    string source = "Photo-with-exif.jpg";
+    string target_dir = temp_dir() + "/Pictures";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    auto start = chrono::system_clock::now();
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -207,18 +304,8 @@ TEST_F(StressTest, photo_no_exif)
     string target_dir = temp_dir() + "/Pictures";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
-    }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -238,18 +325,8 @@ TEST_F(StressTest, mp3)
     string target_dir = temp_dir() + "/Music";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
-    }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -269,18 +346,8 @@ TEST_F(StressTest, video)
     string target_dir = temp_dir() + "/Videos";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
-
     auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
-    {
-        watchers.emplace_back(get_thumbnail(target_dir + "/" + to_string(i) + source, 512));
-    }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    run_requests(N_REQUESTS, target_dir, source);
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -288,20 +355,22 @@ TEST_F(StressTest, video)
 
 TEST_F(StressTest, album_art)
 {
-    int const N_REQUESTS = 400;
+    int const N_REQUESTS = 2000;
 
-    vector<std::unique_ptr<QDBusPendingCallWatcher>> watchers;
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
 
     auto start = chrono::system_clock::now();
     for (int i = 0; i < N_REQUESTS; i++)
     {
-        watchers.emplace_back(get_album_art("generate", to_string(i), 512));
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        provider->getAlbumArt("metallica", "load", QSize(i + 1, i + 1));
+        providers.emplace_back(move(provider));
     }
-    for (auto const& w : watchers)
-    {
-        w->waitForFinished();
-        ASSERT_FALSE(w->isError()) << w->error().name().toStdString();
-    }
+    ASSERT_TRUE(spy.wait(120000));
+    ASSERT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
@@ -309,7 +378,6 @@ TEST_F(StressTest, album_art)
 
 int main(int argc, char** argv)
 {
-    // Need this because we are using a static test fixture and can't rely an global constructor order.
     gst_init(&argc, &argv);
 
     QCoreApplication app(argc, argv);
@@ -320,3 +388,5 @@ int main(int argc, char** argv)
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
+#include "stress_test.moc"

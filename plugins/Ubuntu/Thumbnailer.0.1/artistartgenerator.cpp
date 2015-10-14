@@ -41,11 +41,9 @@ namespace thumbnailer
 namespace qml
 {
 
-ArtistArtGenerator::ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer,
-                                       std::shared_ptr<unity::thumbnailer::RateLimiter> const& backlog_limiter)
+ArtistArtGenerator::ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer)
     : QQuickAsyncImageProvider()
     , thumbnailer(thumbnailer)
-    , backlog_limiter(backlog_limiter)
 {
 }
 
@@ -70,12 +68,8 @@ QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id,
     const QString artist = query.queryItemValue(QStringLiteral("artist"), QUrl::FullyDecoded);
     const QString album = query.queryItemValue(QStringLiteral("album"), QUrl::FullyDecoded);
 
-    // Schedule dbus call
-    auto job = [this, artist, album, size]
-    {
-        return thumbnailer->getArtistArt(artist, album, size);
-    };
-    return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, backlog_limiter.get(), job);
+    auto request = thumbnailer->getArtistArt(artist, album, size);
+    return new ThumbnailerImageResponse(size, DEFAULT_ARTIST_ART, request);
 }
 
 }  // namespace qml
