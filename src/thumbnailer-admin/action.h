@@ -50,7 +50,7 @@ protected:
         , command_(parser.positionalArguments().first())
         , help_option_(parser.addHelpOption())
     {
-        parser.setApplicationDescription("Thumbnailer administrative tool");
+        parser.setApplicationDescription(QStringLiteral("Thumbnailer administrative tool"));
         parser.clearPositionalArguments();
     }
 

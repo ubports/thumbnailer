@@ -36,7 +36,7 @@ class InactivityHandler : public QObject
 {
     Q_OBJECT
 public:
-    InactivityHandler(std::function<void()> timer_func);
+    InactivityHandler(std::function<void()> const& timer_func);
     ~InactivityHandler();
 
     void request_started();

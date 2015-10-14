@@ -50,6 +50,8 @@ const char THEORA_TEST_FILE[] = TESTDATADIR "/testvideo.ogg";
 const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/gegl-landscape.mp4";
 const char MP4_PORTRAIT_TEST_FILE[] = TESTDATADIR "/gegl-portrait.mp4";
 const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
+const char AAC_TEST_FILE[] = TESTDATADIR "/testsong.m4a";
+const char MP3_TEST_FILE[] = TESTDATADIR "/testsong.mp3";
 
 class ExtractorTest : public ::testing::Test
 {
@@ -172,6 +174,48 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
 
     std::string outfile = tempdir + "/out.jpg";
     extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
+    ASSERT_FALSE(extractor.has_video());
+    ASSERT_TRUE(extractor.extract_audio_cover_art());
+    extractor.save_screenshot(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
+    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+}
+
+TEST_F(ExtractorTest, extract_aac_cover_art)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for AAC decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.jpg";
+    extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
+    ASSERT_FALSE(extractor.has_video());
+    ASSERT_TRUE(extractor.extract_audio_cover_art());
+    extractor.save_screenshot(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
+    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+}
+
+TEST_F(ExtractorTest, extract_mp3_cover_art)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.jpg";
+    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_audio_cover_art());
     extractor.save_screenshot(outfile);

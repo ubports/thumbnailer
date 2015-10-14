@@ -47,16 +47,16 @@ GetRemoteThumbnail::GetRemoteThumbnail(QCommandLineParser& parser)
     , size_(0, 0)
 {
     assert(command_ == "get-artist" || command_ == "get-album");
-    QString kind = command_ == "get-artist" ? "artist" : "album";
+    QString kind = command_ == QLatin1String("get-artist") ? "artist" : "album";
 
     parser.addPositionalArgument(command_, "Get " + kind + " thumbnail from remote server", command_);
-    parser.addPositionalArgument("artist", "Artist name", "artist");
-    parser.addPositionalArgument("album", "Album title", "album");
-    parser.addPositionalArgument("dir", "Output directory (default: current dir)", "[dir]");
-    QCommandLineOption size_option(QStringList() << "s"
-                                                 << "size",
-                                   "Thumbnail size, e.g. \"240x480\" or \"480\" (default: largest available size)",
-                                   "size");
+    parser.addPositionalArgument(QStringLiteral("artist"), QStringLiteral("Artist name"), QStringLiteral("artist"));
+    parser.addPositionalArgument(QStringLiteral("album"), QStringLiteral("Album title"), QStringLiteral("album"));
+    parser.addPositionalArgument(QStringLiteral("dir"), QStringLiteral("Output directory (default: current dir)"), QStringLiteral("[dir]"));
+    QCommandLineOption size_option(QStringList() << QStringLiteral("s")
+                                                 << QStringLiteral("size"),
+                                   QStringLiteral("Thumbnail size, e.g. \"240x480\" or \"480\" (default: largest available size)"),
+                                   QStringLiteral("size"));
     parser.addOption(size_option);
 
     if (!parser.parse(QCoreApplication::arguments()))
@@ -97,7 +97,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
     try
     {
         auto method =
-            command_ == "get-artist" ? &ThumbnailerInterface::GetArtistArt : &ThumbnailerInterface::GetAlbumArt;
+            command_ == QLatin1String("get-artist") ? &ThumbnailerInterface::GetArtistArt : &ThumbnailerInterface::GetAlbumArt;
         auto reply = (conn.thumbnailer().*method)(artist_, album_, size_);
         reply.waitForFinished();
         if (!reply.isValid())
@@ -106,7 +106,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
         }
         QDBusUnixFileDescriptor thumbnail_fd = reply.value();
 
-        string suffix = command_ == "get-artist" ? "artist" : "album";
+        string suffix = command_ == QLatin1String("get-artist") ? "artist" : "album";
         string inpath = (artist_ + "_" + album_).toStdString() + "_" + suffix;
         // Just in case some artist or album has a slash in its name.
         replace(inpath.begin(), inpath.end(), '/', '-');

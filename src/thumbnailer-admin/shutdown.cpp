@@ -35,7 +35,7 @@ Shutdown::Shutdown(QCommandLineParser& parser)
     : Action(parser)
 {
     assert(command_ == "shutdown");
-    parser.addPositionalArgument("shutdown", "Shut down thumbnailer service", "shutdown");
+    parser.addPositionalArgument(QStringLiteral("shutdown"), QStringLiteral("Shut down thumbnailer service"), QStringLiteral("shutdown"));
 
     if (!parser.parse(QCoreApplication::arguments()))
     {
@@ -49,7 +49,7 @@ Shutdown::Shutdown(QCommandLineParser& parser)
     auto args = parser.positionalArguments();
     if (args.size() > 1)
     {
-        throw QString("too many arguments for ") + command_ + " command" + parser.errorText() + "\n\n" + parser.helpText();
+        throw QStringLiteral("too many arguments for ") + command_ + " command" + parser.errorText() + "\n\n" + parser.helpText();
     }
 }
 

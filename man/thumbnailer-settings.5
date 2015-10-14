@@ -33,11 +33,11 @@ the same image again. The default is 168 hours (one week).
 .TP
 .B retry\-error\-hours \fR(int)\fP
 If artwork cannot be retrieved from the remote server due to an unexpected error (such as the server not
-responding), this parameter defines how long the thumbnailer waits before trying to download the same
-image again. The default is two hours.
+responding), this parameter defines how long the thumbnailer waits before trying to contact the server
+again (for any image). The default is two hours.
 .TP
 .B max\-downloads \fR(int)\fP
-Controls the maximum number of concurrent downloads for remote artwork.
+Controls the maximum number of concurrent downloads for remote artwork. The default value is 2.
 .TP
 .B max\-extractions \fR(int)\fP
 Controls the maximum number of concurrent image extractions from local media files.
@@ -45,7 +45,11 @@ The default value is zero, which sets the value according to the number of CPU c
 .TP
 .B max\-extraction\-timeout \fR(int)\fP
 Sets the amount of time (in seconds) to wait for a remote image download or
-a thumbnail extraction before giving up.
+a thumbnail extraction before giving up. The default is 10 seconds.
+.TP
+.B max\-backlog \fR(int)\fP
+Controls the number of DBus requests that will be sent before queueing the requests internally.
+The default is 20 requests.
 
 .SH FILES
 /usr/share/glib\-2.0/schemas/com.canonical.Unity.Thumbnailer.gschema.xml

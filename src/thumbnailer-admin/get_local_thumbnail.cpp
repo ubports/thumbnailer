@@ -43,13 +43,13 @@ GetLocalThumbnail::GetLocalThumbnail(QCommandLineParser& parser)
     : Action(parser)
     , size_(0, 0)
 {
-    parser.addPositionalArgument("get", "Get thumbnail from local file", "get");
-    parser.addPositionalArgument("source_file", "Path to image, audio, or video file");
-    parser.addPositionalArgument("dir", "Output directory (default: current dir)", "[dir]");
-    QCommandLineOption size_option(QStringList() << "s"
-                                                 << "size",
-                                   "Thumbnail size, e.g. \"240x480\" or \"480\" (default: largest available size)",
-                                   "size");
+    parser.addPositionalArgument(QStringLiteral("get"), QStringLiteral("Get thumbnail from local file"), QStringLiteral("get"));
+    parser.addPositionalArgument(QStringLiteral("source_file"), QStringLiteral("Path to image, audio, or video file"));
+    parser.addPositionalArgument(QStringLiteral("dir"), QStringLiteral("Output directory (default: current dir)"), QStringLiteral("[dir]"));
+    QCommandLineOption size_option(QStringList() << QStringLiteral("s")
+                                                 << QStringLiteral("size"),
+                                   QStringLiteral("Thumbnail size, e.g. \"240x480\" or \"480\" (default: largest available size)"),
+                                   QStringLiteral("size"));
     parser.addOption(size_option);
 
     if (!parser.parse(QCoreApplication::arguments()))
