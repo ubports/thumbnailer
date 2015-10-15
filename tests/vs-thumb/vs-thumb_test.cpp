@@ -129,7 +129,12 @@ TEST_F(ExtractorTest, extract_theora)
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
 }
 
+// MP4 codec is broken on PPC.
+#if defined(__PPC__)
+TEST_F(ExtractorTest, DISABLED_extract_mp4)
+#else
 TEST_F(ExtractorTest, extract_mp4)
+#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -149,7 +154,12 @@ TEST_F(ExtractorTest, extract_mp4)
     EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
 }
 
+// MP4 codec is broken on PPC.
+#if defined(__PPC__)
+TEST_F(ExtractorTest, DISABLED_extract_mp4_rotation)
+#else
 TEST_F(ExtractorTest, extract_mp4_rotation)
+#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
