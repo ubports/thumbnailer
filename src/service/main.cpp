@@ -40,7 +40,7 @@ QString get_summary(core::PersistentCacheStats const& stats)
 {
     auto hits = stats.hits();
     auto misses = stats.misses();
-    double hit_rate = (hits + misses == 0) ? 0.0 : hits / (hits + misses);
+    double hit_rate = (hits + misses == 0) ? 0.0 : double(hits) / (hits + misses);
     auto entries = stats.size();
     auto size_in_bytes = stats.size_in_bytes();
     QString entry_str = entries == 1 ? QStringLiteral("entry") : QStringLiteral("entries");
