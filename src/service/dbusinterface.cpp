@@ -52,7 +52,7 @@ namespace
 // hardwares we care about. For example, the output from
 // /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
 
-#if defined(__arm__) || defined(__ppc__)
+#if defined(__arm__) || defined(__PPC__)
 
 string hardware()
 {
