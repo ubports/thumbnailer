@@ -116,7 +116,7 @@ int adjusted_limit(int limit)
 
 #else
 
-// Not on Arm, leave as is.
+// Not on Arm or PPC, leave as is.
 
 int adjusted_limit(int limit)
 {
