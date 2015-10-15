@@ -356,7 +356,6 @@ TEST_F(StressTest, video)
 
     add_stats(N_REQUESTS, start, finish);
 }
-#endif
 
 TEST_F(StressTest, album_art)
 {
