@@ -76,7 +76,7 @@ public:
     /**
     \brief Returns whether the request completed successfully.
     \return `true` if the request completed successfully. Otherwise, if the request is still
-    in progress or has failed, the return value is `false`.
+    in progress, has failed, or was cancelled, the return value is `false`.
     */
     bool isValid() const;
 
@@ -97,12 +97,18 @@ public:
     /**
     \brief Cancel the thumbnail request.
 
-    The finished signal will be emitted and the request will be
-    considered to be in an invalid state with an error message set.
-
+    Cancels the request if it has not completed yet and emits the finished() signal.
     Calling cancel() more than once or on a request that has already completed does nothing.
     */
     void cancel();
+
+    /**
+    \brief Returns whether the reqquest was cancelled.
+    \return `true` if the request was cancelled and `false`, otherwise.
+    \note Depending on the time at which cancel() is called,
+          the request may complete successfully despite having been cancelled.
+    */
+    bool isCancelled() const;
 
 Q_SIGNALS:
     /**

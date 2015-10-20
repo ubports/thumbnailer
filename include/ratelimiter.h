@@ -53,8 +53,8 @@ public:
     void done();
 
 private:
-    int const concurrency_;
-    int running_;
+    int const concurrency_;  // Max number of outstanding requests.
+    int running_;            // Actual number of outstanding requests.
     // We store a shared_ptr so we can detect on cancellation
     // whether a job completed before it was cancelled.
     std::queue<std::shared_ptr<std::function<void()>>> queue_;

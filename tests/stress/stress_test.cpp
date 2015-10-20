@@ -105,14 +105,16 @@ public:
                 this, &AsyncThumbnailProvider::requestFinished);
     }
 
+    void cancel()
+    {
+        request_->cancel();
+    }
+
 public Q_SLOTS:
     void requestFinished()
     {
-        EXPECT_TRUE(request_->isValid()) << request_->errorMessage().toStdString();
-        if (!request_->isValid())
-        {
-            abort();
-        }
+        ASSERT_TRUE(request_->isValid() || request_->errorMessage() == "Request cancelled")
+            << request_->errorMessage().toStdString();
         counter_.thumbnailComplete();
     }
 
@@ -128,8 +130,10 @@ protected:
     StressTest()
     {
     }
+
     virtual ~StressTest()
     {
+        timer_.stop();
     }
 
     static void SetUpTestCase()
@@ -176,6 +180,38 @@ protected:
         ASSERT_EQ(1, spy.count());
     }
 
+    void run_and_cancel_requests(int num, string const& target_dir, string const& source, chrono::milliseconds msecs)
+    {
+        vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+        Counter counter(num);
+        QSignalSpy spy(&counter, &Counter::counterDone);
+
+        QSignalSpy timer_spy(&timer_, &QTimer::timeout);
+        timer_.start(msecs.count());
+
+        for (int i = 0; i < num; i++)
+        {
+            QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+            unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+            provider->getThumbnail(path, QSize(512, 512));
+            providers.emplace_back(move(provider));
+        }
+
+        cerr << "pumping event loop" << endl;
+        ASSERT_TRUE(timer_spy.wait(msecs.count() + 1000));
+        cerr << "stopped pumping event loop" << endl;
+        for (auto& p : providers)
+        {
+            p->cancel();
+        }
+
+        cerr << "pumping event loop" << endl;
+        ASSERT_TRUE(spy.wait(30000));
+        cerr << "done pumping event loop" << endl;
+        ASSERT_EQ(1, spy.count());
+    }
+
     static void add_stats(int N_REQUESTS,
                           chrono::system_clock::time_point start_time,
                           chrono::system_clock::time_point finish_time)
@@ -215,6 +251,7 @@ protected:
     static unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer_;
     static unique_ptr<ArtServer> art_server_;
     static string stats_;
+    static QTimer timer_;
 };
 
 unique_ptr<QTemporaryDir> StressTest::tempdir;
@@ -222,6 +259,7 @@ unique_ptr<DBusServer> StressTest::dbus_;
 unique_ptr<unity::thumbnailer::qt::Thumbnailer> StressTest::thumbnailer_;
 unique_ptr<ArtServer> StressTest::art_server_;
 string StressTest::stats_;
+QTimer StressTest::timer_;
 
 // Little helper function to hard-link a single file a number of times
 // under different names, so we can have lots of files without consuming
@@ -254,6 +292,7 @@ typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
 
 // Test for synchronous wait.
 
+#if 0
 TEST_F(StressTest, photo_waitForFinished)
 {
     int const N_REQUESTS = 1000;
@@ -371,6 +410,28 @@ TEST_F(StressTest, album_art)
     }
     ASSERT_TRUE(spy.wait(120000));
     ASSERT_EQ(1, spy.count());
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+#endif
+
+TEST_F(StressTest, cancel)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    int const N_REQUESTS = 500;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir() + "/Music";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    auto start = chrono::system_clock::now();
+    run_and_cancel_requests(N_REQUESTS, target_dir, source, chrono::milliseconds(2000));
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);

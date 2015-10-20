@@ -20,6 +20,7 @@
 #include "ratelimiter.h"
 
 #include <cassert>
+#include <iostream>  // TODO: remove this
 
 using namespace std;
 
@@ -38,6 +39,7 @@ RateLimiter::RateLimiter(int concurrency)
 
 RateLimiter::~RateLimiter()
 {
+    cerr << "~RateLimiter()" << endl;
     assert(running_ == 0);
 }
 
@@ -49,20 +51,20 @@ function<void() noexcept> RateLimiter::schedule(function<void()> job)
     {
         running_++;
         job();
-        return []{};  // Wasn't queued, so cancel does nothing.
+        return []{ cerr << "no-op function" << endl; };  // Wasn't queued, so cancel does nothing.
     }
 
-    shared_ptr<function<void()>> job_p(new function<void()>(move(job)));
-    queue_.emplace(job_p);
+    queue_.emplace(make_shared<function<void()>>(move(job)));
 
-    // Returned function clears job when called, provided the job is still in the queue.
+    // Returned function clears the job when called, provided the job is still in the queue.
     // done() removes any cleared jobs from the queue without calling them.
-    weak_ptr<function<void()>> weak_p(job_p);
+    weak_ptr<function<void()>> weak_p(queue_.back());
     return [weak_p]() noexcept
     {
         auto job_p = weak_p.lock();
         if (job_p)
         {
+            cerr << "cancelling in queue" << endl;
             *job_p = nullptr;
         }
     };
@@ -70,21 +72,29 @@ function<void() noexcept> RateLimiter::schedule(function<void()> job)
 
 void RateLimiter::done()
 {
+    cerr << "done called" << endl;
     // Find the next job, discarding any cancelled jobs.
     shared_ptr<function<void()>> job_p;
     while (!queue_.empty())
     {
         job_p = queue_.front();
+        assert(job_p);
         queue_.pop();
-        if (*job_p)
+        if (*job_p != nullptr)
         {
+            cerr << "job still exists" << endl;
             break;
+        }
+        else
+        {
+            cerr << "job was cancelled earlier" << endl;
         }
     }
 
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
+        cerr << "calling job" << endl;
         (*job_p)();
     }
     else if (queue_.empty())

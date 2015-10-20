@@ -73,7 +73,7 @@ public:
 
     void waitForFinished()
     {
-        if (finished_)
+        if (finished_ || cancelled_)
         {
             return;
         }
@@ -83,13 +83,14 @@ public:
         // In that case we send the request right here after removing it
         // from the limiter queue. This guarantees that we always have
         // a watcher to wait on.
-        if (!watcher_)
+        if (!sent_)
         {
             cancel_func_();
             watcher_.reset(new QDBusPendingCallWatcher(job_()));
             connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
         }
         watcher_->waitForFinished();
+        // TODO: Need to call done here ?
     }
 
     void setRequest(unity::thumbnailer::qt::Request* request)
@@ -98,6 +99,11 @@ public:
     }
 
     void cancel();
+
+    bool isCancelled() const
+    {
+        return cancelled_;
+    }
 
 private Q_SLOTS:
     void dbusCallFinished();
@@ -108,12 +114,14 @@ private:
     QSize requested_size_;
     RateLimiter* limiter_;
     std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
+
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
     std::function<void()> cancel_func_;
     QString error_message_;
     bool finished_;
     bool is_valid_;
-    bool sent_via_limiter_;  // Becomes true once rate limiter has given the request to DBus.
+    bool cancelled_;
+    bool sent_;  // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
 };
@@ -144,16 +152,18 @@ RequestImpl::RequestImpl(QSize const& requested_size,
     , job_(job)
     , finished_(false)
     , is_valid_(false)
-    , sent_via_limiter_(false)
+    , cancelled_(false)
+    , sent_(false)
     , public_request_(nullptr)
 {
     // The limiter does not call send_request until the request can be sent
     // without exceeding max_backlog().
     auto send_request = [this, job]
     {
+        qDebug() << "sending another request";
         watcher_.reset(new QDBusPendingCallWatcher(job()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
-        sent_via_limiter_ = true;
+        sent_ = true;
     };
     cancel_func_ = limiter_->schedule(send_request);
 }
@@ -161,6 +171,8 @@ RequestImpl::RequestImpl(QSize const& requested_size,
 void RequestImpl::dbusCallFinished()
 {
     Q_ASSERT(watcher_);
+    Q_ASSERT(sent_);
+    Q_ASSERT(!finished_);
 
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
@@ -179,11 +191,7 @@ void RequestImpl::dbusCallFinished()
         watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
-        if (sent_via_limiter_)
-        {
-            limiter_->done();
-        }
-        return;
+        limiter_->done();
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
@@ -195,8 +203,6 @@ void RequestImpl::dbusCallFinished()
     {
         finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception"));
     }
-
-    finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown error"));
     // LCOV_EXCL_STOP
 }
 
@@ -206,11 +212,14 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     finished_ = true;
     is_valid_ = false;
     image_ = QImage();
-    qWarning() << error_message_;
+    if (!cancelled_)
+    {
+        qWarning() << error_message_;  // No warning for cancellation because that's an expected outcome.
+    }
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
-    if (sent_via_limiter_)
+    if (sent_ && !cancelled_)
     {
         limiter_->done();
     }
@@ -218,18 +227,23 @@ void RequestImpl::finishWithError(QString const& errorMessage)
 
 void RequestImpl::cancel()
 {
-    cancel_func_();
-
-    if (!finished_)
+    if (finished_ || sent_ || cancelled_)
     {
-        // Deleting the pending call watcher (which should hold the only
-        // reference to the pending call at this point) tells Qt that we
-        // are no longer interested in the reply.  The destruction will
-        // also clear up the signal connections.
-        watcher_.reset();
-
-        finishWithError(QStringLiteral("Request cancelled"));
+        return;  // Too late, do nothing.
     }
+
+    qDebug() << "calling cancel func";
+    cancel_func_();
+    cancelled_ = true;
+    is_valid_ = false;
+
+    // Deleting the pending call watcher (which should hold the only
+    // reference to the pending call at this point) tells Qt that we
+    // are no longer interested in the reply.  The destruction will
+    // also clear up the signal connections.
+    watcher_.reset();
+
+    finishWithError(QStringLiteral("Request cancelled"));
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
@@ -272,7 +286,6 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
 QSharedPointer<Request> ThumbnailerImpl::createRequest(QSize const& requested_size,
                                                        std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
 {
-    //std::unique_ptr<QDBusPendingCallWatcher> watcher(new QDBusPendingCallWatcher(reply));
     auto request_impl = new RequestImpl(requested_size, &limiter_, job);
     auto request = QSharedPointer<Request>(new Request(request_impl));
     request_impl->setRequest(request.data());
@@ -316,6 +329,11 @@ void Request::waitForFinished()
 void Request::cancel()
 {
     p_->cancel();
+}
+
+bool Request::isCancelled() const
+{
+    return p_->isCancelled();
 }
 
 // LCOV_EXCL_START
