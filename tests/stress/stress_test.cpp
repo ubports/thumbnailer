@@ -57,15 +57,25 @@ public:
     Counter(int limit)
         : limit_(limit)
         , count_(0)
+        , cancellations_(0)
     {
+    }
+
+    int cancellations()
+    {
+        return cancellations_;
     }
 
 Q_SIGNALS:
     void counterDone();
 
 public Q_SLOTS:
-    void thumbnailComplete()
+    void thumbnailComplete(bool cancelled)
     {
+        if (cancelled)
+        {
+            ++cancellations_;
+        }
         if (++count_ == limit_)
         {
             Q_EMIT counterDone();
@@ -75,6 +85,7 @@ public Q_SLOTS:
 private:
     int limit_;
     int count_;
+    int cancellations_;
 };
 
 // Class to run a single request and check that it completed OK.
@@ -110,12 +121,23 @@ public:
         request_->cancel();
     }
 
+    void waitForFinished()
+    {
+        request_->waitForFinished();
+    }
+
 public Q_SLOTS:
     void requestFinished()
     {
-        ASSERT_TRUE(request_->isValid() || request_->errorMessage() == "Request cancelled")
-            << request_->errorMessage().toStdString();
-        counter_.thumbnailComplete();
+        EXPECT_TRUE(request_->isFinished());
+        if (!request_->isValid())
+        {
+            EXPECT_TRUE(request_->isCancelled());
+            EXPECT_TRUE(request_->image().isNull());
+            EXPECT_TRUE(request_->errorMessage() == QString("Request cancelled"))
+                << request_->errorMessage().toStdString();
+        }
+        counter_.thumbnailComplete(request_->isCancelled());
     }
 
 private:
@@ -131,12 +153,9 @@ protected:
     {
     }
 
-    virtual ~StressTest()
-    {
-        timer_.stop();
-    }
+    virtual ~StressTest() = default;
 
-    static void SetUpTestCase()
+    void SetUp() override
     {
         // start fake server
         art_server_.reset(new ArtServer());
@@ -157,7 +176,7 @@ protected:
         ASSERT_EQ(0, mkdir((temp_dir() + "/Pictures").c_str(), 0700));
     }
 
-    static string temp_dir()
+    string temp_dir()
     {
         return tempdir->path().toStdString();
     }
@@ -176,8 +195,8 @@ protected:
             provider->getThumbnail(path, QSize(512, 512));
             providers.emplace_back(move(provider));
         }
-        ASSERT_TRUE(spy.wait(120000));
-        ASSERT_EQ(1, spy.count());
+        EXPECT_TRUE(spy.wait(120000));
+        EXPECT_EQ(1, spy.count());
     }
 
     void run_and_cancel_requests(int num, string const& target_dir, string const& source, chrono::milliseconds msecs)
@@ -187,8 +206,9 @@ protected:
         Counter counter(num);
         QSignalSpy spy(&counter, &Counter::counterDone);
 
-        QSignalSpy timer_spy(&timer_, &QTimer::timeout);
-        timer_.start(msecs.count());
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start(msecs.count());
 
         for (int i = 0; i < num; i++)
         {
@@ -198,18 +218,22 @@ protected:
             providers.emplace_back(move(provider));
         }
 
-        cerr << "pumping event loop" << endl;
-        ASSERT_TRUE(timer_spy.wait(msecs.count() + 1000));
-        cerr << "stopped pumping event loop" << endl;
+        EXPECT_TRUE(timer_spy.wait(msecs.count() + 1000));
         for (auto& p : providers)
         {
             p->cancel();
         }
 
-        cerr << "pumping event loop" << endl;
-        ASSERT_TRUE(spy.wait(30000));
-        cerr << "done pumping event loop" << endl;
-        ASSERT_EQ(1, spy.count());
+        EXPECT_TRUE(spy.wait(30000));
+        EXPECT_EQ(1, spy.count());
+        EXPECT_NE(0, counter.cancellations());
+        cout << "Cancellations: " << counter.cancellations() << endl;
+
+        // For coverage
+        for (auto& p : providers)
+        {
+            p->waitForFinished();
+        }
     }
 
     static void add_stats(int N_REQUESTS,
@@ -233,7 +257,7 @@ protected:
         cout << stats_;
     }
 
-    static void TearDownTestCase()
+    void TearDown() override
     {
         thumbnailer_.reset();
         dbus_.reset();
@@ -246,20 +270,14 @@ protected:
         show_stats();
     }
 
-    static unique_ptr<QTemporaryDir> tempdir;
-    static unique_ptr<DBusServer> dbus_;
-    static unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer_;
-    static unique_ptr<ArtServer> art_server_;
+    unique_ptr<QTemporaryDir> tempdir;
+    unique_ptr<DBusServer> dbus_;
+    unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer_;
+    unique_ptr<ArtServer> art_server_;
     static string stats_;
-    static QTimer timer_;
 };
 
-unique_ptr<QTemporaryDir> StressTest::tempdir;
-unique_ptr<DBusServer> StressTest::dbus_;
-unique_ptr<unity::thumbnailer::qt::Thumbnailer> StressTest::thumbnailer_;
-unique_ptr<ArtServer> StressTest::art_server_;
 string StressTest::stats_;
-QTimer StressTest::timer_;
 
 // Little helper function to hard-link a single file a number of times
 // under different names, so we can have lots of files without consuming
@@ -284,7 +302,7 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
     for (int i = 1; i < num_copies; ++i)
     {
         string link_name = target_dir + "/" + to_string(i) + filename;
-        ASSERT_TRUE(link(copied_file.c_str(), link_name.c_str()) == 0 || errno == EEXIST) << "errno = " << errno;
+        EXPECT_TRUE(link(copied_file.c_str(), link_name.c_str()) == 0 || errno == EEXIST) << "errno = " << errno;
     }
 }
 
@@ -292,7 +310,6 @@ typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
 
 // Test for synchronous wait.
 
-#if 0
 TEST_F(StressTest, photo_waitForFinished)
 {
     int const N_REQUESTS = 1000;
@@ -414,7 +431,6 @@ TEST_F(StressTest, album_art)
 
     add_stats(N_REQUESTS, start, finish);
 }
-#endif
 
 TEST_F(StressTest, cancel)
 {
@@ -432,6 +448,54 @@ TEST_F(StressTest, cancel)
 
     auto start = chrono::system_clock::now();
     run_and_cancel_requests(N_REQUESTS, target_dir, source, chrono::milliseconds(2000));
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
+TEST_F(StressTest, wait_for_finished_in_queue)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    int const N_REQUESTS = 50;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir() + "/Music";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    auto start = chrono::system_clock::now();
+    for (int i = 0; i < N_REQUESTS; i++)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // For coverage: Wait for a few requests while they are still in the queue (which will cause
+    // them to be scheduled immediately.)
+    providers[43]->waitForFinished();
+    providers[46]->waitForFinished();
+    providers[48]->waitForFinished();
+
+    // Cancel all of the request. The ones that we didn't wait for synchronously are partly still in
+    // progress, and partly still in the queue.
+    for (auto& p : providers)
+    {
+        p->cancel();
+    }
+
+    ASSERT_TRUE(spy.wait(120000));
+    ASSERT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);

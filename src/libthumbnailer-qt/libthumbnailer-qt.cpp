@@ -85,12 +85,14 @@ public:
         // a watcher to wait on.
         if (!sent_)
         {
+            Q_ASSERT(!watcher_);
             cancel_func_();
             watcher_.reset(new QDBusPendingCallWatcher(job_()));
             connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
+            sent_ = true;
+            limiter_->schedule_now(job_);
         }
         watcher_->waitForFinished();
-        // TODO: Need to call done here ?
     }
 
     void setRequest(unity::thumbnailer::qt::Request* request)
@@ -121,7 +123,7 @@ private:
     bool finished_;
     bool is_valid_;
     bool cancelled_;
-    bool sent_;  // Becomes true once rate limiter has given the request to DBus.
+    bool sent_;     // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
 };
@@ -160,7 +162,6 @@ RequestImpl::RequestImpl(QSize const& requested_size,
     // without exceeding max_backlog().
     auto send_request = [this, job]
     {
-        qDebug() << "sending another request";
         watcher_.reset(new QDBusPendingCallWatcher(job()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
         sent_ = true;
@@ -216,6 +217,10 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     {
         qWarning() << error_message_;  // No warning for cancellation because that's an expected outcome.
     }
+    // Deleting the pending call watcher (which holds the only
+    // reference to the pending call at this point) tells Qt that we
+    // are no longer interested in the reply.  The destruction will
+    // also clear up the signal connections.
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
@@ -232,17 +237,8 @@ void RequestImpl::cancel()
         return;  // Too late, do nothing.
     }
 
-    qDebug() << "calling cancel func";
     cancel_func_();
     cancelled_ = true;
-    is_valid_ = false;
-
-    // Deleting the pending call watcher (which should hold the only
-    // reference to the pending call at this point) tells Qt that we
-    // are no longer interested in the reply.  The destruction will
-    // also clear up the signal connections.
-    watcher_.reset();
-
     finishWithError(QStringLiteral("Request cancelled"));
 }
 

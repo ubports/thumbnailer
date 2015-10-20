@@ -20,7 +20,6 @@
 #include "ratelimiter.h"
 
 #include <cassert>
-#include <iostream>  // TODO: remove this
 
 using namespace std;
 
@@ -39,7 +38,6 @@ RateLimiter::RateLimiter(int concurrency)
 
 RateLimiter::~RateLimiter()
 {
-    cerr << "~RateLimiter()" << endl;
     assert(running_ == 0);
 }
 
@@ -49,9 +47,7 @@ function<void() noexcept> RateLimiter::schedule(function<void()> job)
 
     if (running_ < concurrency_)
     {
-        running_++;
-        job();
-        return []{ cerr << "no-op function" << endl; };  // Wasn't queued, so cancel does nothing.
+        return schedule_now(job);
     }
 
     queue_.emplace(make_shared<function<void()>>(move(job)));
@@ -64,15 +60,22 @@ function<void() noexcept> RateLimiter::schedule(function<void()> job)
         auto job_p = weak_p.lock();
         if (job_p)
         {
-            cerr << "cancelling in queue" << endl;
             *job_p = nullptr;
         }
     };
 }
 
+function<void() noexcept> RateLimiter::schedule_now(function<void()> job)
+{
+    assert(job);
+
+    running_++;
+    job();
+    return []{};  // Wasn't queued, so cancel does nothing.
+}
+
 void RateLimiter::done()
 {
-    cerr << "done called" << endl;
     // Find the next job, discarding any cancelled jobs.
     shared_ptr<function<void()>> job_p;
     while (!queue_.empty())
@@ -82,19 +85,13 @@ void RateLimiter::done()
         queue_.pop();
         if (*job_p != nullptr)
         {
-            cerr << "job still exists" << endl;
             break;
-        }
-        else
-        {
-            cerr << "job was cancelled earlier" << endl;
         }
     }
 
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
-        cerr << "calling job" << endl;
         (*job_p)();
     }
     else if (queue_.empty())

@@ -48,6 +48,9 @@ public:
     // called, cancels the job in the queue (if it's still in the queue).
     std::function<void() noexcept> schedule(std::function<void()> job);
 
+    // Schedule a job to run immediately, regardless of the concurrency limit.
+    std::function<void() noexcept> schedule_now(std::function<void()> job);
+
     // Notify that a job has completed.  If there are queued jobs,
     // start the one at the head of the queue.
     void done();
