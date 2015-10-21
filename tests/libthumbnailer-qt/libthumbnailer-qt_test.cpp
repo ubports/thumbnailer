@@ -420,23 +420,6 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     EXPECT_FALSE(reply->isValid());
 }
 
-TEST_F(LibThumbnailerTest, cancel_request)
-{
-    Thumbnailer thumbnailer(dbus_->connection());
-
-    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
-
-    QSignalSpy spy(reply.data(), &Request::finished);
-    reply->cancel();
-
-    // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
-
-    EXPECT_TRUE(reply->isFinished());
-    EXPECT_FALSE(reply->isValid());
-    EXPECT_EQ(reply->errorMessage(), "Request cancelled");
-}
-
 Q_DECLARE_METATYPE(QProcess::ExitStatus)  // Avoid noise from signal spy.
 
 int main(int argc, char** argv)

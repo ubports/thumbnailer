@@ -661,15 +661,26 @@ TEST_F(ThumbnailerTest, empty_file)
     request->download();
     ASSERT_TRUE(spy.wait(5000));
 
+    bool thumbnail_failed = false;
+    string thumbnail;
     try
     {
-        request->thumbnail();
-        FAIL();
+        thumbnail = request->thumbnail();
     }
     catch (unity::ResourceException const& e)
     {
         string msg = e.what();
         EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
+        thumbnail_failed = true;
+    }
+
+    // Change in glib 2.22: previously, g_file_query_info(..., G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE, ...)
+    // for "empty.mp3" returned "audio/mpeg". As of 2.22, it returns "text/plain". This causes
+    // an exception on Vivid, but returns an empty thumbnail on Wily. Either behavior is acceptable,
+    // seeing that extracting a thumbnail from an empty file is not ever going to produce a thumbnail anyway.
+    if (!thumbnail_failed)
+    {
+        EXPECT_EQ("", thumbnail);
     }
 }
 

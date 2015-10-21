@@ -48,13 +48,16 @@ public:
     // called, cancels the job in the queue (if it's still in the queue).
     std::function<void() noexcept> schedule(std::function<void()> job);
 
+    // Schedule a job to run immediately, regardless of the concurrency limit.
+    std::function<void() noexcept> schedule_now(std::function<void()> job);
+
     // Notify that a job has completed.  If there are queued jobs,
     // start the one at the head of the queue.
     void done();
 
 private:
-    int const concurrency_;
-    int running_;
+    int const concurrency_;  // Max number of outstanding requests.
+    int running_;            // Actual number of outstanding requests.
     // We store a shared_ptr so we can detect on cancellation
     // whether a job completed before it was cancelled.
     std::queue<std::shared_ptr<std::function<void()>>> queue_;
