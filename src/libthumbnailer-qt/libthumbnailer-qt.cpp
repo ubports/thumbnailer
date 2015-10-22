@@ -240,8 +240,9 @@ void RequestImpl::cancel()
     // are no longer interested in the reply.  The destruction will
     // also clear up the signal connections.
     watcher_.reset();
-    Q_ASSERT(public_request_);
-    Q_EMIT public_request_->finished();
+    // TODO: Disabled for debugging for now.
+    //Q_ASSERT(public_request_);
+    //Q_EMIT public_request_->finished();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
