@@ -38,7 +38,10 @@ RateLimiter::RateLimiter(int concurrency)
 
 RateLimiter::~RateLimiter()
 {
-    assert(running_ == 0);
+    // No assert here because this code is linked by the calling application.
+    // If the application terminates without waiting for outstanding requests
+    // to finish, we don't want to cause a core dump.
+    // assert(running_ == 0);
 }
 
 RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)

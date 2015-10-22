@@ -222,10 +222,7 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
-    if (sent_ && !cancelled_)
-    {
-        limiter_->done();
-    }
+    limiter_->done();
 }
 
 void RequestImpl::cancel()

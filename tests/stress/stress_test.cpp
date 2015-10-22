@@ -461,7 +461,7 @@ TEST_F(StressTest, wait_for_finished_in_queue)
         return;
     }
 
-    int const N_REQUESTS = 50;
+    int const N_REQUESTS = 200;
 
     string source = "short-track.mp3";
     string target_dir = temp_dir() + "/Music";
@@ -483,11 +483,11 @@ TEST_F(StressTest, wait_for_finished_in_queue)
 
     // For coverage: Wait for a few requests while they are still in the queue (which will cause
     // them to be scheduled immediately.)
-    providers[43]->waitForFinished();
-    providers[46]->waitForFinished();
-    providers[48]->waitForFinished();
+    providers[N_REQUESTS - 7]->waitForFinished();
+    providers[N_REQUESTS - 5]->waitForFinished();
+    providers[N_REQUESTS - 4]->waitForFinished();
 
-    // Cancel all of the request. The ones that we didn't wait for synchronously are partly still in
+    // Cancel all of the requests. The ones that we didn't wait for synchronously are partly still in
     // progress, and partly still in the queue.
     for (auto& p : providers)
     {
