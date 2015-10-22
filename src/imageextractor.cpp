@@ -25,14 +25,18 @@
 
 #include <QDebug>
 
+#include <cassert>
+
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
 ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds timeout)
     : filename_(filename)
     , timeout_ms_(timeout.count())
+    , read_called_(false)
 {
     process_.setStandardInputFile(QProcess::nullDevice());
+    process_.setProcessChannelMode(QProcess::ForwardedErrorChannel);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this,
             &ImageExtractor::processFinished);
     connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error), this,
@@ -79,12 +83,14 @@ string to_string(QByteArray const& array)
 
 }
 
-string ImageExtractor::data()
+string ImageExtractor::read()
 {
     if (!error_.empty())
     {
-        throw runtime_error(string("ImageExtractor::data(): ") + error_);
+        throw runtime_error(string("ImageExtractor::read(): ") + error_);
     }
+    assert(!read_called_);
+    read_called_ = true;
     // TODO: Not nice. This copies the entire thumbnail.
     return to_string(process_.readAllStandardOutput());
 }
@@ -101,14 +107,14 @@ void ImageExtractor::processFinished()
                     error_ = "";
                     break;
                 case 1:
-                    error_ = string("could not extract screenshot: ") + to_string(process_.readAllStandardError());
+                    error_ = string("could not extract screenshot for ") + filename_;
                     break;
                 case 2:
-                    error_ = string("extractor pipeline failed: ") + to_string(process_.readAllStandardError());
+                    error_ = string("extractor pipeline failed for ") + filename_;
                     break;
                 default:
                     error_ = string("unknown exit status ") + to_string(process_.exitCode()) +
-                             " from " + exe_path_.toStdString();
+                             " from " + exe_path_.toStdString() + " for " + filename_;
                     break;
             }
             break;
