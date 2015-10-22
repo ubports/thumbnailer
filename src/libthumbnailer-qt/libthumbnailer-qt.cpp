@@ -175,9 +175,12 @@ void RequestImpl::dbusCallFinished()
     Q_ASSERT(sent_);
     Q_ASSERT(!finished_);
 
+    limiter_->done();
+
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
+        qDebug() << "reply invalid, cancelled: " << cancelled_;
         finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
         return;
     }
@@ -192,7 +195,6 @@ void RequestImpl::dbusCallFinished()
         watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
-        limiter_->done();
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
@@ -214,18 +216,9 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     is_valid_ = false;
     image_ = QImage();
     qWarning() << error_message_;
-
-    // Deleting the pending call watcher (which holds the only
-    // reference to the pending call at this point) tells Qt that we
-    // are no longer interested in the reply.  The destruction will
-    // also clear up the signal connections.
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
-    if (sent_ && !cancelled_)
-    {
-        limiter_->done();
-    }
 }
 
 void RequestImpl::cancel()
@@ -242,6 +235,10 @@ void RequestImpl::cancel()
     finished_ = true;
     is_valid_ = false;
     error_message_ = QLatin1String("Request cancelled");
+    // Deleting the pending call watcher (which holds the only
+    // reference to the pending call at this point) tells Qt that we
+    // are no longer interested in the reply.  The destruction will
+    // also clear up the signal connections.
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
