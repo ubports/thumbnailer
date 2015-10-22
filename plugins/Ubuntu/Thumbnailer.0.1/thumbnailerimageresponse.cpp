@@ -88,7 +88,7 @@ void ThumbnailerImageResponse::cancel()
 
 void ThumbnailerImageResponse::requestFinished()
 {
-    if (request_isCancelled())
+    if (request_->isCancelled())
     {
         return;
     }
