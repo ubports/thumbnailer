@@ -103,7 +103,7 @@ public:
     void cancel();
 
     /**
-    \brief Returns whether the reqquest was cancelled.
+    \brief Returns whether the request was cancelled.
     \return `true` if the request was cancelled and `false`, otherwise.
     \note Depending on the time at which cancel() is called,
           the request may complete successfully despite having been cancelled.
