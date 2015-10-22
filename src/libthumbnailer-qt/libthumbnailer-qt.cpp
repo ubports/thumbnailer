@@ -213,10 +213,8 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     finished_ = true;
     is_valid_ = false;
     image_ = QImage();
-    if (!cancelled_)
-    {
-        qWarning() << error_message_;  // No warning for cancellation because that's an expected outcome.
-    }
+    qWarning() << error_message_;
+
     // Deleting the pending call watcher (which holds the only
     // reference to the pending call at this point) tells Qt that we
     // are no longer interested in the reply.  The destruction will
@@ -239,8 +237,14 @@ void RequestImpl::cancel()
 
     qDebug() << "cancelled:" << trace_;
     cancel_func_();
+    image_ = QImage();
     cancelled_ = true;
-    finishWithError(QStringLiteral("Request cancelled"));
+    finished_ = true;
+    is_valid_ = false;
+    error_message_ = QLatin1String("Request cancelled");
+    watcher_.reset();
+    Q_ASSERT(public_request_);
+    Q_EMIT public_request_->finished();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
