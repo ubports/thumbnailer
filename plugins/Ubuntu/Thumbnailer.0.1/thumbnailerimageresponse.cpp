@@ -88,11 +88,7 @@ void ThumbnailerImageResponse::cancel()
 
 void ThumbnailerImageResponse::requestFinished()
 {
-    if (request_->isCancelled())
-    {
-        return;
-    }
-    if (!request_->isValid())
+    if (!request_->isValid() && !request_->isCancelled())
     {
         qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << request_->errorMessage();
     }
