@@ -25,9 +25,9 @@
 #include <utils/artgeneratorcommon.h>
 #include <service/dbus_names.h>
 
-#include <memory>
-
 #include <QSharedPointer>
+
+#include <memory>
 
 namespace unity
 {
@@ -87,10 +87,7 @@ public:
         {
             Q_ASSERT(!watcher_);
             cancel_func_();
-            watcher_.reset(new QDBusPendingCallWatcher(job_()));
-            connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
-            sent_ = true;
-            limiter_->schedule_now(job_);
+            limiter_->schedule_now(send_request_);
         }
         watcher_->waitForFinished();
     }
@@ -116,9 +113,10 @@ private:
     QSize requested_size_;
     RateLimiter* limiter_;
     std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
+    std::function<void()> send_request_;
 
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
-    std::function<void()> cancel_func_;
+    RateLimiter::CancelFunc cancel_func_;
     QString error_message_;
     bool finished_;
     bool is_valid_;
@@ -160,15 +158,15 @@ RequestImpl::RequestImpl(QString const& trace, QSize const& requested_size,
     , public_request_(nullptr)
     , trace_(trace)
 {
-    // The limiter does not call send_request until the request can be sent
+    // The limiter does not call send_request_ until the request can be sent
     // without exceeding max_backlog().
-    auto send_request = [this, job]
+    send_request_ = [this]
     {
-        watcher_.reset(new QDBusPendingCallWatcher(job()));
+        watcher_.reset(new QDBusPendingCallWatcher(job_()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
         sent_ = true;
     };
-    cancel_func_ = limiter_->schedule(send_request);
+    cancel_func_ = limiter_->schedule(send_request_);
 }
 
 void RequestImpl::dbusCallFinished()

@@ -41,7 +41,7 @@ RateLimiter::~RateLimiter()
     assert(running_ == 0);
 }
 
-function<void() noexcept> RateLimiter::schedule(function<void()> job)
+RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
 {
     assert(job);
 
@@ -65,7 +65,7 @@ function<void() noexcept> RateLimiter::schedule(function<void()> job)
     };
 }
 
-function<void() noexcept> RateLimiter::schedule_now(function<void()> job)
+RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 {
     assert(job);
 
