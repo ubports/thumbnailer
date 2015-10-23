@@ -235,6 +235,7 @@ void RequestImpl::cancel()
     cancel_func_();
     cancelled_ = true;
     finishWithError("Request cancelled");
+    limiter_->done();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
