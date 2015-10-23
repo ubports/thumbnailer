@@ -80,8 +80,6 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
 void RateLimiter::done()
 {
-    assert(running_ > 0);
-
     // Find the next job, discarding any cancelled jobs.
     shared_ptr<function<void()>> job_p;
     while (!queue_.empty())

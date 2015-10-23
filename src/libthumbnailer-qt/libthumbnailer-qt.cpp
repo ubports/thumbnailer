@@ -180,7 +180,6 @@ void RequestImpl::dbusCallFinished()
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        qDebug() << "reply invalid, cancelled: " << cancelled_;
         finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
         return;
     }
@@ -226,7 +225,7 @@ void RequestImpl::finishWithError(QString const& errorMessage)
 
 void RequestImpl::cancel()
 {
-    if (finished_ || sent_ || cancelled_)
+    if (finished_ || cancelled_)
     {
         return;  // Too late, do nothing.
     }
@@ -234,8 +233,11 @@ void RequestImpl::cancel()
     qDebug() << "cancelled:" << trace_;
     cancel_func_();
     cancelled_ = true;
+    if (sent_)
+    {
+        limiter_->done();
+    }
     finishWithError("Request cancelled");
-    limiter_->done();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)

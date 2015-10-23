@@ -224,8 +224,10 @@ protected:
             p->cancel();
         }
 
-        EXPECT_TRUE(spy.wait(30000));
-        EXPECT_EQ(1, spy.count());
+        if (spy.count() == 0)
+        {
+            EXPECT_TRUE(spy.wait(30000));
+        }
         EXPECT_NE(0, counter.cancellations());
         cout << "Cancellations: " << counter.cancellations() << endl;
 
@@ -481,6 +483,14 @@ TEST_F(StressTest, wait_for_finished_in_queue)
         providers.emplace_back(move(provider));
     }
 
+    // Pump the event loop for a while, to allow some requests to start processing.
+    {
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start();
+        timer_spy.wait(1000);
+    }
+
     // For coverage: Wait for a few requests while they are still in the queue (which will cause
     // them to be scheduled immediately.)
     providers[N_REQUESTS - 7]->waitForFinished();
@@ -494,8 +504,19 @@ TEST_F(StressTest, wait_for_finished_in_queue)
         p->cancel();
     }
 
-    ASSERT_TRUE(spy.wait(120000));
-    ASSERT_EQ(1, spy.count());
+    if (spy.count() == 0)
+    {
+        spy.wait(120000);
+    }
+    else
+    {
+        // Pump the event loop for a while, to allow all the signals to trickle in.
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start();
+        timer_spy.wait(10000);
+    }
+    EXPECT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);
