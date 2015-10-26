@@ -1,4 +1,5 @@
 add_executable(libthumbnailer-qt_test libthumbnailer-qt_test.cpp)
+set_target_properties(libthumbnailer-qt_test PROPERTIES AUTOMOC TRUE)
 
 qt5_use_modules(libthumbnailer-qt_test DBus Gui Test Network)
 target_link_libraries(libthumbnailer-qt_test
@@ -8,6 +9,7 @@ target_link_libraries(libthumbnailer-qt_test
     Qt5::Test
     gtest
     testutils
+    ${GST_DEPS_LDFLAGS}
 )
 add_test(libthumbnailer-qt libthumbnailer-qt_test)
 add_dependencies(libthumbnailer-qt_test thumbnailer-qt)

@@ -36,7 +36,7 @@ namespace thumbnailer
 class RateLimiter
 {
 public:
-    RateLimiter(int concurrency);
+    RateLimiter(int concurrency, std::string const& name);
     ~RateLimiter();
 
     RateLimiter(RateLimiter const&) = delete;
@@ -63,6 +63,7 @@ private:
     // We store a shared_ptr so we can detect on cancellation
     // whether a job completed before it was cancelled.
     std::queue<std::shared_ptr<std::function<void()>>> queue_;
+    std::string name_;
 };
 
 }  // namespace thumbnailer
