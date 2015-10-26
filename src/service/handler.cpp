@@ -307,7 +307,7 @@ void Handler::checkFinished()
         return;
     }
 
-    sendError("Handler::check_finished(): no artwork for " + details() + ": " + status());
+    sendError("Handler::checkFinished(): no artwork for " + details() + ": " + status());
 }
 
 void Handler::downloadFinished()

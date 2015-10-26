@@ -312,6 +312,7 @@ typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
 
 // Test for synchronous wait.
 
+#if 0
 TEST_F(StressTest, photo_waitForFinished)
 {
     int const N_REQUESTS = 1000;
@@ -454,6 +455,7 @@ TEST_F(StressTest, cancel)
 
     add_stats(N_REQUESTS, start, finish);
 }
+#endif
 
 TEST_F(StressTest, wait_for_finished_in_queue)
 {
@@ -528,6 +530,7 @@ int main(int argc, char** argv)
 
     QCoreApplication app(argc, argv);
 
+    setenv("MALLOC_CHECK_", "2", true);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
