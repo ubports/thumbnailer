@@ -20,7 +20,6 @@
 #pragma once
 
 #include <QProcess>
-#include <QTemporaryFile>
 #include <QTimer>
 
 #include <chrono>
@@ -47,7 +46,7 @@ public:
     ImageExtractor& operator=(ImageExtractor const& t) = delete;
 
     void extract();
-    std::string data();
+    std::string read();
 
 Q_SIGNALS:
     void finished();
@@ -60,12 +59,12 @@ private Q_SLOTS:
 private:
     std::string const filename_;
     int const timeout_ms_;
+    bool read_called_;
     QString exe_path_;
     std::string error_;
 
     QProcess process_;
     QTimer timer_;
-    QTemporaryFile tmpfile_;
 };
 
 }  // namespace internal
