@@ -541,7 +541,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     if (image_extractor_)
     {
         // The image data has been extracted via vs-thumb
-        auto id = ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
+        auto id = ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         return id;
     }
 
@@ -566,7 +566,10 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
 
     if (content_type == "application/octet-stream")
     {
-        // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
+#if __GLIBC_MINOR__ > 21
+        // LCOV_EXCL_START
+#endif
+        // Prior to glib 2.22, the FAST_CONTENT_TYPE detector will return 'application/octet-stream'
         // for all files without an extension (as it only uses the extension to
         // determine file type). In these cases, we fall back to the full content
         // type detector.
@@ -584,6 +587,9 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
         {
             return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
         }
+#if __GLIBC_MINOR__ > 21
+        // LCOV_EXCL_STOP
+#endif
     }
 
     // Call the appropriate image extractor and return the image data as JPEG (not scaled).
@@ -765,7 +771,6 @@ Thumbnailer::Thumbnailer()
 
 Thumbnailer::~Thumbnailer()
 {
-    qDebug() << "~Thumbnailer()";
     try
     {
         auto seconds = chrono::duration_cast<chrono::seconds>(nw_fail_time_.time_since_epoch()).count();

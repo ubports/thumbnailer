@@ -98,7 +98,7 @@ set(LIBDIR ${CMAKE_INSTALL_LIBDIR})
 set(SHARE_PRIV_DIR ${CMAKE_INSTALL_LIBDIR}/thumbnailer)
 set(SHARE_PRIV_ABS ${CMAKE_INSTALL_PREFIX}/${SHARE_PRIV_DIR})
 
-find_package(Boost COMPONENTS filesystem regex system REQUIRED)
+find_package(Boost COMPONENTS filesystem iostreams regex system REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5DBus REQUIRED)
@@ -134,12 +134,14 @@ enable_coverage_report(
     TARGETS
         recovery_test         # Need to turn on coverage for this, to get the helper template instrumented.
         testutils
+        test-seq
         thumbnailer-admin
         thumbnailer-qml
         thumbnailer-qt
         thumbnailer-service
         thumbnailer-static
         vs-thumb
+        vs-thumb-static
     FILTER
         ${CMAKE_SOURCE_DIR}/tests/*
         ${CMAKE_BINARY_DIR}/*

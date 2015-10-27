@@ -582,9 +582,8 @@ TEST_F(LibThumbnailerTest, cancel)
 
     string source = "short-track.mp3";
     string target_dir = temp_dir();
-    make_links(string(TESTDATADIR) + "/" + source, target_dir, 4);
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, 1);
 
-    vector<unique_ptr<AsyncThumbnailProvider>> providers;
     QString path;
 
     Counter counter(2);
@@ -593,11 +592,11 @@ TEST_F(LibThumbnailerTest, cancel)
     unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(&thumbnailer, counter));
     path = QString::fromStdString(target_dir + "/0" + source);
     provider->getThumbnail(path, QSize(512, 512));
-    providers.emplace_back(move(provider));
 
-    pump(1000);
+    pump(500);
 
-    providers[0]->cancel();
+    provider->cancel();
+    provider->waitForFinished();  // For coverage
 
     pump(500);
 

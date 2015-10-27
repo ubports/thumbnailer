@@ -72,7 +72,7 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
             break;
         // LCOV_EXCL_STOP
         default:
-            ;  // No label for debug messages.
+            break;  // No label for debug messages.
     }
     fprintf(stderr, " %s\n", msg.toLocal8Bit().constData());
     if (type == QtFatalMsg)

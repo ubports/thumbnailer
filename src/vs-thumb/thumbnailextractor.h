@@ -18,6 +18,26 @@
 
 #pragma once
 
+#include <internal/gobj_memory.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
+
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <gst/gst.h>
+#include <gst/tag/tag.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+#pragma GCC diagnostic pop
+
 #include <memory>
 #include <string>
 
@@ -32,8 +52,6 @@ namespace internal
 
 class ThumbnailExtractor final
 {
-    struct Private;
-
 public:
     ThumbnailExtractor();
     ~ThumbnailExtractor();
@@ -45,8 +63,19 @@ public:
     bool extract_audio_cover_art();
     void save_screenshot(const std::string& filename);
 
+    typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
+
 private:
-    std::unique_ptr<Private> p;
+    void change_state(GstElement* element, GstState state);
+    void throw_error(const char* msg, GError* error = nullptr);
+
+    gobj_ptr<GstElement> playbin_;
+    gint64 duration_ = -1;
+
+    std::string uri_;
+    SampleUPtr sample_{nullptr, gst_sample_unref};
+    GdkPixbufRotation sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    bool sample_raw_ = true;
 };
 
 }  // namespace internal

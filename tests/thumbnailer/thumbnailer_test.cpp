@@ -50,6 +50,7 @@
 
 #define TEST_VIDEO TESTDATADIR "/testvideo.ogg"
 #define TEST_SONG TESTDATADIR "/testsong.ogg"
+#define TEST_SONG_NO_EXTENSION TESTDATADIR "/testsong_ogg"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -422,6 +423,24 @@ TEST_F(ThumbnailerTest, thumbnail_song)
     EXPECT_EQ(200, img.height());
 }
 
+TEST_F(ThumbnailerTest, thumbnail_song_no_extension)
+{
+    Thumbnailer tn;
+    auto request = tn.get_thumbnail(TEST_SONG_NO_EXTENSION, QSize(400, 400));
+    ASSERT_NE(nullptr, request.get());
+    // Audio thumbnails cannot be produced immediately
+    ASSERT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download(chrono::milliseconds(15000));
+    ASSERT_TRUE(spy.wait(20000));
+    string thumb = request->thumbnail();
+    ASSERT_NE("", thumb);
+    Image img(thumb);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
 TEST_F(ThumbnailerTest, exceptions)
 {
     string const cache_dir = tempdir_path();
@@ -467,7 +486,7 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
         catch (unity::ResourceException const& e)
         {
             string msg = e.to_string();
-            string exp = "ImageExtractor::data(): failed to start no_such_directory/vs-thumb";
+            string exp = "ImageExtractor::read(): failed to start no_such_directory/vs-thumb";
             EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
         }
         setenv("TN_UTILDIR", old_env.c_str(), true);

@@ -469,7 +469,9 @@ int main(int argc, char** argv)
 
     QCoreApplication app(argc, argv);
 
+#ifndef NDEBUG
     setenv("MALLOC_CHECK_", "2", true);
+#endif
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
