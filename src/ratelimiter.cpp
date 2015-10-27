@@ -61,7 +61,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
     // Returned function clears the job when called, provided the job is still in the queue.
     // done() removes any cleared jobs from the queue without calling them.
     weak_ptr<function<void()>> weak_p(queue_.back());
-cerr << name_ << ": S: r = " << running_ << endl;
+cerr << name_ << ": S: r = " << running_ << ", size = " << queue_.size() << endl;
     return [weak_p]() noexcept
     {
         auto job_p = weak_p.lock();
@@ -78,7 +78,7 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
     running_++;
     job();
-cerr << name_ << ": N: r = " << running_ << endl;
+cerr << name_ << ": N: r = " << running_ << ", size = " << queue_.size() << endl;
     return []{};  // Wasn't queued, so cancel does nothing.
 }
 
@@ -107,7 +107,7 @@ void RateLimiter::done()
         assert(running_ > 0);
         --running_;
     }
-cerr << name_ << ": D: r = " << running_ << endl;
+cerr << name_ << ": D: r = " << running_ << ", size = " << queue_.size() << endl;
 }
 
 }  // namespace thumbnailer

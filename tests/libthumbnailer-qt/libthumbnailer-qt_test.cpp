@@ -103,7 +103,6 @@ protected:
     unique_ptr<ArtServer> art_server_;
 };
 
-#if 0
 TEST_F(LibThumbnailerTest, get_album_art)
 {
     Thumbnailer thumbnailer(dbus_->connection());
@@ -437,7 +436,6 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
     EXPECT_FALSE(reply->isValid());
 }
-#endif
 
 void make_links(string const& source_path, string const& target_dir, int num_copies)
 {
@@ -596,10 +594,10 @@ TEST_F(LibThumbnailerTest, cancel)
     path = QString::fromStdString(target_dir + "/0" + source);
     provider->getThumbnail(path, QSize(512, 512));
     providers.emplace_back(move(provider));
-    providers[0]->cancel();
 
     pump(1000);
 
+    providers[0]->cancel();
 
     pump(500);
 
@@ -607,17 +605,6 @@ TEST_F(LibThumbnailerTest, cancel)
     provider->getThumbnail(path, QSize(512, 512));
 
     EXPECT_TRUE(spy.wait(1000));
-
-#if 0
-    if (spy.count() == 0)
-    {
-        spy.wait(2000);
-    }
-    else
-    {
-        pump(3000);
-    }
-#endif
     EXPECT_EQ(1, spy.count());
 }
 

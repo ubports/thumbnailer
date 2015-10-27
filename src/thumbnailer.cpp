@@ -765,6 +765,7 @@ Thumbnailer::Thumbnailer()
 
 Thumbnailer::~Thumbnailer()
 {
+    qDebug() << "~Thumbnailer()";
     try
     {
         auto seconds = chrono::duration_cast<chrono::seconds>(nw_fail_time_.time_since_epoch()).count();

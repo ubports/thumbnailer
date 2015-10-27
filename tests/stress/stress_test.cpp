@@ -132,10 +132,7 @@ public Q_SLOTS:
         EXPECT_TRUE(request_->isFinished());
         if (!request_->isValid())
         {
-            EXPECT_TRUE(request_->isCancelled());
             EXPECT_TRUE(request_->image().isNull());
-            EXPECT_TRUE(request_->errorMessage() == QString("Request cancelled"))
-                << request_->errorMessage().toStdString();
         }
         counter_.thumbnailComplete(request_->isCancelled());
     }
@@ -197,45 +194,6 @@ protected:
         }
         EXPECT_TRUE(spy.wait(120000));
         EXPECT_EQ(1, spy.count());
-    }
-
-    void run_and_cancel_requests(int num, string const& target_dir, string const& source, chrono::milliseconds msecs)
-    {
-        vector<unique_ptr<AsyncThumbnailProvider>> providers;
-
-        Counter counter(num);
-        QSignalSpy spy(&counter, &Counter::counterDone);
-
-        QTimer timer;
-        QSignalSpy timer_spy(&timer, &QTimer::timeout);
-        timer.start(msecs.count());
-
-        for (int i = 0; i < num; i++)
-        {
-            QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
-            unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
-            provider->getThumbnail(path, QSize(512, 512));
-            providers.emplace_back(move(provider));
-        }
-
-        EXPECT_TRUE(timer_spy.wait(msecs.count() + 1000));
-        for (auto& p : providers)
-        {
-            p->cancel();
-        }
-
-        if (spy.count() == 0)
-        {
-            EXPECT_TRUE(spy.wait(30000));
-        }
-        EXPECT_NE(0, counter.cancellations());
-        cout << "Cancellations: " << counter.cancellations() << endl;
-
-        // For coverage
-        for (auto& p : providers)
-        {
-            p->waitForFinished();
-        }
     }
 
     static void add_stats(int N_REQUESTS,
@@ -438,27 +396,6 @@ TEST_F(StressTest, album_art)
     add_stats(N_REQUESTS, start, finish);
 }
 
-TEST_F(StressTest, cancel)
-{
-    if (!supports_decoder("audio/mpeg"))
-    {
-        fprintf(stderr, "No support for MP3 decoder\n");
-        return;
-    }
-
-    int const N_REQUESTS = 500;
-
-    string source = "short-track.mp3";
-    string target_dir = temp_dir() + "/Music";
-    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
-
-    auto start = chrono::system_clock::now();
-    run_and_cancel_requests(N_REQUESTS, target_dir, source, chrono::milliseconds(2000));
-    auto finish = chrono::system_clock::now();
-
-    add_stats(N_REQUESTS, start, finish);
-}
-
 TEST_F(StressTest, wait_for_finished_in_queue)
 {
     if (!supports_decoder("audio/mpeg"))
@@ -532,6 +469,7 @@ int main(int argc, char** argv)
 
     QCoreApplication app(argc, argv);
 
+    setenv("MALLOC_CHECK_", "2", true);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);

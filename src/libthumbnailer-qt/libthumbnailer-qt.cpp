@@ -45,7 +45,7 @@ class RequestImpl : public QObject
 {
     Q_OBJECT
 public:
-    RequestImpl(QString const& trace, QSize const& requested_size,
+    RequestImpl(QSize const& requested_size,
                 RateLimiter* limiter,
                 std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
 
@@ -124,7 +124,6 @@ private:
     bool sent_;     // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
-    QString trace_;
 };
 
 class ThumbnailerImpl
@@ -139,13 +138,13 @@ public:
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
-    QSharedPointer<Request> createRequest(QString const& trace, QSize const& requested_size,
+    QSharedPointer<Request> createRequest(QSize const& requested_size,
                                           std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
     RateLimiter limiter_;
 };
 
-RequestImpl::RequestImpl(QString const& trace, QSize const& requested_size,
+RequestImpl::RequestImpl(QSize const& requested_size,
                          RateLimiter* limiter,
                          std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
     : requested_size_(requested_size)
@@ -156,7 +155,6 @@ RequestImpl::RequestImpl(QString const& trace, QSize const& requested_size,
     , cancelled_(false)
     , sent_(false)
     , public_request_(nullptr)
-    , trace_(trace)
 {
     // The limiter does not call send_request_ until the request can be sent
     // without exceeding max_backlog().
@@ -230,12 +228,11 @@ void RequestImpl::cancel()
         return;  // Too late, do nothing.
     }
 
-    qDebug() << "cancelled:" << trace_;
     cancel_func_();
     cancelled_ = true;
     if (sent_)
     {
-        limiter_->done();
+        limiter_->done();  // Pump the limiter because finishWithError deletes the watcher.
     }
     finishWithError("Request cancelled");
 }
@@ -250,52 +247,37 @@ QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
                                                      QString const& album,
                                                      QSize const& requestedSize)
 {
-    QString trace;
-    QTextStream stream(&trace, QIODevice::WriteOnly);
-    stream << "getAlbumArt: artist: " << artist << " album: " << album
-           << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-    qDebug() << trace;
     auto job = [this, artist, album, requestedSize]
     {
         return iface_->GetAlbumArt(artist, album, requestedSize);
     };
-    return createRequest(trace, requestedSize, job);
+    return createRequest(requestedSize, job);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
                                                       QString const& album,
                                                       QSize const& requestedSize)
 {
-    QString trace;
-    QTextStream stream(&trace, QIODevice::WriteOnly);
-    stream << "getArtistArt: artist: " << artist << " album: " << album
-           << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-    qDebug() << trace;
     auto job = [this, artist, album, requestedSize]
     {
         return iface_->GetArtistArt(artist, album, requestedSize);
     };
-    return createRequest(trace, requestedSize, job);
+    return createRequest(requestedSize, job);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, QSize const& requestedSize)
 {
-    QString trace;
-    QTextStream stream(&trace, QIODevice::WriteOnly);
-    stream << "getThumbnail: filename: " << filename
-           << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
-    qDebug() << trace;
     auto job = [this, filename, requestedSize]
     {
         return iface_->GetThumbnail(filename, requestedSize);
     };
-    return createRequest(trace, requestedSize, job);
+    return createRequest(requestedSize, job);
 }
 
-QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& trace, QSize const& requested_size,
+QSharedPointer<Request> ThumbnailerImpl::createRequest(QSize const& requested_size,
                                                        std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
 {
-    auto request_impl = new RequestImpl(trace, requested_size, &limiter_, job);
+    auto request_impl = new RequestImpl(requested_size, &limiter_, job);
     auto request = QSharedPointer<Request>(new Request(request_impl));
     request_impl->setRequest(request.data());
     return request;

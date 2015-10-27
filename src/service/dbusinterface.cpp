@@ -135,7 +135,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
     , inactivity_handler_(inactivity_handler)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
-    , download_limiter_(settings_.max_downloads(), "down")
+    , download_limiter_(make_shared<RateLimiter>(settings_.max_downloads(), "down"))
 {
     auto limit = settings_.max_extractions();
 
@@ -154,7 +154,8 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
         }
     }
 
-    extraction_limiter_.reset(new RateLimiter(limit, "extr"));
+    //extraction_limiter_.reset(new RateLimiter(limit, "extr"));
+    extraction_limiter_ = make_shared<RateLimiter>(limit, "extr");
 }
 
 DBusInterface::~DBusInterface()
@@ -236,7 +237,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 *extraction_limiter_, credentials(), inactivity_handler_,
+                                 extraction_limiter_, credentials(), inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)
