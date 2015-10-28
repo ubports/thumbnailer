@@ -36,7 +36,7 @@ namespace thumbnailer
 class RateLimiter
 {
 public:
-    RateLimiter(int concurrency);
+    RateLimiter(int concurrency, std::string const& name);
     ~RateLimiter();
 
     RateLimiter(RateLimiter const&) = delete;
@@ -59,6 +59,7 @@ public:
 
 private:
     int const concurrency_;  // Max number of outstanding requests.
+    std::string name_;
     int running_;            // Actual number of outstanding requests.
     // We store a shared_ptr so we can detect on cancellation
     // whether a job completed before it was cancelled.
