@@ -82,10 +82,10 @@
     </key>
 
     <key type="b" name="trace-client">
-      <default>true</default>
+      <default>false</default>
       <summary>Enable client-side tracing.</summary>
       <description>
-        If set to true, this parameter enables request tracing on the client side.
+        If set to true, this parameter enables request tracing via qDebug() on the client side.
      </description>
     </key>
   </schema>

@@ -135,7 +135,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
     , inactivity_handler_(inactivity_handler)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
-    , download_limiter_(make_shared<RateLimiter>(settings_.max_downloads(), "D"))
+    , download_limiter_(make_shared<RateLimiter>(settings_.max_downloads()))
 {
     auto limit = settings_.max_extractions();
 
@@ -154,7 +154,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
         }
     }
 
-    extraction_limiter_ = make_shared<RateLimiter>(limit, "E");
+    extraction_limiter_ = make_shared<RateLimiter>(limit);
 }
 
 DBusInterface::~DBusInterface()
