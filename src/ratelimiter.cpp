@@ -107,7 +107,7 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
-        cerr << name_ << ": calling job, s: " << queue_.size() << ", r: " << running_ << endl;
+        cerr << name_ << ": calling job" << endl;
         (*job_p)();
     }
     else if (queue_.empty())
@@ -115,6 +115,7 @@ void RateLimiter::done()
         assert(running_ > 0);
         --running_;
     }
+    cerr << name_ << ": done: s: " << queue_.size() << ", r: " << running_ << endl;
 }
 
 }  // namespace thumbnailer
