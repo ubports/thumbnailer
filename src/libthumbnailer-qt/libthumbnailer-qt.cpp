@@ -220,7 +220,7 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     image_ = QImage();
     if (!cancelled_)
     {
-        qWarning() << error_message_;  // Cancellation is an expected outcome, no warning for that.
+        qWarning().noquote() << error_message_;  // Cancellation is an expected outcome, no warning for that.
     }
     watcher_.reset();
     Q_ASSERT(public_request_);
@@ -231,7 +231,7 @@ void RequestImpl::cancel()
 {
     if (!details_.isEmpty())
     {
-        qDebug() << "cancelled:" << details_;
+        qDebug().noquote() << "cancelled:" << details_;
     }
 
     if (finished_ || cancelled_)
@@ -265,7 +265,7 @@ QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
         QTextStream s(&details, QIODevice::WriteOnly);
         s << "getAlbumArt: (" << requestedSize.width() << "," << requestedSize.height()
           << ") \"" << artist << "\", \"" << album << "\"";
-        qDebug() << details;
+        qDebug().noquote() << details;
     }
     auto job = [this, artist, album, requestedSize]
     {
@@ -284,7 +284,7 @@ QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
         QTextStream s(&details, QIODevice::WriteOnly);
         s << "getArtistArt: (" << requestedSize.width() << "," << requestedSize.height()
           << ") \"" << artist << "\", \"" << album << "\"";
-        qDebug() << details;
+        qDebug().noquote() << details;
     }
     auto job = [this, artist, album, requestedSize]
     {
@@ -300,7 +300,7 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
     {
         QTextStream s(&details, QIODevice::WriteOnly);
         s << "getThumbnail: (" << requestedSize.width() << "," << requestedSize.height() << ") " << filename;
-        qDebug() << details;
+        qDebug().noquote() << details;
     }
     auto job = [this, filename, requestedSize]
     {
