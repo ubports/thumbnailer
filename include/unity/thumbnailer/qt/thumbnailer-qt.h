@@ -88,7 +88,7 @@ public:
 
     \warning Calling this function from the main (GUI) thread might cause your user interface to freeze.
 
-    \warning Calling waitForFinished() may cause the request to be scheduled out of order. This means
+    \warning Calling waitForFinished() causes the request to be scheduled out of order. This means
     that, if you send requests for thumbnails A, B, and C (in that order) and then call waitForFinished()
     on C, you _cannot_ assume that A and B have also finished once waitForFinished() returns.
     */

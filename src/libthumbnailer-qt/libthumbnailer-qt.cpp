@@ -257,7 +257,7 @@ void RequestImpl::cancel()
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : limiter_(Settings().max_backlog(), "Q")
+    : limiter_(Settings().max_backlog())
     , trace_client_(Settings().trace_client())
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
