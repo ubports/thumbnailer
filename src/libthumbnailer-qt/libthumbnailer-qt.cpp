@@ -45,7 +45,8 @@ class RequestImpl : public QObject
 {
     Q_OBJECT
 public:
-    RequestImpl(QSize const& requested_size,
+    RequestImpl(QString const& details,
+                QSize const& requested_size,
                 RateLimiter* limiter,
                 std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
 
@@ -110,6 +111,7 @@ private Q_SLOTS:
 private:
     void finishWithError(QString const& errorMessage);
 
+    QString details_;
     QSize requested_size_;
     RateLimiter* limiter_;
     std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
@@ -138,16 +140,20 @@ public:
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
-    QSharedPointer<Request> createRequest(QSize const& requested_size,
+    QSharedPointer<Request> createRequest(QString const& details,
+                                          QSize const& requested_size,
                                           std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
     RateLimiter limiter_;
+    bool trace_client_;
 };
 
-RequestImpl::RequestImpl(QSize const& requested_size,
+RequestImpl::RequestImpl(QString const& details,
+                         QSize const& requested_size,
                          RateLimiter* limiter,
                          std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
-    : requested_size_(requested_size)
+    : details_(details)
+    , requested_size_(requested_size)
     , limiter_(limiter)
     , job_(job)
     , finished_(false)
@@ -178,7 +184,7 @@ void RequestImpl::dbusCallFinished()
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {
-        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
+        finishWithError("Thumbnailer: RequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
         return;
     }
 
@@ -196,12 +202,12 @@ void RequestImpl::dbusCallFinished()
     // LCOV_EXCL_START
     catch (const std::exception& e)
     {
-        finishWithError("ThumbnailerRequestImpl::dbusCallFinished(): thumbnailer failed: " +
+        finishWithError("Thumbnailer: RequestImpl::dbusCallFinished(): thumbnailer failed: " +
                         QString::fromStdString(e.what()));
     }
     catch (...)
     {
-        finishWithError(QStringLiteral("ThumbnailerRequestImpl::dbusCallFinished(): unknown exception"));
+        finishWithError(QStringLiteral("Thumbnailer: RequestImpl::dbusCallFinished(): unknown exception"));
     }
     // LCOV_EXCL_STOP
 }
@@ -223,6 +229,11 @@ void RequestImpl::finishWithError(QString const& errorMessage)
 
 void RequestImpl::cancel()
 {
+    if (!details_.isEmpty())
+    {
+        qDebug() << "cancelled:" << details_;
+    }
+
     if (finished_ || cancelled_)
     {
         return;  // Too late, do nothing.
@@ -239,6 +250,7 @@ void RequestImpl::cancel()
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     : limiter_(Settings().max_backlog())
+    , trace_client_(Settings().trace_client())
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
 }
@@ -247,37 +259,61 @@ QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
                                                      QString const& album,
                                                      QSize const& requestedSize)
 {
+    QString details;
+    if (trace_client_)
+    {
+        QTextStream s(&details, QIODevice::WriteOnly);
+        s << "getAlbumArt: (" << requestedSize.width() << "," << requestedSize.height()
+          << ") \"" << artist << "\", \"" << album << "\"";
+        qDebug() << details;
+    }
     auto job = [this, artist, album, requestedSize]
     {
         return iface_->GetAlbumArt(artist, album, requestedSize);
     };
-    return createRequest(requestedSize, job);
+    return createRequest(details, requestedSize, job);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getArtistArt(QString const& artist,
                                                       QString const& album,
                                                       QSize const& requestedSize)
 {
+    QString details;
+    if (trace_client_)
+    {
+        QTextStream s(&details, QIODevice::WriteOnly);
+        s << "getArtistArt: (" << requestedSize.width() << "," << requestedSize.height()
+          << ") \"" << artist << "\", \"" << album << "\"";
+        qDebug() << details;
+    }
     auto job = [this, artist, album, requestedSize]
     {
         return iface_->GetArtistArt(artist, album, requestedSize);
     };
-    return createRequest(requestedSize, job);
+    return createRequest(details, requestedSize, job);
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, QSize const& requestedSize)
 {
+    QString details;
+    if (trace_client_)
+    {
+        QTextStream s(&details, QIODevice::WriteOnly);
+        s << "getThumbnail: (" << requestedSize.width() << "," << requestedSize.height() << ") " << filename;
+        qDebug() << details;
+    }
     auto job = [this, filename, requestedSize]
     {
         return iface_->GetThumbnail(filename, requestedSize);
     };
-    return createRequest(requestedSize, job);
+    return createRequest(details, requestedSize, job);
 }
 
-QSharedPointer<Request> ThumbnailerImpl::createRequest(QSize const& requested_size,
+QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
+                                                       QSize const& requested_size,
                                                        std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
 {
-    auto request_impl = new RequestImpl(requested_size, &limiter_, job);
+    auto request_impl = new RequestImpl(details, requested_size, &limiter_, job);
     auto request = QSharedPointer<Request>(new Request(request_impl));
     request_impl->setRequest(request.data());
     return request;

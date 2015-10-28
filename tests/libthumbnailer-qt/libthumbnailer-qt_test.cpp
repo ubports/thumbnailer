@@ -544,7 +544,6 @@ public:
 public Q_SLOTS:
     void requestFinished()
     {
-    cerr << "request finished" << endl;
         EXPECT_TRUE(request_->isFinished());
         if (!request_->isValid())
         {
