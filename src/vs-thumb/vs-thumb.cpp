@@ -21,8 +21,9 @@
 
 #include <internal/trace.h>
 
+#include <boost/algorithm/string.hpp>
+
 #include <cstdio>
-#include <string>
 #include <memory>
 #include <stdexcept>
 
@@ -71,12 +72,20 @@ int main(int argc, char** argv)
 
     if (argc < 2 || argc > 3)
     {
-        fprintf(stderr, "usage: %s source-file [output-file]\n", progname);
+        fprintf(stderr, "usage: %s source-file [output-file.tiff]\n", progname);
         return 1;
     }
 
     string uri = command_line_arg_to_uri(argv[1]);
     string outfile(argc == 2 ? "" : argv[2]);
+
+    // Output file name must end in .tiff.
+    if (!outfile.empty() && !boost::algorithm::ends_with(outfile, ".tiff"))
+    {
+        fprintf(stderr, "%s: invalid output file name: %s (missing .tiff extension)\n", progname, outfile.c_str());
+        return 2;
+    }
+
     bool success = false;
     try
     {

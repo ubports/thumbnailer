@@ -19,7 +19,6 @@
 
 #include "thumbnailextractor.h"
 
-#include <boost/algorithm/string.hpp>
 #include <QDebug>
 
 #include <cassert>
@@ -355,13 +354,6 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
 {
     assert(sample_);
 
-    // Append ".tiff" to output file name if it isn't there already.
-    std::string outfile = filename;
-    if (!outfile.empty() && !boost::algorithm::ends_with(filename, ".tiff"))
-    {
-        outfile += ".tiff";
-    }
-
     // Construct a pixbuf from the sample
     qDebug().nospace() << uri_.c_str() << ": Saving image";
     BufferMap buffermap;
@@ -421,7 +413,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // keep all the policy decisions about image quality in the main thumbnailer.
     // "compression", "1" means "no compression" for tiff files.
     GError* error = nullptr;
-    if (outfile.empty())
+    if (filename.empty())
     {
         // Write to stdout.
         int fd = 1;
@@ -432,7 +424,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     }
     else
     {
-        if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
+        if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
         {
             throw_error("save_screenshot(): cannot save image", error);  // LCOV_EXCL_LINE
         }

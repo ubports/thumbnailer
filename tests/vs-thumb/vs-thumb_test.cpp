@@ -124,13 +124,13 @@ TEST_F(ExtractorTest, extract_theora)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out";  // vs-thumb appens ".tiff"
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.save_screenshot(outfile);
 
-    auto image = load_image(outfile + ".tiff");
+    auto image = load_image(outfile);
     EXPECT_EQ(1920, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(1080, gdk_pixbuf_get_height(image.get()));
 }
@@ -322,13 +322,19 @@ std::string vs_thumb_err_output(std::string const& args)
 TEST(ExeTest, usage_1)
 {
     auto err = vs_thumb_err_output("");
-    EXPECT_EQ("usage: vs-thumb source-file [output-file]\n", err) << err;
+    EXPECT_EQ("usage: vs-thumb source-file [output-file.tiff]\n", err) << err;
 }
 
 TEST(ExeTest, usage_2)
 {
-    auto err = vs_thumb_err_output("arg1 arg2 arg3");
-    EXPECT_EQ("usage: vs-thumb source-file [output-file]\n", err) << err;
+    auto err = vs_thumb_err_output("arg1 arg2.tiff arg3");
+    EXPECT_EQ("usage: vs-thumb source-file [output-file.tiff]\n", err) << err;
+}
+
+TEST(ExeTest, usage_3)
+{
+    auto err = vs_thumb_err_output("arg1 arg2");
+    EXPECT_EQ("vs-thumb: invalid output file name: arg2 (missing .tiff extension)\n", err) << err;
 }
 
 TEST(ExeTest, bad_uri)
