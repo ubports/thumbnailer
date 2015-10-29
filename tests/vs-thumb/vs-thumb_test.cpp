@@ -53,6 +53,7 @@ const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/testvideo.mp4";
 const char MP4_ROTATE_90_TEST_FILE[] = TESTDATADIR "/testvideo-90.mp4";
 const char MP4_ROTATE_180_TEST_FILE[] = TESTDATADIR "/testvideo-180.mp4";
 const char MP4_ROTATE_270_TEST_FILE[] = TESTDATADIR "/testvideo-270.mp4";
+const char M4V_TEST_FILE[] = TESTDATADIR "/Forbidden Planet.m4v";
 const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
 const char AAC_TEST_FILE[] = TESTDATADIR "/testsong.m4a";
 const char MP3_TEST_FILE[] = TESTDATADIR "/testsong.mp3";
@@ -218,7 +219,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_audio_cover_art());
+    ASSERT_TRUE(extractor.extract_cover_art());
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
@@ -239,7 +240,7 @@ TEST_F(ExtractorTest, extract_aac_cover_art)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_audio_cover_art());
+    ASSERT_TRUE(extractor.extract_cover_art());
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
@@ -260,12 +261,26 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_audio_cover_art());
+    ASSERT_TRUE(extractor.extract_cover_art());
     extractor.save_screenshot(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_m4v_cover_art)
+{
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_cover_art());
+    extractor.save_screenshot(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(1947, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(3000, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, no_artwork)
@@ -281,7 +296,7 @@ TEST_F(ExtractorTest, no_artwork)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP3_NO_ARTWORK));
     ASSERT_FALSE(extractor.has_video());
-    ASSERT_FALSE(extractor.extract_audio_cover_art());
+    ASSERT_FALSE(extractor.extract_cover_art());
 }
 
 TEST_F(ExtractorTest, file_not_found)

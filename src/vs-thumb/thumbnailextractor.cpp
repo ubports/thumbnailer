@@ -119,7 +119,7 @@ struct CoverImage
 // and CoverImage.sample points at the image. If we find some other (non-cover) image, type is set to other,
 // and sample points at the image. Otherwise, if we can't find any image at all, sample is set to nullptr.
 
-CoverImage find_audio_cover(GstTagList* tags, const char* tag_name)
+CoverImage find_cover(GstTagList* tags, const char* tag_name)
 {
     CoverImage ci{other, {nullptr, gst_sample_unref}};
 
@@ -287,7 +287,7 @@ bool ThumbnailExtractor::extract_video_frame()
 
 #pragma GCC diagnostic pop
 
-bool ThumbnailExtractor::extract_audio_cover_art()
+bool ThumbnailExtractor::extract_cover_art()
 {
     GstTagList* tags = nullptr;
     g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
@@ -300,7 +300,7 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     sample_raw_ = false;
 
     // Look for a normal image (cover or other image).
-    auto image = std::move(find_audio_cover(tags, GST_TAG_IMAGE));
+    auto image = std::move(find_cover(tags, GST_TAG_IMAGE));
     if (image.sample && image.type == cover)
     {
         sample_ = std::move(image.sample);
@@ -308,7 +308,7 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     }
 
     // We didn't find a full-size cover image. Try to find a preview image instead.
-    auto preview_image = find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
+    auto preview_image = find_cover(tags, GST_TAG_PREVIEW_IMAGE);
     if (preview_image.sample && preview_image.type == cover)
     {
         sample_ = std::move(preview_image.sample);

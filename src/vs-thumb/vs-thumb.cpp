@@ -46,22 +46,17 @@ bool extract_thumbnail(string const& uri, string const& ofname)
     ThumbnailExtractor extractor;
 
     extractor.set_uri(uri);
-    if (extractor.has_video())
+    if (extractor.extract_cover_art())
     {
-        if (!extractor.extract_video_frame())
-        {
-            return false;
-        }
+        extractor.save_screenshot(ofname);
+        return true;
     }
-    else
+    if (extractor.has_video() && extractor.extract_video_frame())
     {
-        if (!extractor.extract_audio_cover_art())
-        {
-            return false;
-        }
+        extractor.save_screenshot(ofname);
+        return true;
     }
-    extractor.save_screenshot(ofname);
-    return true;
+    return false;
 }
 
 }  // namespace
