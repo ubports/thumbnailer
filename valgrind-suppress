@@ -140,6 +140,30 @@
 }
 
 {
+    QHash
+    Memcheck:Cond
+    ...
+    fun:_Z5qHashRK10QByteArrayj
+}
+
+{
+    QHash_2
+    Memcheck:Cond
+    ...
+    fun:_Z5qHashRK7QStringj
+}
+
+{
+   QImageReader
+   Memcheck:Cond
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/qt5/plugins/imageformats/libqjpeg.so
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.4.2
+   fun:_ZNK12QImageReader4sizeEv
+}
+
+{
     gst_plugin_load_file
     Memcheck:Leak
     match-leak-kinds: definite
@@ -182,7 +206,6 @@
     fun:gdk_pixbuf_save_to_callbackv
     fun:gdk_pixbuf_save_to_bufferv
     fun:gdk_pixbuf_save_to_buffer
-    fun:_ZNK5unity11thumbnailer8internal5Image7to_jpegEi
 }
 
 {
@@ -194,7 +217,6 @@
     fun:gdk_pixbuf_save_to_callbackv
     fun:gdk_pixbuf_save_to_bufferv
     fun:gdk_pixbuf_save_to_buffer
-    fun:_ZNK5unity11thumbnailer8internal5Image7to_jpegEi
 }
 
 {
@@ -204,8 +226,6 @@
     fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
     fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
     fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
-    fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
-    fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
 }
 
 {
@@ -221,7 +241,6 @@
     obj:/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-tiff.so
     fun:gdk_pixbuf_savev
     fun:gdk_pixbuf_save
-    fun:_ZN5unity11thumbnailer8internal18ThumbnailExtractor15save_screenshotERKSs
 }
 
 {
@@ -232,9 +251,6 @@
     fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
     fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
     fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
-    fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
-    fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
-    fun:_ZN5unity11thumbnailer8internal11RequestBase9thumbnailEv
 }
 
 {
@@ -251,6 +267,4 @@
     fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
     fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
     fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
-    fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
-    fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
 }
