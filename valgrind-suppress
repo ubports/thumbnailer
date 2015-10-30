@@ -156,6 +156,24 @@
 }
 
 {
+    gstreamer_uninitialized_jump
+    Memcheck:Cond
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvideoconvert.so
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvideoconvert.so
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvideoconvert.so
+    obj:/usr/lib/x86_64-linux-gnu/libgstvideo-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so.0.405.0
+    obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.4400.1
+    obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.4400.1
+    fun:start_thread
+    fun:clone
+}
+
+{
     gdk_pixbuf_save_to_buffer
     Memcheck:Value8
     ...
@@ -188,7 +206,22 @@
     fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
     fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
     fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
-    fun:_ZN5unity11thumbnailer8internal11RequestBase9thumbnailEv
+}
+
+{
+    gdk_pixbuf_save
+    Memcheck:Param
+    write(buf)
+    obj:/lib/x86_64-linux-gnu/libc-2.21.so
+    fun:_IO_file_write@@GLIBC_2.2.5
+    fun:new_do_write
+    fun:_IO_file_xsputn@@GLIBC_2.2.5
+    fun:fwrite
+    obj:/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-tiff.so
+    obj:/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-tiff.so
+    fun:gdk_pixbuf_savev
+    fun:gdk_pixbuf_save
+    fun:_ZN5unity11thumbnailer8internal18ThumbnailExtractor15save_screenshotERKSs
 }
 
 {
@@ -202,4 +235,22 @@
     fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
     fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
     fun:_ZN5unity11thumbnailer8internal11RequestBase9thumbnailEv
+}
+
+{
+    leveldb_write
+    Memcheck:Param
+    write(buf)
+    obj:/lib/x86_64-linux-gnu/libc-2.21.so
+    fun:_IO_file_write@@GLIBC_2.2.5
+    fun:new_do_write
+    fun:_IO_do_write@@GLIBC_2.2.5
+    fun:_IO_file_sync@@GLIBC_2.2.5
+    fun:fflush_unlocked
+    obj:/usr/lib/x86_64-linux-gnu/libleveldb.so.1.17
+    fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
+    fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
+    fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
+    fun:_ZN4core8internal25PersistentStringCacheImpl3putERKSsPKclS5_lNSt6chrono10time_pointINS6_3_V212system_clockENS6_8durationIlSt5ratioILl1ELl1000000000EEEEEE
+    fun:_ZN4core21PersistentStringCache3putERKSsS2_NSt6chrono10time_pointINS3_3_V212system_clockENS3_8durationIlSt5ratioILl1ELl1000000000EEEEEE
 }
