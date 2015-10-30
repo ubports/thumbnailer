@@ -10,7 +10,7 @@ SET(CTEST_CUSTOM_MEMCHECK_IGNORE
     speed
     copyright
     stand-alone-internal-headers
-    stand-alone-libthumbnailer-qt-headers
-    clean-public-libthumbnailer-qt-headers
+    stand-alone-unity-thumbnailer-qt-headers
+    clean-public-unity-thumbnailer-qt-headers
     whitespace
 )
