@@ -38,27 +38,29 @@ RateLimiter::RateLimiter(int concurrency)
 
 RateLimiter::~RateLimiter()
 {
-    assert(running_ == 0);
+    // No assert here because this code is linked by the calling application.
+    // If the application terminates without waiting for outstanding requests
+    // to finish, we don't want to cause a core dump.
+    // assert(running_ == 0);
 }
 
-function<void()> RateLimiter::schedule(function<void()> job)
+RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
 {
     assert(job);
+    assert (running_ >= 0);
+    assert (running_ <= concurrency_);
 
     if (running_ < concurrency_)
     {
-        running_++;
-        job();
-        return []{};  // Wasn't queued, so cancel does nothing.
+        return schedule_now(job);
     }
 
-    shared_ptr<function<void()>> job_p(new function<void()>(move(job)));
-    queue_.emplace(job_p);
+    queue_.emplace(make_shared<function<void()>>(move(job)));
 
-    // Returned function clears job when called, provided the job is still in the queue.
+    // Returned function clears the job when called, provided the job is still in the queue.
     // done() removes any cleared jobs from the queue without calling them.
-    weak_ptr<function<void()>> weak_p(job_p);
-    return [weak_p]
+    weak_ptr<function<void()>> weak_p(queue_.back());
+    return [this, weak_p]() noexcept
     {
         auto job_p = weak_p.lock();
         if (job_p)
@@ -68,6 +70,15 @@ function<void()> RateLimiter::schedule(function<void()> job)
     };
 }
 
+RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
+{
+    assert(job);
+
+    running_++;
+    job();
+    return []{};  // Wasn't queued, so cancel does nothing.
+}
+
 void RateLimiter::done()
 {
     // Find the next job, discarding any cancelled jobs.
@@ -75,8 +86,9 @@ void RateLimiter::done()
     while (!queue_.empty())
     {
         job_p = queue_.front();
+        assert(job_p);
         queue_.pop();
-        if (*job_p)
+        if (*job_p != nullptr)
         {
             break;
         }

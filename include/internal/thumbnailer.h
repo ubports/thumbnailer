@@ -37,8 +37,6 @@ namespace thumbnailer
 namespace internal
 {
 
-class RequestBase;
-
 class ThumbnailRequest : public QObject
 {
     Q_OBJECT
@@ -80,16 +78,7 @@ Q_SIGNALS:
     void downloadFinished();
 };
 
-/**
- * This class provides a way to generate and access
- * thumbnails of video, audio and image files.
- *
- * All methods are blocking.
- *
- * All methods are thread safe.
- *
- * Errors are reported as exceptions.
- */
+class RequestBase;
 
 class Thumbnailer
 {
@@ -100,25 +89,13 @@ public:
     Thumbnailer(Thumbnailer const&) = delete;
     Thumbnailer& operator=(Thumbnailer const&) = delete;
 
-    /**
-     * Gets a thumbnail of the given input file in the requested size.
-     *
-     * Return value is the thumbnail image as a string.
-     * If the thumbnail could not be generated, an empty string is returned.
-     */
     std::unique_ptr<ThumbnailRequest> get_thumbnail(std::string const& filename,
                                                     QSize const& requested_size);
 
-    /**
-     * Gets album art for the given artist an album.
-     */
     std::unique_ptr<ThumbnailRequest> get_album_art(std::string const& artist,
                                                     std::string const& album,
                                                     QSize const& requested_size);
 
-    /**
-     * Gets artist art for the given artist and album.
-     */
     std::unique_ptr<ThumbnailRequest> get_artist_art(std::string const& artist,
                                                      std::string const& album,
                                                      QSize const& requested_size);

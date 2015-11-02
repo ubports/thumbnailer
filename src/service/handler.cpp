@@ -119,7 +119,7 @@ struct HandlerPrivate
     QDBusMessage const message;
     shared_ptr<QThreadPool> check_pool;
     shared_ptr<QThreadPool> create_pool;
-    RateLimiter& limiter;
+    shared_ptr<RateLimiter> limiter;
     CredentialsCache& creds;
     InactivityHandler& inactivity_handler;
     unique_ptr<ThumbnailRequest> request;
@@ -137,9 +137,9 @@ struct HandlerPrivate
 
     HandlerPrivate(QDBusConnection const& bus,
                    QDBusMessage const& message,
-                   shared_ptr<QThreadPool> check_pool,
-                   shared_ptr<QThreadPool> create_pool,
-                   RateLimiter& limiter,
+                   shared_ptr<QThreadPool> const& check_pool,
+                   shared_ptr<QThreadPool> const& create_pool,
+                   shared_ptr<RateLimiter> const& limiter,
                    CredentialsCache& creds,
                    InactivityHandler& inactivity_handler,
                    unique_ptr<ThumbnailRequest>&& request,
@@ -160,9 +160,9 @@ struct HandlerPrivate
 
 Handler::Handler(QDBusConnection const& bus,
                  QDBusMessage const& message,
-                 shared_ptr<QThreadPool> check_pool,
-                 shared_ptr<QThreadPool> create_pool,
-                 RateLimiter& limiter,
+                 shared_ptr<QThreadPool> const& check_pool,
+                 shared_ptr<QThreadPool> const& create_pool,
+                 shared_ptr<RateLimiter> const& limiter,
                  CredentialsCache& creds,
                  InactivityHandler& inactivity_handler,
                  unique_ptr<ThumbnailRequest>&& request,
@@ -227,7 +227,7 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
     {
         try
         {
-            return FdOrError{check(), nullptr};
+            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), "gotCredentials(): cancelled"} : FdOrError{check(), nullptr};
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -249,6 +249,11 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 
 QDBusUnixFileDescriptor Handler::check()
 {
+    if (p->cancelled)
+    {
+        return QDBusUnixFileDescriptor();
+    }
+
     string art_image = p->request->thumbnail();
 
     if (art_image.empty())
@@ -273,7 +278,7 @@ void Handler::checkFinished()
     // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        sendError("Handler::checkFinished(): result error: " + details() + ": " + e.what());
+        sendError("Handler::checkFinished(): exception: " + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isNull())
@@ -296,7 +301,7 @@ void Handler::checkFinished()
         {
             // otherwise move on to the download phase.
             p->schedule_start_time = chrono::system_clock::now();
-            p->limiter.schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
+            p->limiter->schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -307,13 +312,13 @@ void Handler::checkFinished()
         return;
     }
 
-    sendError("Handler::check_finished(): no artwork for " + details() + ": " + status());
+    sendError("Handler::checkFinished(): no artwork for " + details() + ": " + status());
 }
 
 void Handler::downloadFinished()
 {
     p->download_finish_time = chrono::system_clock::now();
-    p->limiter.done();
+    p->limiter->done();
 
     if (p->cancelled)
     {
@@ -324,7 +329,7 @@ void Handler::downloadFinished()
     {
         try
         {
-            return FdOrError{create(), nullptr};
+            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), nullptr} : FdOrError{create(), nullptr};
         }
         catch (std::exception const& e)
         {
@@ -341,6 +346,11 @@ void Handler::downloadFinished()
 
 QDBusUnixFileDescriptor Handler::create()
 {
+    if (p->cancelled)
+    {
+        return QDBusUnixFileDescriptor();
+    }
+
     string art_image = p->request->thumbnail();
 
     if (art_image.empty())
@@ -365,7 +375,7 @@ void Handler::createFinished()
     // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        sendError(QString("Handler::createFinished(): ") + details() + ": " + e.what());
+        sendError(QStringLiteral("Handler::createFinished(): ") + details() + ": " + e.what());
         return;
     }
     if (!fd_error.error.isEmpty())
@@ -435,21 +445,21 @@ QString Handler::status() const
     switch (p->request->status())
     {
     case ThumbnailRequest::FetchStatus::cache_hit:
-        return "HIT";
+        return QStringLiteral("HIT");
     case ThumbnailRequest::FetchStatus::scaled_from_fullsize:
-        return "FULL-SIZE HIT";
+        return QStringLiteral("FULL-SIZE HIT");
     case ThumbnailRequest::FetchStatus::cached_failure:
-        return "FAILED PREVIOUSLY";
+        return QStringLiteral("FAILED PREVIOUSLY");
     case ThumbnailRequest::FetchStatus::needs_download:
-        return "NEEDS DOWNLOAD";  // LCOV_EXCL_LINE
+        return QStringLiteral("NEEDS DOWNLOAD");  // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::downloaded:
-        return "MISS";
+        return QStringLiteral("MISS");
     case ThumbnailRequest::FetchStatus::not_found:
-        return "NO ARTWORK";
+        return QStringLiteral("NO ARTWORK");
     case ThumbnailRequest::FetchStatus::no_network:
-        return "NETWORK DOWN";  // LCOV_EXCL_LINE
+        return QStringLiteral("NETWORK DOWN");  // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::error:
-        return "ERROR";  // LCOV_EXCL_LINE
+        return QStringLiteral("ERROR");  // LCOV_EXCL_LINE
     default:
         abort();  // LCOV_EXCL_LINE  // Impossible.
     }

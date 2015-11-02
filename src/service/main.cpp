@@ -33,6 +33,40 @@ using namespace std;
 using namespace unity::thumbnailer::internal;
 using namespace unity::thumbnailer::service;
 
+namespace
+{
+
+QString get_summary(core::PersistentCacheStats const& stats)
+{
+    auto hits = stats.hits();
+    auto misses = stats.misses();
+    double hit_rate = (hits + misses == 0) ? 0.0 : double(hits) / (hits + misses);
+    auto entries = stats.size();
+    auto size_in_bytes = stats.size_in_bytes();
+    QString entry_str = entries == 1 ? QStringLiteral("entry") : QStringLiteral("entries");
+    QString summary;
+    summary = QStringLiteral("%1 %2, %3 bytes, hit rate %5 (%6/%7), avg hit run %8, avg miss run %9")
+        .arg(entries)
+        .arg(entry_str)
+        .arg(size_in_bytes)
+        .arg(hit_rate, 4, 'f', 2, '0')
+        .arg(hits)
+        .arg(misses)
+        .arg(stats.avg_hit_run_length(), 4, 'f', 2, '0')
+        .arg(stats.avg_miss_run_length(), 4, 'f', 2, '0');
+    return summary;
+}
+
+void show_stats(shared_ptr<Thumbnailer> const& thumbnailer)
+{
+    auto stats = thumbnailer->stats();
+    qDebug() << qUtf8Printable("image cache:     " + get_summary(stats.full_size_stats));
+    qDebug() << qUtf8Printable("thumbnail cache: " + get_summary(stats.thumbnail_stats));
+    qDebug() << qUtf8Printable("failure cache:   " + get_summary(stats.failure_stats));
+}
+
+}
+
 int main(int argc, char** argv)
 {
     TraceMessageHandler message_handler("thumbnailer-service");
@@ -65,7 +99,9 @@ int main(int argc, char** argv)
             throw runtime_error(string("thumbnailer-service: could not acquire DBus name ") + BUS_NAME);
         }
 
-        qDebug() << "Ready";
+        // Print basic cache stats on start-up. This is useful when examining log entries.
+        show_stats(thumbnailer);
+
         rc = app.exec();
 
         // We must shut down the thumbnailer before we dismantle the DBus connection.

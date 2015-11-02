@@ -115,7 +115,7 @@ public:
     UbuntuServerArtReply(QString const& url)
         : ArtReply(nullptr)
         , is_running_(false)
-        , error_string_("network down")
+        , error_string_(QStringLiteral("network down"))
         , error_(QNetworkReply::TemporaryNetworkFailureError)
         , url_string_(url)
         , succeeded_(false)
@@ -192,8 +192,10 @@ public Q_SLOTS:
         //       reply_ is nullptr only if the network is down.
         if (!reply_)
         {
-            Q_EMIT finished();  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            Q_EMIT finished();
             return;
+            // LCOV_EXCL_STOP
         }
 
         timer_.stop();
@@ -246,9 +248,9 @@ QUrl get_art_url(
     }
 
     QUrlQuery q;
-    q.addQueryItem("artist", artist);
-    q.addQueryItem("album", album);
-    q.addQueryItem("key", api_key);
+    q.addQueryItem(QStringLiteral("artist"), artist);
+    q.addQueryItem(QStringLiteral("album"), album);
+    q.addQueryItem(QStringLiteral("key"), api_key);
 
     QUrl url(prefix_api_root + "/" + base_url);
     url.setQuery(q);

@@ -52,7 +52,7 @@ namespace
 // hardwares we care about. For example, the output from
 // /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
 
-#ifdef __arm__
+#if defined(__arm__)
 
 string hardware()
 {
@@ -69,7 +69,7 @@ string hardware()
     // LCOV_EXCL_START
     catch (runtime_error const& e)
     {
-        qDebug() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
+        qWarning() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
         return "";
     }
     // LCOV_EXCL_STOP
@@ -135,7 +135,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
     , inactivity_handler_(inactivity_handler)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
-    , download_limiter_(settings_.max_downloads())
+    , download_limiter_(make_shared<RateLimiter>(settings_.max_downloads()))
 {
     auto limit = settings_.max_extractions();
 
@@ -154,7 +154,7 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
         }
     }
 
-    extraction_limiter_.reset(new RateLimiter(limit));
+    extraction_limiter_ = make_shared<RateLimiter>(limit);
 }
 
 DBusInterface::~DBusInterface()
@@ -236,7 +236,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 *extraction_limiter_, credentials(), inactivity_handler_,
+                                 extraction_limiter_, credentials(), inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)

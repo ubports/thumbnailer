@@ -63,7 +63,7 @@ public:
 
     /**
     \brief Returns the thumbnail.
-    \return A valid QImage if the request was successful and an empty `QImage`, otherwise.
+    \return A valid `QImage` if the request was successful and an empty `QImage`, otherwise.
     */
     QImage image() const;
 
@@ -76,24 +76,39 @@ public:
     /**
     \brief Returns whether the request completed successfully.
     \return `true` if the request completed successfully. Otherwise, if the request is still
-    in progress or has failed, the return value is `false`.
+    in progress, has failed, or was cancelled, the return value is `false`.
     */
     bool isValid() const;
 
     /**
     \brief Blocks the calling thread until the request completes.
 
+    It is safe to call waitForFinished() on the same request more than once.
+    If called on an already-completed (or cancelled) request, waitForFinished() returns immediately.
+
     \warning Calling this function from the main (GUI) thread might cause your user interface to freeze.
+
+    \warning Calling waitForFinished() causes the request to be scheduled out of order. This means
+    that, if you send requests for thumbnails A, B, and C (in that order) and then call waitForFinished()
+    on C, you _cannot_ assume that A and B have also finished once waitForFinished() returns.
     */
     void waitForFinished();
 
     /**
     \brief Cancel the thumbnail request.
 
-    The finished signal will be emitted and the request will be
-    considered to be in an invalid state with an error message set.
-     */
+    Cancels the request if it has not completed yet and emits the finished() signal.
+    Calling cancel() more than once or on a request that has already completed does nothing.
+    */
     void cancel();
+
+    /**
+    \brief Returns whether the request was cancelled.
+    \return `true` if the request was cancelled and `false`, otherwise.
+    \note Depending on the time at which cancel() is called,
+          the request may complete successfully despite having been cancelled.
+    */
+    bool isCancelled() const;
 
 Q_SIGNALS:
     /**

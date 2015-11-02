@@ -32,7 +32,9 @@ namespace thumbnailer
 // RateLimiter is a simple class to control the level of concurrency
 // of asynchronous jobs.  It performs no locking because it is only
 // intended to be run from the event loop thread.
-class RateLimiter {
+
+class RateLimiter
+{
 public:
     RateLimiter(int concurrency);
     ~RateLimiter();
@@ -40,19 +42,24 @@ public:
     RateLimiter(RateLimiter const&) = delete;
     RateLimiter& operator=(RateLimiter const&) = delete;
 
+    typedef std::function<void() noexcept> CancelFunc;
+
     // Schedule a job to run.  If the concurrency limit has not been
     // reached, the job will be run immediately.  Otherwise it will be
     // added to the queue. Return value is a function that, when
     // called, cancels the job in the queue (if it's still in the queue).
-    std::function<void()> schedule(std::function<void()> job);
+    CancelFunc schedule(std::function<void()> job);
+
+    // Schedule a job to run immediately, regardless of the concurrency limit.
+    CancelFunc schedule_now(std::function<void()> job);
 
     // Notify that a job has completed.  If there are queued jobs,
     // start the one at the head of the queue.
     void done();
 
 private:
-    int const concurrency_;
-    int running_;
+    int const concurrency_;  // Max number of outstanding requests.
+    int running_;            // Actual number of outstanding requests.
     // We store a shared_ptr so we can detect on cancellation
     // whether a job completed before it was cancelled.
     std::queue<std::shared_ptr<std::function<void()>>> queue_;

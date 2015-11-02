@@ -73,19 +73,19 @@
      </description>
     </key>
 
-    <key type="i" name="max-pending-requests">
-      <default>200</default>
-      <summary>Maximum number of pending DBus requests before a call blocks the caller</summary>
+    <key type="i" name="max-backlog">
+      <default>20</default>
+      <summary>Maximum number of pending DBus requests before the thumbnailer starts queuing them.</summary>
       <description>
-        This parameter limits the number of pending DBus requests on the thumbnailer service. If there are more requests than this currently in progress, the caller is suspended until the number of pending requests drops below the limit again.
+        This parameter limits the number of pending DBus requests to the thumbnailer service. If there are more requests than this currently in progress, additional requests are queued and sent once the backlog drops below the limit.
      </description>
     </key>
 
-    <key type="i" name="max-backlog">
-      <default>200</default>
-      <summary>Maximum number of pending DBus requests before the thumbnailer starts queuing them.</summary>
+    <key type="b" name="trace-client">
+      <default>false</default>
+      <summary>Enable client-side tracing.</summary>
       <description>
-        This parameter limits the number of pending DBus requests on the thumbnailer service. If there are more requests than this currently in progress, additional requests are queued and sent once the backlog drops below the limit.
+        If set to true, this parameter enables request tracing via qDebug() on the client side.
      </description>
     </key>
   </schema>

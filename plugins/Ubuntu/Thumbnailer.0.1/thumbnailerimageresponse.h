@@ -22,7 +22,6 @@
 
 #include <memory>
 
-#include <ratelimiter.h>
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 namespace unity
@@ -49,8 +48,7 @@ public:
 
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image,
-                             unity::thumbnailer::RateLimiter* rate_limiter,
-                             std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> reply);
+                             QSharedPointer<unity::thumbnailer::qt::Request> const& request);
     ThumbnailerImageResponse(QSize const& requested_size,
                              QString const& default_image);
     ~ThumbnailerImageResponse();
@@ -64,12 +62,8 @@ private Q_SLOTS:
 private:
     QString id_;
     QSize requested_size_;
-    unity::thumbnailer::RateLimiter* backlog_limiter_ = nullptr;
-    std::function<QSharedPointer<unity::thumbnailer::qt::Request>()> job_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
     QString default_image_;
-    std::function<void()> cancel_func_;
-    bool finished_ = false;
 };
 
 }  // namespace qml

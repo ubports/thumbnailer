@@ -115,6 +115,11 @@ int Settings::max_backlog() const
     return get_positive_int("max-backlog", MAX_BACKLOG_DEFAULT);
 }
 
+bool Settings::trace_client() const
+{
+    return get_bool("trace-client", TRACE_CLIENT_DEFAULT);
+}
+
 string Settings::get_string(char const* key, string const& default_value) const
 {
     if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))
@@ -164,6 +169,15 @@ int Settings::get_int(char const* key, int default_value) const
     return g_settings_get_int(settings_.get(), key);
 }
 
+bool Settings::get_bool(char const* key, bool default_value) const
+{
+    if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))
+    {
+        return default_value;
+    }
+
+    return g_settings_get_boolean(settings_.get(), key);
+}
 
 }  // namespace thumbnailer
 

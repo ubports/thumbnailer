@@ -536,13 +536,12 @@ void LocalThumbnailRequest::check_client_credentials(uid_t user,
 
 }
 
-
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
 {
     if (image_extractor_)
     {
         // The image data has been extracted via vs-thumb
-        auto id = ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
+        auto id = ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         return id;
     }
 
@@ -563,6 +562,28 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
     if (content_type.empty())
     {
         return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+    }
+
+    if (content_type == "application/octet-stream")
+    {
+        // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
+        // for all files without an extension (as it only uses the extension to
+        // determine file type). In these cases, we fall back to the full content
+        // type detector.
+        gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
+                                                        G_FILE_QUERY_INFO_NONE,
+                                                        /* cancellable */ NULL,
+                                                        /* error */ NULL));
+        if (!full_info)
+        {
+            return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+        }
+
+        content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
+        if (content_type.empty())
+        {
+            return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+        }
     }
 
     // Call the appropriate image extractor and return the image data as JPEG (not scaled).
@@ -629,7 +650,6 @@ RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
         Image full_size(string(raw_data.data(), raw_data.size()));
         return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
     }
-    qDebug() << "common_fetch(): Request failed:" << artreply->error_string();
     if (artreply->not_found_error())
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::not_found, Location::remote);
@@ -638,6 +658,7 @@ RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::no_network, Location::remote);
     }
+    qCritical() << "common_fetch(): Request failed:" << artreply->error_string();
     return RequestBase::ImageData(RequestBase::FetchStatus::error, Location::remote);
 }
 
@@ -847,12 +868,33 @@ Thumbnailer::CacheVec Thumbnailer::select_caches(CacheSelector selector) const
     return v;
 }
 
+namespace
+{
+
+char const* cache_name(Thumbnailer::CacheSelector selector)
+{
+    switch (selector)
+    {
+        case Thumbnailer::CacheSelector::full_size_cache:
+            return "image cache";
+        case Thumbnailer::CacheSelector::thumbnail_cache:
+            return "thumbnail cache";
+        case Thumbnailer::CacheSelector::failure_cache:
+            return "failure cache";
+        default:
+            return "all caches";
+    }
+}
+
+}
+
 void Thumbnailer::clear_stats(CacheSelector selector)
 {
     for (auto c : select_caches(selector))
     {
         c->clear_stats();
     }
+    qDebug() << "reset statistics for" << cache_name(selector);
 }
 
 void Thumbnailer::clear(CacheSelector selector)
@@ -861,14 +903,23 @@ void Thumbnailer::clear(CacheSelector selector)
     {
         c->invalidate();
     }
+    if (selector == Thumbnailer::CacheSelector::failure_cache)
+    {
+        // Force retry on next remote retrieval even if we
+        // are still within the timeout period.
+        nw_fail_time_ = chrono::system_clock::time_point();
+    }
+    qDebug() << "cleared" << cache_name(selector);
 }
 
 void Thumbnailer::compact(CacheSelector selector)
 {
+    qDebug() << "compacting" << cache_name(selector);
     for (auto c : select_caches(selector))
     {
         c->compact();
     }
+    qDebug() << "completed compacting" << cache_name(selector);
 }
 
 }  // namespace internal

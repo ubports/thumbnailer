@@ -37,7 +37,7 @@ namespace qml
 void ThumbnailerPlugin::registerTypes(const char* uri)
 {
     qmlRegisterTypeNotAvailable(uri, 0, 1, "__ThumbnailerIgnoreMe",
-                                "Ignore this: QML plugins must contain at least one type");
+                                QStringLiteral("Ignore this: QML plugins must contain at least one type"));
 }
 
 void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
@@ -45,13 +45,10 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
     QQmlExtensionPlugin::initializeEngine(engine, uri);
 
     auto thumbnailer = std::make_shared<unity::thumbnailer::qt::Thumbnailer>();
-    auto backlog_limiter = std::make_shared<unity::thumbnailer::RateLimiter>(
-        Settings().max_backlog());
 
     try
     {
-        engine->addImageProvider("albumart", new AlbumArtGenerator(
-                                     thumbnailer, backlog_limiter));
+        engine->addImageProvider("albumart", new AlbumArtGenerator(thumbnailer));
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
@@ -67,8 +64,7 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("artistart", new ArtistArtGenerator(
-                                     thumbnailer, backlog_limiter));
+        engine->addImageProvider("artistart", new ArtistArtGenerator(thumbnailer));
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)
@@ -84,8 +80,7 @@ void ThumbnailerPlugin::initializeEngine(QQmlEngine* engine, const char* uri)
 
     try
     {
-        engine->addImageProvider("thumbnailer", new ThumbnailGenerator(
-                                     thumbnailer, backlog_limiter));
+        engine->addImageProvider("thumbnailer", new ThumbnailGenerator(thumbnailer));
     }
     // LCOV_EXCL_START
     catch (const std::exception& e)

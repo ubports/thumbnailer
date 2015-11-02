@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <ratelimiter.h>
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <QQuickImageProvider>
@@ -36,11 +35,9 @@ class ArtistArtGenerator : public QQuickAsyncImageProvider
 {
 private:
     std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer;
-    std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter;
 
 public:
-    ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer,
-                       std::shared_ptr<unity::thumbnailer::RateLimiter> backlog_limiter);
+    ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer);
     QQuickImageResponse* requestImageResponse(const QString& id, const QSize& requestedSize) override;
 };
 }
