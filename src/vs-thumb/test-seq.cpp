@@ -86,7 +86,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                success = extractor.extract_audio_cover_art();
+                success = extractor.extract_cover_art();
             }
         }
         catch (exception const& e)

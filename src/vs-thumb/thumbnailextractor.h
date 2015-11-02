@@ -60,7 +60,7 @@ public:
     void set_uri(const std::string& uri);
     bool has_video();
     bool extract_video_frame();
-    bool extract_audio_cover_art();
+    bool extract_cover_art();
     void save_screenshot(const std::string& filename);
 
     typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
