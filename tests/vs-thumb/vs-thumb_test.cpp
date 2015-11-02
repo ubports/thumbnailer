@@ -289,7 +289,12 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
+// MP4 codec is broken on PPC.
+#if defined(__PPC__)
+TEST_F(ExtractorTest, DISABLED_extract_m4v_cover_art)
+#else
 TEST_F(ExtractorTest, extract_m4v_cover_art)
+#endif
 {
     ThumbnailExtractor extractor;
 
