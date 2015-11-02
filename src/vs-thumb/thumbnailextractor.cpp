@@ -19,7 +19,6 @@
 
 #include "thumbnailextractor.h"
 
-#include <boost/algorithm/string.hpp>
 #include <QDebug>
 
 #include <cassert>
@@ -119,7 +118,7 @@ struct CoverImage
 // and CoverImage.sample points at the image. If we find some other (non-cover) image, type is set to other,
 // and sample points at the image. Otherwise, if we can't find any image at all, sample is set to nullptr.
 
-CoverImage find_audio_cover(GstTagList* tags, const char* tag_name)
+CoverImage find_cover(GstTagList* tags, const char* tag_name)
 {
     CoverImage ci{other, {nullptr, gst_sample_unref}};
 
@@ -287,7 +286,7 @@ bool ThumbnailExtractor::extract_video_frame()
 
 #pragma GCC diagnostic pop
 
-bool ThumbnailExtractor::extract_audio_cover_art()
+bool ThumbnailExtractor::extract_cover_art()
 {
     GstTagList* tags = nullptr;
     g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
@@ -300,7 +299,7 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     sample_raw_ = false;
 
     // Look for a normal image (cover or other image).
-    auto image = std::move(find_audio_cover(tags, GST_TAG_IMAGE));
+    auto image = std::move(find_cover(tags, GST_TAG_IMAGE));
     if (image.sample && image.type == cover)
     {
         sample_ = std::move(image.sample);
@@ -308,7 +307,7 @@ bool ThumbnailExtractor::extract_audio_cover_art()
     }
 
     // We didn't find a full-size cover image. Try to find a preview image instead.
-    auto preview_image = find_audio_cover(tags, GST_TAG_PREVIEW_IMAGE);
+    auto preview_image = find_cover(tags, GST_TAG_PREVIEW_IMAGE);
     if (preview_image.sample && preview_image.type == cover)
     {
         sample_ = std::move(preview_image.sample);
@@ -354,13 +353,6 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
 void ThumbnailExtractor::save_screenshot(const std::string& filename)
 {
     assert(sample_);
-
-    // Append ".tiff" to output file name if it isn't there already.
-    std::string outfile = filename;
-    if (!outfile.empty() && !boost::algorithm::ends_with(filename, ".tiff"))
-    {
-        outfile += ".tiff";
-    }
 
     // Construct a pixbuf from the sample
     qDebug().nospace() << uri_.c_str() << ": Saving image";
@@ -421,7 +413,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     // keep all the policy decisions about image quality in the main thumbnailer.
     // "compression", "1" means "no compression" for tiff files.
     GError* error = nullptr;
-    if (outfile.empty())
+    if (filename.empty())
     {
         // Write to stdout.
         int fd = 1;
@@ -432,7 +424,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     }
     else
     {
-        if (!gdk_pixbuf_save(image.get(), outfile.c_str(), "tiff", &error, "compression", "1", nullptr))
+        if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
         {
             throw_error("save_screenshot(): cannot save image", error);  // LCOV_EXCL_LINE
         }
