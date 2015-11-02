@@ -57,15 +57,25 @@ public:
     Counter(int limit)
         : limit_(limit)
         , count_(0)
+        , cancellations_(0)
     {
+    }
+
+    int cancellations()
+    {
+        return cancellations_;
     }
 
 Q_SIGNALS:
     void counterDone();
 
 public Q_SLOTS:
-    void thumbnailComplete()
+    void thumbnailComplete(bool cancelled)
     {
+        if (cancelled)
+        {
+            ++cancellations_;
+        }
         if (++count_ == limit_)
         {
             Q_EMIT counterDone();
@@ -75,6 +85,7 @@ public Q_SLOTS:
 private:
     int limit_;
     int count_;
+    int cancellations_;
 };
 
 // Class to run a single request and check that it completed OK.
@@ -105,15 +116,25 @@ public:
                 this, &AsyncThumbnailProvider::requestFinished);
     }
 
+    void cancel()
+    {
+        request_->cancel();
+    }
+
+    void waitForFinished()
+    {
+        request_->waitForFinished();
+    }
+
 public Q_SLOTS:
     void requestFinished()
     {
-        EXPECT_TRUE(request_->isValid()) << request_->errorMessage().toStdString();
+        EXPECT_TRUE(request_->isFinished());
         if (!request_->isValid())
         {
-            abort();
+            EXPECT_TRUE(request_->image().isNull());
         }
-        counter_.thumbnailComplete();
+        counter_.thumbnailComplete(request_->isCancelled());
     }
 
 private:
@@ -128,11 +149,10 @@ protected:
     StressTest()
     {
     }
-    virtual ~StressTest()
-    {
-    }
 
-    static void SetUpTestCase()
+    virtual ~StressTest() = default;
+
+    void SetUp() override
     {
         // start fake server
         art_server_.reset(new ArtServer());
@@ -153,7 +173,7 @@ protected:
         ASSERT_EQ(0, mkdir((temp_dir() + "/Pictures").c_str(), 0700));
     }
 
-    static string temp_dir()
+    string temp_dir()
     {
         return tempdir->path().toStdString();
     }
@@ -172,8 +192,8 @@ protected:
             provider->getThumbnail(path, QSize(512, 512));
             providers.emplace_back(move(provider));
         }
-        ASSERT_TRUE(spy.wait(120000));
-        ASSERT_EQ(1, spy.count());
+        EXPECT_TRUE(spy.wait(120000));
+        EXPECT_EQ(1, spy.count());
     }
 
     static void add_stats(int N_REQUESTS,
@@ -197,7 +217,7 @@ protected:
         cout << stats_;
     }
 
-    static void TearDownTestCase()
+    void TearDown() override
     {
         thumbnailer_.reset();
         dbus_.reset();
@@ -210,17 +230,13 @@ protected:
         show_stats();
     }
 
-    static unique_ptr<QTemporaryDir> tempdir;
-    static unique_ptr<DBusServer> dbus_;
-    static unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer_;
-    static unique_ptr<ArtServer> art_server_;
+    unique_ptr<QTemporaryDir> tempdir;
+    unique_ptr<DBusServer> dbus_;
+    unique_ptr<unity::thumbnailer::qt::Thumbnailer> thumbnailer_;
+    unique_ptr<ArtServer> art_server_;
     static string stats_;
 };
 
-unique_ptr<QTemporaryDir> StressTest::tempdir;
-unique_ptr<DBusServer> StressTest::dbus_;
-unique_ptr<unity::thumbnailer::qt::Thumbnailer> StressTest::thumbnailer_;
-unique_ptr<ArtServer> StressTest::art_server_;
 string StressTest::stats_;
 
 // Little helper function to hard-link a single file a number of times
@@ -246,7 +262,7 @@ void make_links(string const& source_path, string const& target_dir, int num_cop
     for (int i = 1; i < num_copies; ++i)
     {
         string link_name = target_dir + "/" + to_string(i) + filename;
-        ASSERT_TRUE(link(copied_file.c_str(), link_name.c_str()) == 0 || errno == EEXIST) << "errno = " << errno;
+        EXPECT_TRUE(link(copied_file.c_str(), link_name.c_str()) == 0 || errno == EEXIST) << "errno = " << errno;
     }
 }
 
@@ -376,12 +392,82 @@ TEST_F(StressTest, album_art)
     add_stats(N_REQUESTS, start, finish);
 }
 
+TEST_F(StressTest, wait_for_finished_in_queue)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    int const N_REQUESTS = 200;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir() + "/Music";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    auto start = chrono::system_clock::now();
+    for (int i = 0; i < N_REQUESTS; i++)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump the event loop for a while, to allow some requests to start processing.
+    {
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start();
+        timer_spy.wait(1000);
+    }
+
+    // For coverage: Wait for a few requests while they are still in the queue (which will cause
+    // them to be scheduled immediately.)
+    providers[N_REQUESTS - 7]->waitForFinished();
+    providers[N_REQUESTS - 5]->waitForFinished();
+    providers[N_REQUESTS - 4]->waitForFinished();
+
+    // Cancel all of the requests. The ones that we didn't wait for synchronously are partly still in
+    // progress, and partly still in the queue.
+    for (auto& p : providers)
+    {
+        p->cancel();
+    }
+
+    if (spy.count() == 0)
+    {
+        spy.wait(120000);
+    }
+    else
+    {
+        // Pump the event loop for a while, to allow all the signals to trickle in.
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start();
+        timer_spy.wait(10000);
+    }
+    EXPECT_EQ(1, spy.count());
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
 int main(int argc, char** argv)
 {
     gst_init(&argc, &argv);
 
     QCoreApplication app(argc, argv);
 
+#ifndef NDEBUG
+    setenv("MALLOC_CHECK_", "2", true);
+#endif
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);

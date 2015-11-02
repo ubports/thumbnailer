@@ -342,7 +342,7 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
     {
         // LCOV_EXCL_START
         g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(errno),
-                    "cannot write image data %s", g_strerror(errno));
+                    "cannot write image data: %s", errno == 0 ? "short write" : g_strerror(errno));
         return false;
         // LCOV_EXCL_STOP
     }

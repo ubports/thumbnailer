@@ -868,12 +868,33 @@ Thumbnailer::CacheVec Thumbnailer::select_caches(CacheSelector selector) const
     return v;
 }
 
+namespace
+{
+
+char const* cache_name(Thumbnailer::CacheSelector selector)
+{
+    switch (selector)
+    {
+        case Thumbnailer::CacheSelector::full_size_cache:
+            return "image cache";
+        case Thumbnailer::CacheSelector::thumbnail_cache:
+            return "thumbnail cache";
+        case Thumbnailer::CacheSelector::failure_cache:
+            return "failure cache";
+        default:
+            return "all caches";
+    }
+}
+
+}
+
 void Thumbnailer::clear_stats(CacheSelector selector)
 {
     for (auto c : select_caches(selector))
     {
         c->clear_stats();
     }
+    qDebug() << "reset statistics for" << cache_name(selector);
 }
 
 void Thumbnailer::clear(CacheSelector selector)
@@ -888,14 +909,17 @@ void Thumbnailer::clear(CacheSelector selector)
         // are still within the timeout period.
         nw_fail_time_ = chrono::system_clock::time_point();
     }
+    qDebug() << "cleared" << cache_name(selector);
 }
 
 void Thumbnailer::compact(CacheSelector selector)
 {
+    qDebug() << "compacting" << cache_name(selector);
     for (auto c : select_caches(selector))
     {
         c->compact();
     }
+    qDebug() << "completed compacting" << cache_name(selector);
 }
 
 }  // namespace internal
