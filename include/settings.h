@@ -51,12 +51,14 @@ public:
     int max_extractions() const;
     int extraction_timeout() const;  // In seconds
     int max_backlog() const;
+    bool trace_client() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;
     int get_positive_int(char const* key, int default_value) const;
     int get_positive_or_zero_int(char const* key, int default_value) const;
     int get_int(char const* key, int default_value) const;
+    bool get_bool(char const* key, bool default_value) const;
 
     std::unique_ptr<GSettingsSchema, void(*)(GSettingsSchema*)> schema_;
     std::string schema_name_;

@@ -75,8 +75,8 @@ private:
     std::map<Handler*, std::unique_ptr<Handler>> requests_;
     std::map<std::string, std::vector<Handler*>> request_keys_;
     unity::thumbnailer::Settings settings_;
-    RateLimiter download_limiter_;
-    std::unique_ptr<RateLimiter> extraction_limiter_;
+    std::shared_ptr<RateLimiter> download_limiter_;
+    std::shared_ptr<RateLimiter> extraction_limiter_;
 };
 
 }  // namespace service

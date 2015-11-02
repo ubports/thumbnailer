@@ -53,7 +53,7 @@ public:
             QDBusMessage const& message,
             std::shared_ptr<QThreadPool> const& check_pool,
             std::shared_ptr<QThreadPool> const& create_pool,
-            RateLimiter& limiter,
+            std::shared_ptr<RateLimiter> const& limiter,
             CredentialsCache& creds,
             InactivityHandler& inactivity_handler,
             std::unique_ptr<internal::ThumbnailRequest>&& request,
