@@ -20,7 +20,10 @@ override_dh_auto_configure:
 # Tests are not written to be run in parallel.
 # We don't test on PPC because the thumbnailer is irrelevant there,
 # and gstreamer has bugs in the plugins for PPC.
-ifneq (,$(filter powerpc ppc64el,$(DEB_HOST_ARCH)))
 override_dh_auto_test:
-    dh_auto_test --max-parallel=1 -- ARGS="--verbose" || :
+	test_args="--max-parallel=1 -- ARGS=\"--verbose\""
+ifneq (,$(filter powerpc ppc64el,$(DEB_HOST_ARCH)))
+	dh_auto_test $(test_args) || :
+else
+	dh_auto_test $(test_args)
 endif
