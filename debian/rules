@@ -18,5 +18,9 @@ override_dh_auto_configure:
 	dh_auto_configure -- -DCMAKE_INSTALL_SYSCONFDIR=/etc
 
 # Tests are not written to be run in parallel.
+# We don't test on PPC because the thumbnailer is irrelevant there,
+# and gstreamer has bugs in the plugins for PPC.
+ifneq (,$(filter powerpc ppc64el,$(DEB_HOST_ARCH)))
 override_dh_auto_test:
-	dh_auto_test --max-parallel=1 -- ARGS="--verbose"
+    dh_auto_test --max-parallel=1 -- ARGS="--verbose" || :
+endif
