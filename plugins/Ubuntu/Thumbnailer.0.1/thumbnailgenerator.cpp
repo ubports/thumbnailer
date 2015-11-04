@@ -67,13 +67,6 @@ ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::T
 QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
     QSize size = requestedSize;
-    // TODO: Turn this into an error soonish.
-    if (!requestedSize.isValid())
-    {
-        qWarning().nospace() << "ThumbnailGenerator::requestImageResponse(): deprecated invalid QSize: "
-                             << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        // Size will be adjusted by the service to 128x128.
-    }
 
     /* Allow appending a query string (e.g. ?something=timestamp)
      * to the id and then ignore it.
