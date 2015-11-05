@@ -38,7 +38,7 @@ class AdminInterface : public QObject, protected QDBusContext
     Q_OBJECT
 public:
     AdminInterface(std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer,
-                   InactivityHandler& inactivity_handler,
+                   std::shared_ptr<InactivityHandler> const& inactivity_handler,
                    QObject* parent = nullptr)
         : QObject(parent)
         , thumbnailer_(thumbnailer)
@@ -59,7 +59,7 @@ public Q_SLOTS:
 
 private:
     std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
-    InactivityHandler& inactivity_handler_;
+    std::shared_ptr<InactivityHandler> inactivity_handler_;
 };
 
 }  // namespace service

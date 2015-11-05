@@ -130,6 +130,7 @@ struct HandlerPrivate
     chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
     QString details;
     QString status;
+    RateLimiter::CancelFunc cancel_func;
 
     bool cancelled = false;
     QFutureWatcher<FdOrError> checkWatcher;
@@ -181,10 +182,15 @@ Handler::Handler(QDBusConnection const& bus,
 Handler::~Handler()
 {
     p->cancelled = true;
+    if (p->cancel_func)
+    {
+        p->cancel_func();
+    }
     // ensure that jobs occurring in the thread pool complete.
     p->checkWatcher.waitForFinished();
     p->createWatcher.waitForFinished();
     p->inactivity_handler.request_completed();
+    p->request.reset();
 }
 
 string const& Handler::key() const
@@ -227,7 +233,7 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
     {
         try
         {
-            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), "gotCredentials(): cancelled"} : FdOrError{check(), nullptr};
+            return FdOrError{check(), nullptr};
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -249,7 +255,7 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 
 QDBusUnixFileDescriptor Handler::check()
 {
-    if (p->cancelled)
+    if (p->cancelled || !p->request)
     {
         return QDBusUnixFileDescriptor();
     }
@@ -301,7 +307,11 @@ void Handler::checkFinished()
         {
             // otherwise move on to the download phase.
             p->schedule_start_time = chrono::system_clock::now();
-            p->limiter->schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
+            p->cancel_func = p->limiter->schedule([&]
+            {
+                p->download_start_time = chrono::system_clock::now();
+                p->request->download();
+            });
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -346,7 +356,7 @@ void Handler::downloadFinished()
 
 QDBusUnixFileDescriptor Handler::create()
 {
-    if (p->cancelled)
+    if (p->cancelled || !p->request)
     {
         return QDBusUnixFileDescriptor();
     }

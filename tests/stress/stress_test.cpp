@@ -270,6 +270,7 @@ typedef vector<QSharedPointer<unity::thumbnailer::qt::Request>> RequestVec;
 
 // Test for synchronous wait.
 
+#if 0
 TEST_F(StressTest, photo_waitForFinished)
 {
     int const N_REQUESTS = 1000;
@@ -391,6 +392,7 @@ TEST_F(StressTest, album_art)
 
     add_stats(N_REQUESTS, start, finish);
 }
+#endif
 
 TEST_F(StressTest, wait_for_finished_in_queue)
 {
@@ -441,17 +443,14 @@ TEST_F(StressTest, wait_for_finished_in_queue)
         p->cancel();
     }
 
-    if (spy.count() == 0)
-    {
-        spy.wait(120000);
-    }
-    else
     {
         // Pump the event loop for a while, to allow all the signals to trickle in.
         QTimer timer;
         QSignalSpy timer_spy(&timer, &QTimer::timeout);
         timer.start();
-        timer_spy.wait(10000);
+        cerr << "pumping" << endl;
+        timer_spy.wait(6000);
+        cerr << "done pumping" << endl;
     }
     EXPECT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();

@@ -128,7 +128,7 @@ int adjusted_limit(int limit)
 }
 
 DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
-                             InactivityHandler& inactivity_handler,
+                             shared_ptr<InactivityHandler> const& inactivity_handler,
                              QObject* parent)
     : QObject(parent)
     , thumbnailer_(thumbnailer)
@@ -182,7 +182,7 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(), inactivity_handler_,
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -208,7 +208,7 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(), inactivity_handler_,
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -236,7 +236,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 extraction_limiter_, credentials(), inactivity_handler_,
+                                 extraction_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)

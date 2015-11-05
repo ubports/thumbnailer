@@ -107,7 +107,7 @@ private:
 
 unity::thumbnailer::service::AllStats AdminInterface::Stats()
 {
-    ActivityNotifier notifier(inactivity_handler_);
+    ActivityNotifier notifier(*inactivity_handler_);
 
     auto const st = thumbnailer_->stats();
     AllStats all;
@@ -119,7 +119,7 @@ unity::thumbnailer::service::AllStats AdminInterface::Stats()
 
 void AdminInterface::ClearStats(int cache_id)
 {
-    ActivityNotifier notifier(inactivity_handler_);
+    ActivityNotifier notifier(*inactivity_handler_);
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
@@ -132,7 +132,7 @@ void AdminInterface::ClearStats(int cache_id)
 
 void AdminInterface::Clear(int cache_id)
 {
-    ActivityNotifier notifier(inactivity_handler_);
+    ActivityNotifier notifier(*inactivity_handler_);
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
@@ -145,7 +145,7 @@ void AdminInterface::Clear(int cache_id)
 
 void AdminInterface::Compact(int cache_id)
 {
-    ActivityNotifier notifier(inactivity_handler_);
+    ActivityNotifier notifier(*inactivity_handler_);
 
     if (cache_id < 0 || cache_id >= int(Thumbnailer::CacheSelector::LAST__))
     {
