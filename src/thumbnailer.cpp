@@ -905,7 +905,8 @@ void Thumbnailer::clear(CacheSelector selector)
     {
         c->invalidate();
     }
-    if (selector == Thumbnailer::CacheSelector::failure_cache)
+    if (selector == Thumbnailer::CacheSelector::failure_cache ||
+        selector == Thumbnailer::CacheSelector::all)
     {
         // Force retry on next remote retrieval even if we
         // are still within the timeout period.

@@ -5,7 +5,7 @@ libthumbnailer-qt.so.1.0 libthumbnailer-qt1.0 #MINVER#
  (c++)"unity::thumbnailer::qt::Request::errorMessage() const@Base" 2.3+15.10.20150915.1
  (c++)"unity::thumbnailer::qt::Request::finished()@Base" 2.3+15.10.20150915.1
  (c++)"unity::thumbnailer::qt::Request::image() const@Base" 2.3+15.10.20150915.1
- (c++)"unity::thumbnailer::qt::Request::isCancelled() const@Base" 0replaceme
+ (c++)"unity::thumbnailer::qt::Request::isCancelled() const@Base" 2.3+16.04.20151102.2
  (c++)"unity::thumbnailer::qt::Request::isFinished() const@Base" 2.3+15.10.20150915.1
  (c++)"unity::thumbnailer::qt::Request::isValid() const@Base" 2.3+15.10.20150915.1
  (c++)"unity::thumbnailer::qt::Request::metaObject() const@Base" 2.3+15.10.20150915.1
