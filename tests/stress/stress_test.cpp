@@ -348,11 +348,7 @@ TEST_F(StressTest, mp3)
     add_stats(N_REQUESTS, start, finish);
 }
 
-#if defined(__PPC__)
-TEST_F(StressTest, DISABLED_video)
-#else
 TEST_F(StressTest, video)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
