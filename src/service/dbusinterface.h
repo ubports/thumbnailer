@@ -65,7 +65,7 @@ Q_SIGNALS:
     void stoppedRequest();
 
 private:
-    std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
+    std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const thumbnailer_;
     std::unique_ptr<CredentialsCache> credentials_;
     CredentialsCache& credentials();
     std::shared_ptr<InactivityHandler> inactivity_handler_;

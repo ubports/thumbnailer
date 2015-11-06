@@ -209,6 +209,12 @@ void Handler::begin()
 
 void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 {
+    if (p->cancelled || !p->request)
+    {
+        Q_EMIT finished();
+        return;
+    }
+
     if (!credentials.valid)
     {
         // LCOV_EXCL_START
