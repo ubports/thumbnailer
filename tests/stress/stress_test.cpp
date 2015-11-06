@@ -454,6 +454,64 @@ TEST_F(StressTest, wait_for_finished_in_queue)
     add_stats(N_REQUESTS, start, finish);
 }
 
+// Same as the previous test, but this time, we stop the service
+// without pumping the event loop to completion. This ensures
+// that we terminate cleanly even if there are still requests
+// running in the thread pools.
+
+TEST_F(StressTest, terminate_without_wait)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    int const N_REQUESTS = 200;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir() + "/Music";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    auto start = chrono::system_clock::now();
+    for (int i = 0; i < N_REQUESTS; i++)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump the event loop for a while, to allow some requests to start processing.
+    {
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start();
+        timer_spy.wait(1000);
+    }
+
+    // For coverage: Wait for a few requests while they are still in the queue (which will cause
+    // them to be scheduled immediately.)
+    providers[N_REQUESTS - 7]->waitForFinished();
+    providers[N_REQUESTS - 5]->waitForFinished();
+    providers[N_REQUESTS - 4]->waitForFinished();
+
+    // Cancel all of the requests. The ones that we didn't wait for synchronously are partly still in
+    // progress, and partly still in the queue.
+    for (auto& p : providers)
+    {
+        p->cancel();
+    }
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
 int main(int argc, char** argv)
 {
     gst_init(&argc, &argv);
