@@ -21,6 +21,8 @@
 #include <utils/supports_decoder.h>
 #include "../src/vs-thumb/thumbnailextractor.h"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #pragma GCC diagnostic push
@@ -341,6 +343,15 @@ TEST(ExeTest, bad_uri)
 {
     auto err = vs_thumb_err_output("file:///no_such_file");
     EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
+}
+
+TEST(ExeTest, no_artwork)
+{
+    auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
+    auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
+    EXPECT_TRUE(boost::ends_with(err, msg)) << err;
+    boost::system::error_code ec;
+    EXPECT_FALSE(boost::filesystem::exists("xyz.diff", ec));
 }
 
 int main(int argc, char** argv)
