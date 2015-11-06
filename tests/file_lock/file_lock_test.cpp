@@ -40,6 +40,9 @@ TEST(file_lock, basic)
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 TEST(file_lock, timeout_fail)
 {
     system("./hold_lock &");  // Holds lock for three seconds
@@ -55,6 +58,8 @@ TEST(file_lock, timeout_success)
     AdvisoryFileLock lock(lockfile);
     EXPECT_TRUE(lock.lock(chrono::milliseconds(5000)));
 }
+
+#pragma GCC diagnostic pop
 
 TEST(file_lock, exceptions)
 {
