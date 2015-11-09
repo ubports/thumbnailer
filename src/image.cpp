@@ -445,6 +445,17 @@ Image Image::scale(QSize requested_size) const
     }
 
     scaled_size.scale(requested_size, Qt::KeepAspectRatio);
+    // Make sure that we don't try to scale down to zero, which
+    // would cause an error in gdk_pixbuf_scale_simple().
+    if (scaled_size.width() == 0)
+    {
+        scaled_size.setWidth(1);
+    }
+    if (scaled_size.height() == 0)
+    {
+        scaled_size.setHeight(1);
+    }
+
     Image scaled;
     scaled.pixbuf_.reset(
         gdk_pixbuf_scale_simple(pixbuf_.get(), scaled_size.width(), scaled_size.height(), GDK_INTERP_BILINEAR));
