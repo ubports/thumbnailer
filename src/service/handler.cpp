@@ -226,22 +226,17 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
         // LCOV_EXCL_STOP
     }
 
-    // Make sure that we have a copy because the destructor can asynchronously call reset().
-    auto request = atomic_load(&p->request);
-    if (request)
+    try
     {
-        try
-        {
-            request->check_client_credentials(credentials.user, credentials.label);
-        }
-        // LCOV_EXCL_START
-        catch (std::exception const& e)
-        {
-            sendError("Handler::gotCredentials(): " + details() + ": " + e.what());
-            return;
-        }
-        // LCOV_EXCL_STOP
+        p->request->check_client_credentials(credentials.user, credentials.label);
     }
+    // LCOV_EXCL_START
+    catch (std::exception const& e)
+    {
+        sendError("Handler::gotCredentials(): " + details() + ": " + e.what());
+        return;
+    }
+    // LCOV_EXCL_STOP
 
     auto do_check = [this]() -> FdOrError
     {
@@ -274,14 +269,7 @@ QDBusUnixFileDescriptor Handler::check()
         return QDBusUnixFileDescriptor();
     }
 
-    // Make sure that we have a copy because the destructor can asynchronously call reset().
-    auto request = atomic_load(&p->request);
-    if (!request)
-    {
-        return QDBusUnixFileDescriptor();
-    }
-
-    string art_image = request->thumbnail();
+    string art_image = p->request->thumbnail();
     if (art_image.empty())
     {
         return QDBusUnixFileDescriptor();
@@ -384,14 +372,7 @@ QDBusUnixFileDescriptor Handler::create()
         return QDBusUnixFileDescriptor();
     }
 
-    // Make sure that we have a copy because the destructor can asynchronously call reset().
-    auto request = atomic_load(&p->request);
-    if (!request)
-    {
-        return QDBusUnixFileDescriptor();
-    }
-
-    string art_image = request->thumbnail();
+    string art_image = p->request->thumbnail();
     if (art_image.empty())
     {
         throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
