@@ -26,6 +26,8 @@
 #include <QtConcurrent>
 #include <QThreadPool>
 
+#include <atomic>
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -115,23 +117,24 @@ namespace service
 
 struct HandlerPrivate
 {
-    QDBusConnection bus;
+    QDBusConnection const bus;
     QDBusMessage const message;
-    shared_ptr<QThreadPool> check_pool;
-    shared_ptr<QThreadPool> create_pool;
-    shared_ptr<RateLimiter> limiter;
+    shared_ptr<QThreadPool> const check_pool;
+    shared_ptr<QThreadPool> const create_pool;
+    shared_ptr<RateLimiter> const limiter;
     CredentialsCache& creds;
     InactivityHandler& inactivity_handler;
-    unique_ptr<ThumbnailRequest> request;
-    chrono::system_clock::time_point start_time;            // Overall start time
+    shared_ptr<ThumbnailRequest> request;
+    chrono::system_clock::time_point const start_time;      // Overall start time
     chrono::system_clock::time_point finish_time;           // Overall finish time
     chrono::system_clock::time_point schedule_start_time;   // Time at which download/extract is scheduled.
     chrono::system_clock::time_point download_start_time;   // Time at which download/extract is started.
     chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
-    QString details;
-    QString status;
+    QString const details;
+    QString const status;
+    RateLimiter::CancelFunc cancel_func;
 
-    bool cancelled = false;
+    atomic_bool cancelled;                                  // Must be atomic because destructor asynchronously writes to it.
     QFutureWatcher<FdOrError> checkWatcher;
     QFutureWatcher<FdOrError> createWatcher;
 
@@ -152,9 +155,10 @@ struct HandlerPrivate
         , creds(creds)
         , inactivity_handler(inactivity_handler)
         , request(move(request))
+        , start_time(chrono::system_clock::now())
         , details(details)
+        , cancelled(false)
     {
-        start_time = chrono::system_clock::now();
     }
 };
 
@@ -181,10 +185,15 @@ Handler::Handler(QDBusConnection const& bus,
 Handler::~Handler()
 {
     p->cancelled = true;
+    if (p->cancel_func)
+    {
+        p->cancel_func();
+    }
     // ensure that jobs occurring in the thread pool complete.
     p->checkWatcher.waitForFinished();
     p->createWatcher.waitForFinished();
     p->inactivity_handler.request_completed();
+    p->request.reset();
 }
 
 string const& Handler::key() const
@@ -203,6 +212,12 @@ void Handler::begin()
 
 void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 {
+    if (p->cancelled)
+    {
+        Q_EMIT finished();
+        return;
+    }
+
     if (!credentials.valid)
     {
         // LCOV_EXCL_START
@@ -210,10 +225,10 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
         return;
         // LCOV_EXCL_STOP
     }
+
     try
     {
-        p->request->check_client_credentials(
-            credentials.user, credentials.label);
+        p->request->check_client_credentials(credentials.user, credentials.label);
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)
@@ -227,7 +242,7 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
     {
         try
         {
-            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), "gotCredentials(): cancelled"} : FdOrError{check(), nullptr};
+            return FdOrError{check(), nullptr};
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -255,7 +270,6 @@ QDBusUnixFileDescriptor Handler::check()
     }
 
     string art_image = p->request->thumbnail();
-
     if (art_image.empty())
     {
         return QDBusUnixFileDescriptor();
@@ -301,7 +315,14 @@ void Handler::checkFinished()
         {
             // otherwise move on to the download phase.
             p->schedule_start_time = chrono::system_clock::now();
-            p->limiter->schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
+            p->cancel_func = p->limiter->schedule([&]
+            {
+                if (!p->cancelled)
+                {
+                    p->download_start_time = chrono::system_clock::now();
+                    p->request->download();
+                }
+            });
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -329,7 +350,7 @@ void Handler::downloadFinished()
     {
         try
         {
-            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), nullptr} : FdOrError{create(), nullptr};
+            return FdOrError{create(), nullptr};
         }
         catch (std::exception const& e)
         {
@@ -352,7 +373,6 @@ QDBusUnixFileDescriptor Handler::create()
     }
 
     string art_image = p->request->thumbnail();
-
     if (art_image.empty())
     {
         throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
