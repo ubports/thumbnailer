@@ -348,11 +348,7 @@ TEST_F(StressTest, mp3)
     add_stats(N_REQUESTS, start, finish);
 }
 
-#if defined(__PPC__)
-TEST_F(StressTest, DISABLED_video)
-#else
 TEST_F(StressTest, video)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -375,7 +371,7 @@ TEST_F(StressTest, video)
 
 TEST_F(StressTest, album_art)
 {
-    int const N_REQUESTS = 2000;
+    int const N_REQUESTS = 100;
 
     vector<unique_ptr<AsyncThumbnailProvider>> providers;
 
@@ -386,10 +382,12 @@ TEST_F(StressTest, album_art)
     for (int i = 0; i < N_REQUESTS; i++)
     {
         unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
-        provider->getAlbumArt("metallica", "load", QSize(i + 1, i + 1));
+        // Minimum dimension is at least 20 because there is some performance issue
+        // in the gdk scaling algorithm. With very small sizes, scaling takes forever (or near enough forever).
+        provider->getAlbumArt("generate", QString::number(i), QSize(i + 20, 512));
         providers.emplace_back(move(provider));
     }
-    ASSERT_TRUE(spy.wait(120000));
+    ASSERT_TRUE(spy.wait(60000));
     ASSERT_EQ(1, spy.count());
     auto finish = chrono::system_clock::now();
 
@@ -428,8 +426,8 @@ TEST_F(StressTest, wait_for_finished_in_queue)
     {
         QTimer timer;
         QSignalSpy timer_spy(&timer, &QTimer::timeout);
-        timer.start();
-        timer_spy.wait(1000);
+        timer.start(2000);
+        timer_spy.wait(2500);
     }
 
     // For coverage: Wait for a few requests while they are still in the queue (which will cause
@@ -445,19 +443,115 @@ TEST_F(StressTest, wait_for_finished_in_queue)
         p->cancel();
     }
 
-    if (spy.count() == 0)
-    {
-        spy.wait(120000);
-    }
-    else
     {
         // Pump the event loop for a while, to allow all the signals to trickle in.
         QTimer timer;
         QSignalSpy timer_spy(&timer, &QTimer::timeout);
-        timer.start();
-        timer_spy.wait(10000);
+        timer.start(5000);
+        timer_spy.wait(6000);
     }
     EXPECT_EQ(1, spy.count());
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
+// Same as the previous test, but this time, we stop the service
+// without pumping the event loop to completion. This ensures
+// that we terminate cleanly even if there are still requests
+// running in the thread pools.
+
+TEST_F(StressTest, terminate_after_cancel)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    int const N_REQUESTS = 400;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir() + "/Music";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    auto start = chrono::system_clock::now();
+    for (int i = 0; i < N_REQUESTS; i++)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump the event loop for a while, to allow some requests to start processing.
+    {
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start(2000);
+        timer_spy.wait(2500);
+    }
+
+    // For coverage: Wait for a few requests while they are still in the queue (which will cause
+    // them to be scheduled immediately.)
+    providers[N_REQUESTS - 7]->waitForFinished();
+    providers[N_REQUESTS - 5]->waitForFinished();
+    providers[N_REQUESTS - 4]->waitForFinished();
+
+    // Cancel all of the requests. The ones that we didn't wait for synchronously are partly still in
+    // progress, and partly still in the queue.
+    for (auto& p : providers)
+    {
+        p->cancel();
+    }
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
+// Same as the previous test, but this time, we just destroy
+// everything without cancelling first.
+
+TEST_F(StressTest, terminate)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    int const N_REQUESTS = 400;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir() + "/Music";
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    auto start = chrono::system_clock::now();
+    for (int i = 0; i < N_REQUESTS; i++)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump the event loop for a while, to allow some requests to start processing.
+    {
+        QTimer timer;
+        QSignalSpy timer_spy(&timer, &QTimer::timeout);
+        timer.start(2000);
+        timer_spy.wait(2500);
+    }
     auto finish = chrono::system_clock::now();
 
     add_stats(N_REQUESTS, start, finish);

@@ -97,5 +97,10 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    return success ? 0 : 1;
+    if (!success)
+    {
+        fprintf(stderr, "%s: No artwork in %s\n", progname, argv[1]);
+    }
+
+    return !success;
 }

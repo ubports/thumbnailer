@@ -91,7 +91,7 @@ private:
     std::unique_ptr<HandlerPrivate> p;
 };
 
-}  // namespace unity
+}  // namespace service
 
 }  // namespace thumbnailer
 

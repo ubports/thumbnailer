@@ -320,6 +320,8 @@ string RequestBase::thumbnail()
         sized_key += to_string(target_size.height());
 
         // Check if we have the thumbnail in the cache already.
+        assert(thumbnailer_);
+        assert(thumbnailer_->thumbnail_cache_);
         auto thumbnail = thumbnailer_->thumbnail_cache_->get(sized_key);
         if (thumbnail)
         {
@@ -700,7 +702,7 @@ void ArtistRequest::download(chrono::milliseconds timeout)
         timeout = timeout_;
     }
     artreply_ = downloader()->download_artist(QString::fromStdString(artist_), QString::fromStdString(album_), timeout);
-    connect(artreply_.get(), &ArtReply::finished, this, &ThumbnailRequest::downloadFinished, Qt::DirectConnection);
+    connect(artreply_.get(), &ArtReply::finished, this, &ArtistRequest::downloadFinished, Qt::DirectConnection);
 }
 
 namespace
