@@ -22,12 +22,14 @@
 #include "dbusinterface.h"
 #include "dbusinterfaceadaptor.h"
 #include "inactivityhandler.h"
+#include <internal/file_lock.h>
 #include <internal/trace.h>
 #include <service/dbus_names.h>
 
 #include <QCoreApplication>
 
 #include <cstdio>
+#include <sys/stat.h>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -65,7 +67,17 @@ void show_stats(shared_ptr<Thumbnailer> const& thumbnailer)
     qDebug() << qUtf8Printable("failure cache:   " + get_summary(stats.failure_stats));
 }
 
+string get_cache_dir()
+{
+    string xdg_base = g_get_user_cache_dir();
+    if (xdg_base == "")
+    {
+        throw runtime_error("Could not determine cache dir");
+    }
+    return xdg_base;
 }
+
+}  // namespace
 
 int main(int argc, char** argv)
 {
@@ -76,6 +88,18 @@ int main(int argc, char** argv)
     {
         qDebug() << "Initializing";
 
+        // We keep a lock file while the service is alive. That's to avoid
+        // a shutdown race where a new service instance starts up while
+        // a previous instance is still shutting down, but the leveldb
+        // lock has not been released yet by the previous instance.
+        auto cache_dir = get_cache_dir();
+        ::mkdir(cache_dir.c_str(), 0700);  // May not exist yet.
+        AdvisoryFileLock file_lock(cache_dir + "/thumbnailer-service.lock");
+        if (!file_lock.lock(chrono::milliseconds(10000)))
+        {
+            throw runtime_error("Could not acquire file lock within 10 seconds");
+        }
+
         QCoreApplication app(argc, argv);
 
         auto inactivity_handler = make_shared<InactivityHandler>([&]{ qDebug() << "Idle timeout reached."; app.quit(); });
@@ -85,7 +109,7 @@ int main(int argc, char** argv)
         unity::thumbnailer::service::DBusInterface server(thumbnailer, inactivity_handler);
         new ThumbnailerAdaptor(&server);
 
-        unity::thumbnailer::service::AdminInterface admin_server(thumbnailer, inactivity_handler);
+        unity::thumbnailer::service::AdminInterface admin_server(move(thumbnailer), move(inactivity_handler));
         new ThumbnailerAdminAdaptor(&admin_server);
 
         auto bus = QDBusConnection::sessionBus();
@@ -96,13 +120,20 @@ int main(int argc, char** argv)
 
         if (!bus.registerService(BUS_NAME))
         {
-            throw runtime_error(string("thumbnailer-service: could not acquire DBus name ") + BUS_NAME);
+            throw runtime_error(string("thumbnailer-service: Could not acquire DBus name ") + BUS_NAME);
         }
 
         // Print basic cache stats on start-up. This is useful when examining log entries.
         show_stats(thumbnailer);
 
         rc = app.exec();
+
+        // Release the bus name as soon as we decide to shut down, otherwise DBus
+        // may still send us requests that we are no longer able to process.
+        if (!bus.unregisterService(BUS_NAME))
+        {
+            throw runtime_error(string("thumbnailer-service: Could not release DBus name ") + BUS_NAME);  // LCOV_EXCL_LINE
+        }
 
         qDebug() << "Exiting";
     }

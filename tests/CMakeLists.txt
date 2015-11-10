@@ -20,6 +20,7 @@ set(unit_test_dirs
     dbus
     download
     file_io
+    file_lock
     gobj_ptr
     image
     qml

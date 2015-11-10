@@ -14,6 +14,7 @@ add_library(thumbnailer-static STATIC
     artdownloader.cpp
     check_access.cpp
     file_io.cpp
+    file_lock.cpp
     image.cpp
     imageextractor.cpp
     make_directories.cpp
