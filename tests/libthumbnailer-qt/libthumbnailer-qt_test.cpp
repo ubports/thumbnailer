@@ -19,6 +19,7 @@
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <internal/file_io.h>
+#include <internal/gobj_memory.h>
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
 #include <utils/supports_decoder.h>
@@ -27,6 +28,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
+#include <gio/gio.h>
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
@@ -107,7 +109,7 @@ TEST_F(LibThumbnailerTest, get_album_art)
 {
     Thumbnailer thumbnailer(dbus_->connection());
 
-    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
+    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(0, 48));
 
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
@@ -132,7 +134,7 @@ TEST_F(LibThumbnailerTest, get_album_art)
 TEST_F(LibThumbnailerTest, get_album_art_sync)
 {
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
+    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 0));
 
     reply->waitForFinished();
 
@@ -642,6 +644,11 @@ int main(int argc, char** argv)
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+
+    // Turn on trace so we get coverage on those parts of the code.
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

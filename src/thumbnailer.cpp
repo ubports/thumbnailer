@@ -289,9 +289,9 @@ string RequestBase::thumbnail()
 {
     try
     {
-        // This is logged here as well as on the Qt/QML size so
-        // we don't need to look at the logs for all applications
-        // to spot when we get an invalid size.
+        // This is logged here as well as on the Qt/QML side because,
+        // at least in theory, someone could talk to the DBus interface
+        // directly without going through the official client-side API.
         if (!requested_size_.isValid())
         {
             QString msg;
