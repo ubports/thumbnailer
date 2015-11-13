@@ -471,6 +471,58 @@ TEST_F(AdminTest, get_small_thumbnail_square)
     EXPECT_EQ(0x807FFE, img.pixel(0, 35));
 }
 
+TEST_F(AdminTest, get_unconstrained_width)
+{
+    auto filename = temp_dir() + "/orientation-1_0x240.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x240", TESTDATADIR "/orientation-1.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(320, img.width());
+    EXPECT_EQ(240, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_height)
+{
+    auto filename = temp_dir() + "/Photo-with-exif_240x0.jpg";  // Portrait orientation
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=240x0", TESTDATADIR "/Photo-with-exif.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(240, img.width());
+    EXPECT_EQ(426, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_height_large)
+{
+    auto filename = temp_dir() + "/big_0x2048.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x2048", TESTDATADIR "/big.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_both_large)
+{
+    auto filename = temp_dir() + "/big_0x0.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x0", TESTDATADIR "/big.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+}
+
 TEST_F(AdminTest, get_with_dir)
 {
     auto filename = temp_dir() + "/orientation-2_0x0.jpg";
