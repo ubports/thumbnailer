@@ -6,6 +6,7 @@ Standards-Version: 3.9.6
 Build-Depends: cmake,
                cmake-extras (>= 0.4),
                debhelper (>= 9),
+               devscripts,
                google-mock,
                gstreamer1.0-libav,
                gstreamer1.0-fluendo-mp3,
