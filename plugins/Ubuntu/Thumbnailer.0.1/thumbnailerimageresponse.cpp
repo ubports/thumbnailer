@@ -54,17 +54,14 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
 
 ThumbnailerImageResponse::~ThumbnailerImageResponse()
 {
-    // TODO: Once we remove fallback image support, this test for request_ != nullptr
-    //       (here and elsewhere) needs to be removed because request_ is nullptr
-    //       only if the default image constructor above was called.
-    if (request_)
-    {
-        request_->cancel();
-    }
+    cancel();
 }
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
+    // TODO: Once we remove fallback image support, this test for request_ != nullptr
+    //       (here and elsewhere) needs to be removed because request_ is nullptr
+    //       only if the default image constructor above was called.
     if (request_ && request_->isValid())
     {
         return QQuickTextureFactory::textureFactoryForImage(request_->image());
@@ -80,7 +77,7 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
-    if (request_)
+    if (request_ && !request_->isFinished())
     {
         request_->cancel();
     }
