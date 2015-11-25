@@ -50,8 +50,15 @@ class Q_DECL_EXPORT Request : public QObject
 public:
     /// @cond
     Q_DISABLE_COPY(Request)
-    ~Request();
     /// @endcond
+
+    /**
+    \brief Destroys a request.
+
+    If the request is still in progress, it is implicitly cancelled, and
+    the finished() signal is emitted.
+    */
+    ~Request();
 
     /**
     \brief Returns whether the request has completed.

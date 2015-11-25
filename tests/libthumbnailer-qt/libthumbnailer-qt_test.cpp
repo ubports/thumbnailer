@@ -18,6 +18,7 @@
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
+#include <internal/gobj_memory.h>
 #include <internal/file_io.h>
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
@@ -27,6 +28,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
+#include <gio/gio.h>
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
@@ -103,6 +105,7 @@ protected:
     unique_ptr<ArtServer> art_server_;
 };
 
+#if 0
 TEST_F(LibThumbnailerTest, get_album_art)
 {
     Thumbnailer thumbnailer(dbus_->connection());
@@ -436,6 +439,7 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
     EXPECT_FALSE(reply->isValid());
 }
+#endif
 
 void make_links(string const& source_path, string const& target_dir, int num_copies)
 {
@@ -471,14 +475,24 @@ class Counter : public QObject
 public:
     Counter(int limit)
         : limit_(limit)
-        , count_(0)
-        , cancellations_(0)
+        , completed_(0)
+        , cancelled_(0)
     {
     }
 
-    int cancellations()
+    int cancelled() const
     {
-        return cancellations_;
+        return cancelled_;
+    }
+
+    int completed() const
+    {
+        return completed_;
+    }
+
+    int limit() const
+    {
+        return limit_;
     }
 
 Q_SIGNALS:
@@ -489,18 +503,23 @@ public Q_SLOTS:
     {
         if (cancelled)
         {
-            ++cancellations_;
+            ++cancelled_;
         }
-        if (++count_ == limit_)
+        else
         {
+            ++completed_;
+        }
+        if (cancelled_ + completed_ == limit_)
+        {
+            qDebug() << "emitting counterDone";
             Q_EMIT counterDone();
         }
     }
 
 private:
     int limit_;
-    int count_;
-    int cancellations_;
+    int completed_;
+    int cancelled_;
 };
 
 // Class to run a single request and check that it completed OK.
@@ -549,7 +568,8 @@ public Q_SLOTS:
         {
             EXPECT_TRUE(request_->isCancelled());
             EXPECT_TRUE(request_->image().isNull());
-            EXPECT_TRUE(request_->errorMessage() == QString("Request cancelled"))
+            EXPECT_TRUE(request_->errorMessage() == QString("Request cancelled") ||
+                        request_->errorMessage() == QString("Request destroyed"))
                 << request_->errorMessage().toStdString();
         }
         counter_.thumbnailComplete(request_->isCancelled());
@@ -569,6 +589,7 @@ void pump(int millisecs)
     EXPECT_TRUE(timer_spy.wait(millisecs + 1000));
 }
 
+#if 0
 TEST_F(LibThumbnailerTest, cancel)
 {
     if (!supports_decoder("audio/mpeg"))
@@ -604,6 +625,61 @@ TEST_F(LibThumbnailerTest, cancel)
 
     EXPECT_TRUE(spy.wait(1000));
     EXPECT_EQ(1, spy.count());
+}
+#endif
+
+TEST_F(LibThumbnailerTest, cancel_many)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    // Turn on trace so we get coverage on those parts of the code.
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+
+    Thumbnailer thumbnailer(dbus_->connection());
+
+    int N_REQUESTS = 200;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir();
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    QString path;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    for (int i = 0; i < N_REQUESTS; ++i)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(&thumbnailer, counter));
+        path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump for a while, so some requests start executing.
+    pump(2000);
+
+    // Cancel all but the last few requests.
+    for (int i = 0; i < N_REQUESTS - 5; ++i)
+    {
+        providers[i]->cancel();
+    }
+
+    pump(2000);
+    EXPECT_EQ(1, spy.count());
+
+    // We must have both completed and cancelled requests.
+    cerr << "completed: " << counter.completed() << endl;
+    EXPECT_GT(counter.completed(), 0);
+    cerr << "cancelled: " << counter.cancelled() << endl;
+    EXPECT_GT(counter.cancelled(), 0);
 }
 
 Q_DECLARE_METATYPE(QProcess::ExitStatus)  // Avoid noise from signal spy.

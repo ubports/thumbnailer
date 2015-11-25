@@ -51,7 +51,7 @@ public:
                 std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job,
                 bool trace_client);
 
-    ~RequestImpl() = default;
+    ~RequestImpl();
 
     bool isFinished() const
     {
@@ -171,6 +171,21 @@ RequestImpl::RequestImpl(QString const& details,
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
     };
     cancel_func_ = limiter_->schedule(send_request_);
+}
+
+RequestImpl::~RequestImpl()
+{
+    if (!finished_)
+    {
+        // Pump the limiter if this request is destroyed after it was physically sent.
+        if (!cancel_func_())
+        {
+            limiter_->done();
+        }
+        // Always emit a signal, even if destroyed while the request is still in progress.
+        cancelled_ = true;
+        finishWithError("Request destroyed");
+    }
 }
 
 void RequestImpl::dbusCallFinished()
