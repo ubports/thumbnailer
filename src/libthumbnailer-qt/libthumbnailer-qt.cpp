@@ -84,10 +84,9 @@ public:
         // In that case we send the request right here after removing it
         // from the limiter queue. This guarantees that we always have
         // a watcher to wait on.
-        if (!sent_)
+        if (cancel_func_())
         {
             Q_ASSERT(!watcher_);
-            cancel_func_();
             limiter_->schedule_now(send_request_);
         }
         watcher_->waitForFinished();
@@ -123,7 +122,6 @@ private:
     bool finished_;
     bool is_valid_;
     bool cancelled_;
-    bool sent_;     // Becomes true once rate limiter has given the request to DBus.
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
 };
@@ -159,7 +157,6 @@ RequestImpl::RequestImpl(QString const& details,
     , finished_(false)
     , is_valid_(false)
     , cancelled_(false)
-    , sent_(false)
     , public_request_(nullptr)
 {
     // The limiter does not call send_request_ until the request can be sent
@@ -168,7 +165,6 @@ RequestImpl::RequestImpl(QString const& details,
     {
         watcher_.reset(new QDBusPendingCallWatcher(job_()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
-        sent_ = true;
     };
     cancel_func_ = limiter_->schedule(send_request_);
 }
@@ -176,7 +172,6 @@ RequestImpl::RequestImpl(QString const& details,
 void RequestImpl::dbusCallFinished()
 {
     Q_ASSERT(watcher_);
-    Q_ASSERT(sent_);
     Q_ASSERT(!finished_);
 
     limiter_->done();
@@ -247,12 +242,11 @@ void RequestImpl::cancel()
         return;  // Too late, do nothing.
     }
 
-    cancel_func_();
-    cancelled_ = true;
-    if (sent_)
+    if (cancel_func_())
     {
         limiter_->done();  // Pump the limiter because finishWithError deletes the watcher.
     }
+    cancelled_ = true;
     finishWithError("Request cancelled");
 }
 

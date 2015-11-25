@@ -67,6 +67,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
         {
             *job_p = nullptr;
         }
+        return job_p != nullptr;
     };
 }
 
@@ -76,7 +77,7 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
     running_++;
     job();
-    return []{};  // Wasn't queued, so cancel does nothing.
+    return []{ return false; };  // Wasn't queued, so cancel does nothing.
 }
 
 void RateLimiter::done()
