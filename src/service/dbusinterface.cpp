@@ -58,9 +58,8 @@ int adjusted_limit(int limit)
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
-        string hw = hardware();
         new_limit = 1;
-        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for Arm";
     }
     return new_limit;
 }
