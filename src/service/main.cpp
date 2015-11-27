@@ -67,16 +67,6 @@ void show_stats(shared_ptr<Thumbnailer> const& thumbnailer)
     qDebug() << qUtf8Printable("failure cache:   " + get_summary(stats.failure_stats));
 }
 
-string get_cache_dir()
-{
-    string xdg_base = g_get_user_cache_dir();
-    if (xdg_base == "")
-    {
-        throw runtime_error("Could not determine cache dir");
-    }
-    return xdg_base;
-}
-
 }  // namespace
 
 int main(int argc, char** argv)
@@ -92,8 +82,9 @@ int main(int argc, char** argv)
         // a shutdown race where a new service instance starts up while
         // a previous instance is still shutting down, but the leveldb
         // lock has not been released yet by the previous instance.
-        auto cache_dir = get_cache_dir();
-        ::mkdir(cache_dir.c_str(), 0700);  // May not exist yet.
+
+        string cache_dir = g_get_user_cache_dir();  // Never fails, even if HOME and XDG_CACHE_HOME are not set.
+        ::mkdir(cache_dir.c_str(), 0700);           // May not exist yet.
         AdvisoryFileLock file_lock(cache_dir + "/thumbnailer-service.lock");
         if (!file_lock.lock(chrono::milliseconds(10000)))
         {
