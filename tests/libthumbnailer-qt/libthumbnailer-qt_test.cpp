@@ -509,7 +509,6 @@ public Q_SLOTS:
         }
         if (cancelled_ + completed_ == limit_)
         {
-            qDebug() << "emitting counterDone";
             Q_EMIT counterDone();
         }
     }
