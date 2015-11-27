@@ -673,7 +673,7 @@ TEST_F(LibThumbnailerTest, cancel_many)
     providers.clear();
 
     // Allow all the signals to trickle in.
-    pump(2000);
+    pump(4000);
     EXPECT_EQ(1, spy.count());
 
     // We must have both completed and cancelled requests.
@@ -726,8 +726,7 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
     }
 
     // Allow all the signals to trickle in.
-    pump(2000);
-    EXPECT_EQ(1, spy.count());
+    EXPECT_TRUE(spy.wait(5000));
 
     // We must have both completed and cancelled requests.
     EXPECT_GT(counter.completed(), 5);
