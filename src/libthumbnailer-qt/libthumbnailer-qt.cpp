@@ -122,7 +122,9 @@ private:
     QString error_message_;
     bool finished_;
     bool is_valid_;
-    bool cancelled_;
+    bool cancelled_;                 // true if cancel() was called by client
+    bool cancelled_while_waiting_;   // true if cancel() succeeded because request was not sent yet
+    bool signal_sent_;               // true once we have sent the Request::finished signal
     bool trace_client_;
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
@@ -160,6 +162,8 @@ RequestImpl::RequestImpl(QString const& details,
     , finished_(false)
     , is_valid_(false)
     , cancelled_(false)
+    , cancelled_while_waiting_(false)
+    , signal_sent_(false)
     , trace_client_(trace_client)
     , public_request_(nullptr)
 {
@@ -175,14 +179,9 @@ RequestImpl::RequestImpl(QString const& details,
 
 RequestImpl::~RequestImpl()
 {
-    if (!finished_)
+    // Make sure that we always send a signal, even if a request is destroyed while in flight.
+    if (!signal_sent_)
     {
-        // Pump the limiter if this request is destroyed after it was physically sent.
-        if (!cancel_func_())
-        {
-            limiter_->done();
-        }
-        // Always emit a signal, even if destroyed while the request is still in progress.
         cancelled_ = true;
         finishWithError("Request destroyed");
     }
@@ -193,7 +192,19 @@ void RequestImpl::dbusCallFinished()
     Q_ASSERT(watcher_);
     Q_ASSERT(!finished_);
 
-    limiter_->done();
+    // If this is a fake call from cancel(), pump the limiter.
+    if (!cancelled_while_waiting_)
+    {
+        // Note: Don't pump the limiter from anywhere else! We depend on all calls to pump
+        //       the limiter exactly once, whether they really finished, or were cancelled.
+        limiter_->done();
+    }
+
+    if (cancelled_)
+    {
+        finishWithError("Request cancelled");
+        return;
+    }
 
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
@@ -212,9 +223,10 @@ void RequestImpl::dbusCallFinished()
         watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
+        signal_sent_ = true;
         if (trace_client_)
         {
-            qDebug().noquote() << "completed:" << details_;
+            qDebug().noquote() << "Thumbnailer: completed:" << details_;
         }
     }
     // LCOV_EXCL_START
@@ -242,31 +254,36 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     }
     else if (trace_client_)
     {
-        qDebug().noquote() << "cancelled:" << details_;
+        qDebug().noquote() << "Thumbnailer: cancelled:" << details_;
     }
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
+    signal_sent_ = true;
 }
 
 void RequestImpl::cancel()
 {
     if (trace_client_)
     {
-        qDebug().noquote() << "cancelling:" << details_;
+        qDebug().noquote() << "Thumbnailer: cancelling:" << details_;
     }
 
     if (finished_ || cancelled_)
     {
+        qDebug().noquote() << "Thumbnailer: already finished or cancelled:" << details_;
         return;  // Too late, do nothing.
     }
 
-    if (cancel_func_())
-    {
-        limiter_->done();  // Pump the limiter because finishWithError deletes the watcher.
-    }
     cancelled_ = true;
-    finishWithError("Request cancelled");
+    cancelled_while_waiting_ = cancel_func_();
+    if (cancelled_while_waiting_)
+    {
+        // We fake the call completion, in order to pump the limiter only from within
+        // the dbus completion callback. We cannot call limiter_->done() here
+        // because that would schedule the next request in the queue.
+        QMetaObject::invokeMethod(this, "dbusCallFinished", Qt::QueuedConnection);
+    }
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
@@ -324,7 +341,7 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
 {
     if (trace_client_)
     {
-        qDebug().noquote() << details;
+        qDebug().noquote() << "Thumbnailer:" << details;
     }
     auto request_impl = new RequestImpl(details, requested_size, &limiter_, job, trace_client_);
     auto request = QSharedPointer<Request>(new Request(request_impl));

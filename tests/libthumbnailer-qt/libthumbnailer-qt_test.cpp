@@ -105,7 +105,6 @@ protected:
     unique_ptr<ArtServer> art_server_;
 };
 
-#if 0
 TEST_F(LibThumbnailerTest, get_album_art)
 {
     Thumbnailer thumbnailer(dbus_->connection());
@@ -439,7 +438,6 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
     EXPECT_FALSE(reply->isValid());
 }
-#endif
 
 void make_links(string const& source_path, string const& target_dir, int num_copies)
 {
@@ -532,6 +530,7 @@ public:
     AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer* tn, Counter& counter)
         : thumbnailer_(tn)
         , counter_(counter)
+        , finished_ok_(false)
     {
         assert(tn);
     }
@@ -560,11 +559,17 @@ public:
         request_->waitForFinished();
     }
 
+    bool finishedOK()
+    {
+        return finished_ok_;
+    }
+
 public Q_SLOTS:
     void requestFinished()
     {
         EXPECT_TRUE(request_->isFinished());
-        if (!request_->isValid())
+        finished_ok_ = request_->isValid();
+        if (!finished_ok_)
         {
             EXPECT_TRUE(request_->isCancelled());
             EXPECT_TRUE(request_->image().isNull());
@@ -578,6 +583,7 @@ public Q_SLOTS:
 private:
     unity::thumbnailer::qt::Thumbnailer* thumbnailer_;
     Counter& counter_;
+    bool finished_ok_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
 };
 
@@ -589,7 +595,6 @@ void pump(int millisecs)
     EXPECT_TRUE(timer_spy.wait(millisecs + 1000));
 }
 
-#if 0
 TEST_F(LibThumbnailerTest, cancel)
 {
     if (!supports_decoder("audio/mpeg"))
@@ -626,9 +631,58 @@ TEST_F(LibThumbnailerTest, cancel)
     EXPECT_TRUE(spy.wait(1000));
     EXPECT_EQ(1, spy.count());
 }
-#endif
 
 TEST_F(LibThumbnailerTest, cancel_many)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    // Turn on trace so we get coverage on those parts of the code.
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+
+    Thumbnailer thumbnailer(dbus_->connection());
+
+    int N_REQUESTS = 200;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir();
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    QString path;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    for (int i = 0; i < N_REQUESTS; ++i)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(&thumbnailer, counter));
+        path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump for a while, so some requests start executing.
+    pump(2000);
+
+    // Cancel all requests.
+    providers.clear();
+
+    // Allow all the signals to trickle in.
+    pump(2000);
+    EXPECT_EQ(1, spy.count());
+
+    // We must have both completed and cancelled requests.
+    EXPECT_GT(counter.completed(), 20);
+    EXPECT_GT(counter.cancelled(), 0);
+}
+
+TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
 {
     if (!supports_decoder("audio/mpeg"))
     {
@@ -672,14 +726,19 @@ TEST_F(LibThumbnailerTest, cancel_many)
         providers[i]->cancel();
     }
 
+    // Allow all the signals to trickle in.
     pump(2000);
     EXPECT_EQ(1, spy.count());
 
     // We must have both completed and cancelled requests.
-    cerr << "completed: " << counter.completed() << endl;
-    EXPECT_GT(counter.completed(), 0);
-    cerr << "cancelled: " << counter.cancelled() << endl;
+    EXPECT_GT(counter.completed(), 25);
     EXPECT_GT(counter.cancelled(), 0);
+
+    // The last few requests must have finished successfully.
+    for (int i = N_REQUESTS - 5; i < N_REQUESTS; ++i)
+    {
+        EXPECT_TRUE(providers[i]->finishedOK());
+    }
 }
 
 Q_DECLARE_METATYPE(QProcess::ExitStatus)  // Avoid noise from signal spy.
