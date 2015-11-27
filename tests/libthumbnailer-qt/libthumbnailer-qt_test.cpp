@@ -677,7 +677,7 @@ TEST_F(LibThumbnailerTest, cancel_many)
     EXPECT_EQ(1, spy.count());
 
     // We must have both completed and cancelled requests.
-    EXPECT_GT(counter.completed(), 20);
+    EXPECT_GT(counter.completed(), 0);
     EXPECT_GT(counter.cancelled(), 0);
 }
 
@@ -730,7 +730,7 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
     EXPECT_EQ(1, spy.count());
 
     // We must have both completed and cancelled requests.
-    EXPECT_GT(counter.completed(), 25);
+    EXPECT_GT(counter.completed(), 5);
     EXPECT_GT(counter.cancelled(), 0);
 
     // The last few requests must have finished successfully.
