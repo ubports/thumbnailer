@@ -725,8 +725,8 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
         providers[i]->cancel();
     }
 
-    // Allow all the signals to trickle in.
-    EXPECT_TRUE(spy.wait(5000));
+    // Allow all the signals to trickle in (can be slow on Jenkins).
+    EXPECT_TRUE(spy.wait(10000));
 
     // We must have both completed and cancelled requests.
     EXPECT_GT(counter.completed(), 5);
