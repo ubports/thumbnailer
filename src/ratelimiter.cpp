@@ -81,7 +81,7 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
     ++running_;
     job();
-    return [this]{ return false; };  // Wasn't queued, so cancel does nothing.
+    return []{ return false; };  // Wasn't queued, so cancel does nothing.
 }
 
 void RateLimiter::done()
