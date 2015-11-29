@@ -189,14 +189,13 @@ RequestImpl::~RequestImpl()
 
 void RequestImpl::dbusCallFinished()
 {
-    Q_ASSERT(watcher_);
     Q_ASSERT(!finished_);
 
     // If this is a fake call from cancel(), pump the limiter.
     if (!cancelled_while_waiting_)
     {
-        // Note: Don't pump the limiter from anywhere else! We depend on all calls to pump
-        //       the limiter exactly once, whether they really finished, or were cancelled.
+        // Note: Don't pump the limiter from anywhere else! We depend on calls to pump
+        //       the limiter exactly once for each request that was sent.
         limiter_->done();
     }
 
@@ -206,6 +205,7 @@ void RequestImpl::dbusCallFinished()
         return;
     }
 
+    Q_ASSERT(watcher_);
     QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
     if (!reply.isValid())
     {

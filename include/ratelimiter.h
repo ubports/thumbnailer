@@ -20,8 +20,8 @@
 #pragma once
 
 #include <functional>
-#include <map>
 #include <memory>
+#include <queue>
 
 namespace unity
 {
@@ -48,6 +48,8 @@ public:
     // reached, the job will be run immediately.  Otherwise it will be
     // added to the queue. Return value is a function that, when
     // called, cancels the job in the queue (if it's still in the queue).
+    // The cancel function returns true if the request could be cancelled because
+    // it was still waiting, false otherwise.
     CancelFunc schedule(std::function<void()> job);
 
     // Schedule a job to run immediately, regardless of the concurrency limit.
@@ -55,16 +57,17 @@ public:
 
     // Notify that a job has completed. If there are queued jobs,
     // start the one at the head of the queue. Every call to schedule()
-    // (but not schedule_now() *must* be matched by exactly one call to done().
+    // and schedule_now() *must* be matched by exactly one call to done(),
+    // unless the call is cancelled. If the call is cancelled, done() must
+    // be called only if the cancel function returns false.
     void done();
 
 private:
     int const concurrency_;  // Max number of outstanding requests.
     int running_;            // Actual number of outstanding requests.
-    int next_id_;            // Next available ID.
-    // Map of <ID, job> pairs. IDs are integers that increase monotonically.
-    // The job with the lowest ID has been waiting the longest.
-    std::map<int, std::function<void()>> jobs_;
+    // We store a shared_ptr so we can detect on cancellation
+    // whether a job completed before it was cancelled.
+    std::queue<std::shared_ptr<std::function<void()>>> queue_;
 };
 
 }  // namespace thumbnailer

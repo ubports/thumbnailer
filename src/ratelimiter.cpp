@@ -32,7 +32,6 @@ namespace thumbnailer
 RateLimiter::RateLimiter(int concurrency)
     : concurrency_(concurrency)
     , running_(0)
-    , next_id_(0)
 {
     assert(concurrency > 0);
 }
@@ -51,28 +50,25 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
     assert (running_ >= 0);
     assert (running_ <= concurrency_);
 
-    int id = next_id_++;
-
     if (running_ < concurrency_)
     {
-        return schedule_now(move(job));
+        return schedule_now(job);
     }
 
-    jobs_.emplace_hint(jobs_.end(), id, move(job));
+    queue_.emplace(make_shared<function<void()>>(move(job)));
 
-    // Returned function erases the job when called, provided the job is still in the map.
-    auto cancel_func = [this, id]() noexcept
+    // Returned function clears the job when called, provided the job is still in the queue.
+    // done() removes any cleared jobs from the queue without calling them.
+    weak_ptr<function<void()>> weak_p(queue_.back());
+    return [this, weak_p]() noexcept
     {
-        auto it = jobs_.find(id);
-        bool found = it != jobs_.end();
-        if (found)
+        auto job_p = weak_p.lock();
+        if (job_p)
         {
-            jobs_.erase(it);
+            *job_p = nullptr;
         }
-        return found;
+        return job_p != nullptr;
     };
-
-    return cancel_func;
 }
 
 RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
@@ -89,12 +85,23 @@ void RateLimiter::done()
     assert(running_ > 0);
     --running_;
 
-    auto it = jobs_.begin();  // Find the oldest job.
-    if (it != jobs_.end())
+    // Find the next job, discarding any cancelled jobs.
+    shared_ptr<function<void()>> job_p;
+    while (!queue_.empty())
     {
-        auto job = move(it->second);
-        jobs_.erase(it);
-        schedule_now(job);
+        job_p = queue_.front();
+        assert(job_p);
+        queue_.pop();
+        if (*job_p != nullptr)
+        {
+            break;
+        }
+    }
+
+    // If we found an uncancelled job, call it.
+    if (job_p && *job_p)
+    {
+        schedule_now(*job_p);
     }
 }
 
