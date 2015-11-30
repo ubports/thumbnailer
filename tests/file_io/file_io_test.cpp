@@ -69,7 +69,7 @@ TEST(file_io, read_write)
     ASSERT_NE(-1, in_fd);
     out_file = TESTBINDIR "/out.jpg";
     unlink(out_file.c_str());
-    write_file(in_fd, out_file);
+    write_file(out_file, in_fd);
     close(in_fd);
     cmd = "cmp " + in_file + " " + out_file;
     rc = system(cmd.c_str());
@@ -144,7 +144,7 @@ TEST(file_io, exceptions)
     {
         int fd = open("/dev/zero", O_WRONLY);
         ASSERT_NE(-1, fd);
-        write_file(fd, "no_such_dir/no_such_file");
+        write_file("no_such_dir/no_such_file", fd);
         FAIL();
     }
     catch (runtime_error const& e)

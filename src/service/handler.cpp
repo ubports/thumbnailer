@@ -308,7 +308,12 @@ QByteArray Handler::create()
         return QByteArray();
     }
 
-    return p->request->thumbnail();
+    QByteArray art_image = p->request->thumbnail();
+    if (art_image.size() == 0)
+    {
+        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
+    }
+    return art_image;
 }
 
 void Handler::createFinished()
@@ -335,14 +340,7 @@ void Handler::createFinished()
         return;
     }
     // LCOV_EXCL_STOP
-    if (ba_error.ba.size() != 0)
-    {
-        sendThumbnail(ba_error.ba);
-    }
-    else
-    {
-        sendError("Handler::createFinished(): could not get thumbnail for " + details() + ": " + status());
-    }
+    sendThumbnail(ba_error.ba);
 }
 
 void Handler::sendThumbnail(QByteArray const& ba)

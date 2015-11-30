@@ -159,7 +159,7 @@ void write_file(int in_fd, int out_fd)
 
 // Write contents of fd to path.
 
-void write_file(int fd, string const& path)
+void write_file(string const& path, int fd)
 {
     FdPtr out_fd(open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0600), do_close);
     if (out_fd.get() == -1)
