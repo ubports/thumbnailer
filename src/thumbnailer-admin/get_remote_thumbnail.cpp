@@ -104,7 +104,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
         {
             throw reply.error().message();
         }
-        QDBusUnixFileDescriptor thumbnail_fd = reply.value();
+        QByteArray thumbnail = reply.value();
 
         string suffix = command_ == QLatin1String("get-artist") ? "artist" : "album";
         string inpath = (artist_ + "_" + album_).toStdString() + "_" + suffix;
@@ -112,7 +112,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
         replace(inpath.begin(), inpath.end(), '/', '-');
 
         string out_path = make_output_path(inpath, size_, output_dir_.toStdString());
-        write_file(thumbnail_fd.fileDescriptor(), out_path);
+        write_file(out_path, thumbnail.data(), thumbnail.size());
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)

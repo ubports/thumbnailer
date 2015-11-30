@@ -4,24 +4,24 @@
       <arg direction="in" type="s" name="artist" />
       <arg direction="in" type="s" name="album" />
       <arg direction="in" type="(ii)" name="requestedSize" />
-      <arg direction="out" type="h" name="fd" />
+      <arg direction="out" type="ay" name="thumbnail" />
       <annotation name="org.qtproject.QtDBus.QtTypeName.In2" value="QSize" />
-      <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="QByteArray" />
     </method>
     <method name="GetArtistArt">
       <arg direction="in" type="s" name="artist" />
       <arg direction="in" type="s" name="album" />
       <arg direction="in" type="(ii)" name="requestedSize" />
-      <arg direction="out" type="h" name="fd" />
+      <arg direction="out" type="ay" name="thumbnail" />
       <annotation name="org.qtproject.QtDBus.QtTypeName.In2" value="QSize" />
-      <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="QByteArray" />
     </method>
     <method name="GetThumbnail">
       <arg direction="in" type="s" name="filename" />
       <arg direction="in" type="(ii)" name="requestedSize" />
-      <arg direction="out" type="h" name="fd" />
+      <arg direction="out" type="ay" name="thumbnail" />
       <annotation name="org.qtproject.QtDBus.QtTypeName.In1" value="QSize" />
-      <annotation name="org.gtk.GDBus.C.UnixFD" value="true" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="QByteArray" />
     </method>
   </interface>
 </node>

@@ -257,6 +257,12 @@ Image::Image(string const& data, QSize requested_size)
     load(reader, requested_size);
 }
 
+Image::Image(QByteArray const& ba, QSize requested_size)
+{
+    BufferReader reader(reinterpret_cast<unsigned char const*>(ba.data()), ba.size());
+    load(reader, requested_size);
+}
+
 Image::Image(int fd, QSize requested_size)
 {
     FdReader reader(fd);

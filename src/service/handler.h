@@ -29,7 +29,6 @@
 #include <QObject>
 #include <QDBusConnection>
 #include <QDBusMessage>
-#include <QDBusUnixFileDescriptor>
 #include <QSize>
 
 class QThreadPool;
@@ -82,11 +81,11 @@ Q_SIGNALS:
     void finished();
 
 private:
-    void sendThumbnail(QDBusUnixFileDescriptor const& unix_fd);
+    void sendThumbnail(QByteArray const& ba);
     void sendError(QString const& error);
     void gotCredentials(CredentialsCache::Credentials const& credentials);
-    QDBusUnixFileDescriptor check();
-    QDBusUnixFileDescriptor create();
+    QByteArray check();
+    QByteArray create();
 
     std::unique_ptr<HandlerPrivate> p;
 };

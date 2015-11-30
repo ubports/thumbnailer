@@ -79,7 +79,7 @@ static string tmp_dir = []
 
 // Atomically write contents to filename.
 
-void write_file(string const& filename, string const& contents)
+void write_file(string const& filename, char const* buf, size_t len)
 {
     using namespace boost::filesystem;
 
@@ -97,14 +97,14 @@ void write_file(string const& filename, string const& contents)
     {
         FdPtr fd_ptr(fd, do_close);
 
-        int rc = write(fd_ptr.get(), &contents[0], contents.size());
+        int rc = write(fd_ptr.get(), buf, len);
         if (rc == -1)
         {
             // LCOV_EXCL_START
             throw runtime_error("write_file(): cannot write to \"" + filename + "\": " + safe_strerror(errno));
             // LCOV_EXCL_STOP
         }
-        if (string::size_type(rc) != contents.size())
+        if (size_t(rc) != len)
         {
             throw runtime_error("write_file(): short write for \"" + filename + "\"");  // LCOV_EXCL_LINE
         }
@@ -118,6 +118,16 @@ void write_file(string const& filename, string const& contents)
                             safe_strerror(errno));
         // LCOV_EXCL_STOP
     }
+}
+
+void write_file(string const& filename, string const& contents)
+{
+    write_file(filename, contents.data(), contents.size());
+}
+
+void write_file(string const& filename, QByteArray const& contents)
+{
+    write_file(filename, contents.data(), contents.size());
 }
 
 // Write contents of in_fd to out_fd, using current read position of in_fd.

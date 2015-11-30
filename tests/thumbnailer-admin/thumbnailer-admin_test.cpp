@@ -562,16 +562,14 @@ TEST_F(AdminTest, bad_files)
 {
     AdminRunner ar;
 
-    EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file", QString::fromStdString(temp_dir())}));
     EXPECT_TRUE(starts_with(ar.stderr(),
                             "thumbnailer-admin: DBusInterface::GetThumbnail(): no_such_file: unity::ResourceException: Thumbnailer::get_thumbnail():\n    boost::filesystem::canonical: No such file or directory:"))
         << ar.stderr();
 
     EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", "no_such_directory"}));
-    EXPECT_EQ(
-        "thumbnailer-admin: GetLocalThumbnail::run(): write_file(): "
-        "cannot open no_such_directory/orientation-2_0x0.jpg: No such file or directory\n",
-        ar.stderr())
+    EXPECT_TRUE(starts_with(ar.stderr(),
+                            "thumbnailer-admin: GetLocalThumbnail::run(): write_file(): mkstemp() failed for "))
         << ar.stderr();
 }
 

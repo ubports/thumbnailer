@@ -49,10 +49,9 @@ public:
     DBusInterface& operator=(DBusInterface&) = delete;
 
 public Q_SLOTS:
-    QDBusUnixFileDescriptor GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
-    QDBusUnixFileDescriptor GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
-    QDBusUnixFileDescriptor GetThumbnail(QString const& filename,
-                                         QSize const& requestedSize);
+    QByteArray GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QByteArray GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QByteArray GetThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
     void queueRequest(Handler* handler);
