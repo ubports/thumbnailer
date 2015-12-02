@@ -45,35 +45,22 @@ namespace service
 namespace
 {
 
-#if defined(__arm__)
-
 // TODO: Hack to work around gstreamer problems.
 //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
 
 int adjusted_limit(int limit)
 {
-    int new_limit = limit;
-
+#if defined(__arm__)
     // Only adjust if max-extractions is at its default of 0.
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
-        new_limit = 1;
-        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for Arm";
+        limit = 1;
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << limit << "for Arm";
     }
-    return new_limit;
-}
-
-#else
-
-// Not on Arm, leave as is.
-
-int adjusted_limit(int limit)
-{
+#endif
     return limit;
 }
-
-#endif
 
 }
 
