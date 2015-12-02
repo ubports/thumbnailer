@@ -320,25 +320,6 @@ TEST_F(ThumbnailerTest, clear)
     EXPECT_EQ(0, stats.failure_stats.hits());
 }
 
-TEST_F(ThumbnailerTest, DISABLED_replace_photo)
-{
-    string testfile = tempdir_path() + "/foo.jpg";
-    ASSERT_EQ(0, link(TEST_IMAGE, testfile.c_str()));
-
-    Thumbnailer tn;
-    auto request = tn.get_thumbnail(testfile, QSize(640, 640));
-
-    // Replace test image with a different file with different
-    // dimensions so we can tell which one is thumbnailed.
-    ASSERT_EQ(0, unlink(testfile.c_str()));
-    ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
-
-    string data = request->thumbnail();
-    Image img(data);
-    EXPECT_EQ(640, img.width());
-    EXPECT_EQ(480, img.height());
-}
-
 TEST_F(ThumbnailerTest, thumbnail_video)
 {
     Thumbnailer tn;
@@ -379,30 +360,6 @@ TEST_F(ThumbnailerTest, thumbnail_video)
         EXPECT_EQ(500, img.width());
         EXPECT_EQ(281, img.height());
     }
-}
-
-TEST_F(ThumbnailerTest, DISABLED_replace_video)
-{
-    string testfile = tempdir_path() + "/foo.ogv";
-    ASSERT_EQ(0, link(TEST_VIDEO, testfile.c_str())) << strerror(errno);
-
-    Thumbnailer tn;
-    auto request = tn.get_thumbnail(testfile, QSize(1920, 1920));
-    ASSERT_EQ("", request->thumbnail());
-
-    // Replace test image with a different file with different
-    // dimensions so we can tell which one is thumbnailed.
-    ASSERT_EQ(0, unlink(testfile.c_str()));
-    ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
-
-    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-    request->download(chrono::milliseconds(15000));
-    ASSERT_TRUE(spy.wait(20000));
-
-    string data = request->thumbnail();
-    Image img(data);
-    EXPECT_EQ(1920, img.width());
-    EXPECT_EQ(1080, img.height());
 }
 
 TEST_F(ThumbnailerTest, thumbnail_song)
@@ -884,7 +841,7 @@ TEST_F(RemoteServer, server_error)
     // We do this twice, so we get coverage on the transient network error handling.
     for (int i = 0; i < 2; ++i)
     {
-        auto request = tn.get_album_art("error", "403", QSize(10, 10));
+        auto request = tn.get_album_art("error", "429", QSize(10, 10));
         EXPECT_EQ("", request->thumbnail());
 
         QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
