@@ -726,15 +726,7 @@ string const LAST_NETWORK_FAIL_TIME_KEY = "/*** LAST_NETWORK_FAIL_TIME ***/";
 Thumbnailer::Thumbnailer()
     : downloader_(new UbuntuServerDownloader())
 {
-    string xdg_base = g_get_user_cache_dir();
-    if (xdg_base == "")
-    {
-        // LCOV_EXCL_START
-        string s("Thumbnailer(): Could not determine cache dir.");
-        throw runtime_error(s);
-        // LCOV_EXCL_STOP
-    }
-
+    string xdg_base = g_get_user_cache_dir();  // Always returns something, even HOME and XDG_CACHE_HOME are not set.
     string cache_dir = xdg_base + "/unity-thumbnailer";
     make_directories(cache_dir, 0700);
 
