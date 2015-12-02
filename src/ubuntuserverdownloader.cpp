@@ -76,27 +76,6 @@ bool network_is_connected()
 
 }
 
-bool network_down_error(QNetworkReply::NetworkError error)
-{
-    switch (error)
-    {
-        // add here all the cases that you consider as network errors
-        case QNetworkReply::ConnectionRefusedError:
-        case QNetworkReply::HostNotFoundError:
-        case QNetworkReply::OperationCanceledError:
-        case QNetworkReply::TemporaryNetworkFailureError:
-        case QNetworkReply::NetworkSessionFailedError:
-        case QNetworkReply::ProxyConnectionRefusedError:
-        case QNetworkReply::ProxyConnectionClosedError:
-        case QNetworkReply::ProxyNotFoundError:
-        case QNetworkReply::ProxyTimeoutError:
-        case QNetworkReply::UnknownNetworkError:
-            return true;
-        default:
-            return false;
-    }
-}
-
 class UbuntuServerArtReply : public ArtReply
 {
 #ifdef __clang__
@@ -112,16 +91,16 @@ public:
     Q_DISABLE_COPY(UbuntuServerArtReply)
 
     // LCOV_EXCL_START
+    // TODO: Hack for QNetworkAccessManager. Creates a failed network reply
+    //       used when we conclude that the device is in flight mode.
     UbuntuServerArtReply(QString const& url)
         : ArtReply(nullptr)
-        , is_running_(false)
-        , error_string_(QStringLiteral("network down"))
-        , error_(QNetworkReply::TemporaryNetworkFailureError)
         , url_string_(url)
-        , succeeded_(false)
-        , network_down_error_(true)
+        , error_string_(QStringLiteral("network down"))
+        , status_(ArtReply::network_down)
         , reply_(nullptr)
     {
+        assert(!url.isEmpty());
     }
     // LCOV_EXCL_STOP
 
@@ -129,49 +108,32 @@ public:
                          QNetworkReply* reply,
                          chrono::milliseconds timeout)
         : ArtReply(nullptr)
-        , is_running_(false)
-        , error_(QNetworkReply::NoError)
         , url_string_(url)
-        , succeeded_(false)
-        , network_down_error_(false)
+        , status_(ArtReply::not_finished)
         , reply_(reply)
     {
+        assert(!url.isEmpty());
         assert(reply_);
+
         connect(&timer_, &QTimer::timeout, this, &UbuntuServerArtReply::timeout);
         timer_.setSingleShot(true);
         timer_.start(timeout.count());
     }
 
-    bool succeeded() const override
+    Status status() const override
     {
-        return succeeded_;
-    };
-
-    bool is_running() const override
-    {
-        return is_running_;
-    };
+        return status_;
+    }
 
     QString error_string() const override
     {
+        assert(status_ != ArtReply::Status::not_finished);
         return error_string_;
-    }
-
-    bool not_found_error() const override
-    {
-        switch (error_)
-        {
-            // add here all the cases that you consider as source not found
-            case QNetworkReply::ContentNotFoundError:
-            case QNetworkReply::ContentGoneError:
-                return true;
-            default:
-                return false;
-        }
     }
 
     QByteArray const& data() const override
     {
+        assert(status_ != ArtReply::Status::not_finished);
         return data_;
     }
 
@@ -180,9 +142,56 @@ public:
         return url_string_;
     }
 
-    bool network_down() const override
+    void set_status()
     {
-        return network_down_error_;
+        status_ = ArtReply::Status::temporary_error;  // Default, in case none of the tests below match.
+        error_string_ = reply_->errorString();
+
+        auto error_code = reply_->error();
+        switch (error_code)
+        {
+            case QNetworkReply::NoError:
+                status_ = ArtReply::Status::success;
+                return;
+            case QNetworkReply::ContentNotFoundError:
+            case QNetworkReply::ContentGoneError:
+                // Authoritive "no artwork available" response (404 or 410).
+                status_ = ArtReply::Status::not_found;
+                return;
+            case QNetworkReply::ProtocolInvalidOperationError:
+                // Probably HTTP error 400 (Bad Request) but could
+                // potentially be something else that is surprising,
+                // deal with it below.
+                break;
+            default:
+                // All the other errors indicate things that should never happen,
+                // such as BackgroundRequestNotAllowedError, or a temporary
+                // network error, such as TimeoutError.
+                return;
+        }
+
+        // Pull out the HTTP response code.
+        QVariant att = reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+        if (att.type() != QVariant::Type::Int)
+        {
+            abort();  // TODO: remove this!
+            return;  // LCOV_EXCL_LINE
+        }
+        auto http_code = att.toInt();
+        qDebug() << "unexpected HTTP error" << http_code << "for" << url_string_;
+
+        // Classify the HTTP error as permanent or potentially recoverable.
+        switch (http_code)
+        {
+            // No chance of recovery with a retry.
+            case 400:  // Bad Request
+            case 403:  // Forbidden
+                status_ = ArtReply::Status::hard_error;
+                break;
+            default:
+                qDebug() << "unexpected QNetworkReply::NetworkError" << int(error_code) << "for" << url_string_;
+                break;
+        }
     }
 
 public Q_SLOTS:
@@ -200,38 +209,26 @@ public Q_SLOTS:
 
         timer_.stop();
 
-        QNetworkReply* reply = static_cast<QNetworkReply*>(sender());
-        assert(reply);
-
-        is_running_ = false;
-        error_ = reply->error();
-        if (error_)
+        set_status();
+        if (status_ == ArtReply::Status::success)
         {
-            error_string_ = reply->errorString();
-            network_down_error_ = network_down_error(error_);
-        }
-        else
-        {
-            data_ = reply->readAll();
-            succeeded_ = true;
+            data_ = reply_->readAll();
         }
         Q_EMIT finished();
-        reply->deleteLater();
     }
 
     void timeout()
     {
+        status_ = ArtReply::Status::temporary_error;
         reply_->abort();
+        error_string_ = QStringLiteral("Request timed out");
     }
 
 private:
-    bool is_running_;
+    QString const url_string_;
     QString error_string_;
-    QNetworkReply::NetworkError error_;
     QByteArray data_;
-    QString url_string_;
-    bool succeeded_;
-    bool network_down_error_;
+    ArtReply::Status status_;
     QNetworkReply* reply_;
     QTimer timer_;
 };
@@ -267,24 +264,29 @@ QUrl get_artist_art_url(QString const& artist, QString const& album, QString con
     return get_art_url(ARTIST_ART_BASE_URL, artist, album, api_key);
 }
 
-UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
-    : ArtDownloader(parent)
-    , network_manager_(make_shared<QNetworkAccessManager>(this))
+namespace
 {
-    set_api_key();
-}
 
-void UbuntuServerDownloader::set_api_key()
+QString api_key()
 {
     // the API key is not expected to change, so don't monitor it
     Settings settings;
 
-    api_key_ = QString::fromStdString(settings.art_api_key());
-    if (api_key_.isEmpty())
+    auto key = QString::fromStdString(settings.art_api_key());
+    if (key.isEmpty())
     {
-        // TODO do something with the error
         qCritical() << "Failed to get API key";  // LCOV_EXCL_LINE
     }
+    return key;
+}
+
+}  // namespace
+
+UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
+    : ArtDownloader(parent)
+    , api_key_(api_key())
+    , network_manager_(make_shared<QNetworkAccessManager>(this))
+{
 }
 
 shared_ptr<ArtReply> UbuntuServerDownloader::download_album(QString const& artist,

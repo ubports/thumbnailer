@@ -355,9 +355,11 @@ string RequestBase::thumbnail()
             {
                 image_data = fetch(target_size);
                 status_ = image_data.status;
+                cerr << "fetch did not throw" << endl;
             }
             catch (...)
             {
+                cerr << "fetch threw" << endl;
                 // Record any failure due to an exception. Because GStreamer
                 // is flaky and can hang, if we extracted via vs-thumb and got
                 // an error, we don't add the failure to the failure cache
@@ -376,6 +378,7 @@ string RequestBase::thumbnail()
                     //       does not throw when a remote access fails. Consider unifying
                     //       the error handling in ImageData to do never throw at all,
                     //       so everthing can be handled via the ImageData::status member;
+                    cerr << "1 Disabling network" << endl;
                     thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
                 }
                 image_data.status = FetchStatus::error;
@@ -383,6 +386,7 @@ string RequestBase::thumbnail()
             }
             switch (status_)
             {
+                cerr << "status: " << int(status_) << endl;
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
                     break;
                 case FetchStatus::needs_download:  // Caller will call download().
@@ -430,6 +434,7 @@ string RequestBase::thumbnail()
                     }
                     else
                     {
+                        cerr << "2 Disabling network" << endl;
                         thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
                     }
                     // TODO: That's really poor. Should store the error data so we can produce
@@ -646,17 +651,18 @@ RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::needs_download, Location::remote);
     }
-    if (artreply->succeeded())
+    // TODO: make this a switch
+    if (artreply->status() == ArtReply::Status::success)
     {
         auto raw_data = artreply->data();
         Image full_size(string(raw_data.data(), raw_data.size()));
         return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
     }
-    if (artreply->not_found_error())
+    if (artreply->status() == ArtReply::Status::not_found)
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::not_found, Location::remote);
     }
-    if (artreply->network_down())
+    if (artreply->status() == ArtReply::Status::network_down)
     {
         return RequestBase::ImageData(RequestBase::FetchStatus::no_network, Location::remote);
     }
@@ -804,9 +810,9 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
                                                         string const& album,
                                                         QSize const& requested_size)
 {
-    if (artist.empty() && album.empty())
+    if (album.empty())
     {
-        throw unity::InvalidArgumentException("Thumbnailer::get_album_art(): both artist and album are empty");
+        throw unity::InvalidArgumentException("Thumbnailer::get_album_art(): album is empty");
     }
 
     try
@@ -825,9 +831,9 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
                                                          string const& album,
                                                          QSize const& requested_size)
 {
-    if (artist.empty() && album.empty())
+    if (artist.empty())
     {
-        throw unity::InvalidArgumentException("Thumbnailer::get_artist_art(): both artist and album are empty");
+        throw unity::InvalidArgumentException("Thumbnailer::get_artist_art(): artist is empty");
     }
 
     try

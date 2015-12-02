@@ -788,18 +788,31 @@ TEST_F(RemoteServer, no_such_local_image)
     }
 }
 
+TEST_F(RemoteServer, bad_request)
+{
+    Thumbnailer tn;
+
+    auto request = tn.get_artist_art("error", "400", QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(15000));
+    EXPECT_EQ("", request->thumbnail());
+}
+
 TEST_F(RemoteServer, get_artist_empty_strings)
 {
     Thumbnailer tn;
 
     try
     {
-        tn.get_artist_art("", "", QSize(10, 10));
+        tn.get_artist_art("", "some album", QSize(10, 10));
         FAIL();
     }
     catch (unity::InvalidArgumentException const& e)
     {
-        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_artist_art(): both artist and album are empty",
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_artist_art(): artist is empty",
                      e.what()) << e.what();
     }
 }
@@ -810,12 +823,12 @@ TEST_F(RemoteServer, get_album_empty_strings)
 
     try
     {
-        tn.get_album_art("", "", QSize(10, 10));
+        tn.get_album_art("some artis", "", QSize(10, 10));
         FAIL();
     }
     catch (unity::InvalidArgumentException const& e)
     {
-        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_album_art(): both artist and album are empty",
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_album_art(): album is empty",
                      e.what()) << e.what();
     }
 }

@@ -37,13 +37,12 @@ public:
 
     virtual ~ArtReply() = default;
 
-    virtual bool succeeded() const = 0;
-    virtual bool is_running() const = 0;
+    enum Status { not_finished, success, not_found, temporary_error, hard_error, network_down };
+
+    virtual Status status() const = 0;
     virtual QString error_string() const = 0;
-    virtual bool not_found_error() const = 0;
     virtual QByteArray const& data() const = 0;
     virtual QString url_string() const = 0;
-    virtual bool network_down() const = 0;
 
 Q_SIGNALS:
     void finished();
