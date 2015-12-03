@@ -112,7 +112,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
         replace(inpath.begin(), inpath.end(), '/', '-');
 
         string out_path = make_output_path(inpath, size_, output_dir_.toStdString());
-        write_file(out_path, thumbnail.data(), thumbnail.size());
+        write_file(out_path, thumbnail);
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)

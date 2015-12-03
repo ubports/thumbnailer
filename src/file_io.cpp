@@ -127,7 +127,7 @@ void write_file(string const& filename, string const& contents)
 
 void write_file(string const& filename, QByteArray const& contents)
 {
-    write_file(filename, contents.data(), contents.size());
+    write_file(filename, contents.constData(), contents.size());
 }
 
 // Write contents of in_fd to out_fd, using current read position of in_fd.
