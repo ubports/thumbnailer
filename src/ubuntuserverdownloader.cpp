@@ -158,6 +158,11 @@ public:
                 // Authoritive "no artwork available" response (404 or 410).
                 status_ = ArtReply::Status::not_found;
                 return;
+            case QNetworkReply::OperationCanceledError:
+                // Happens if we call reply_->abort() after a timeout.
+                error_string_ = QStringLiteral("Request timed out");
+                qDebug() << error_string_ << "for" << url_string_;
+                return;
             case QNetworkReply::ProtocolInvalidOperationError:
                 // Probably HTTP error 400 (Bad Request) but could
                 // potentially be something else that is surprising,
@@ -167,6 +172,7 @@ public:
                 // All the other errors indicate things that should never happen,
                 // such as BackgroundRequestNotAllowedError, or a temporary
                 // network error, such as TimeoutError.
+                qDebug() << "unexpected QNetworkReply::NetworkError" << int(error_code) << "for" << url_string_;
                 return;
         }
 
@@ -174,7 +180,6 @@ public:
         QVariant att = reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute);
         if (att.type() != QVariant::Type::Int)
         {
-            abort();  // TODO: remove this!
             return;  // LCOV_EXCL_LINE
         }
         auto http_code = att.toInt();
@@ -221,7 +226,6 @@ public Q_SLOTS:
     {
         status_ = ArtReply::Status::temporary_error;
         reply_->abort();
-        error_string_ = QStringLiteral("Request timed out");
     }
 
 private:

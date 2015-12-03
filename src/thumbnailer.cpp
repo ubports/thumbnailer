@@ -80,31 +80,28 @@ public:
     virtual ~RequestBase() = default;
     string thumbnail() override;
     FetchStatus status() const override;
+
     string const& key() const override
     {
         return key_;
     }
+
     void check_client_credentials(uid_t, std::string const&) override
     {
     }
+
     enum class CachePolicy
     {
         cache_fullsize,
         dont_cache_fullsize
     };
+
     struct ImageData
     {
         FetchStatus status;
         Image image;
         CachePolicy cache_policy;
         Location location;
-
-        ImageData()
-            : status(FetchStatus::error)
-            , cache_policy(CachePolicy::dont_cache_fullsize)
-            , location(Location::local)
-        {
-        }
 
         ImageData(Image const& image, CachePolicy policy, Location location)
             : status(FetchStatus::downloaded)
@@ -114,9 +111,9 @@ public:
         {
         }
 
-        ImageData(FetchStatus status, Location location)
+        ImageData(FetchStatus status, CachePolicy policy, Location location)
             : status(status)
-            , cache_policy(CachePolicy::dont_cache_fullsize)
+            , cache_policy(policy)
             , location(location)
         {
         }
@@ -125,12 +122,22 @@ public:
         ImageData& operator=(ImageData&&) = default;
     };
 
+    void set_error_message(string const& msg)
+    {
+        error_message_ = msg;
+    }
+
+    string error_message() const
+    {
+        return error_message_;
+    }
+
 protected:
     RequestBase(Thumbnailer* thumbnailer,
                 string const& key,
                 QSize const& requested_size,
                 chrono::milliseconds timeout);
-    virtual ImageData fetch(QSize const& size_hint) = 0;
+    virtual ImageData fetch(QSize const& size_hint) noexcept = 0;
 
     ArtDownloader* downloader() const
     {
@@ -158,6 +165,7 @@ protected:
 
     Thumbnailer* thumbnailer_;
     string key_;
+    string error_message_;
     // TODO: Make this a const member again once we remove the hack
     //       that adjusts invalid QSizes to 128x128.
     //QSize const requested_size_;
@@ -189,7 +197,7 @@ public:
     void check_client_credentials(uid_t user, std::string const& label) override;
 
 protected:
-    ImageData fetch(QSize const& size_hint) override;
+    ImageData fetch(QSize const& size_hint) noexcept override;
     void download(std::chrono::milliseconds timeout) override;
 
 private:
@@ -215,7 +223,7 @@ public:
                  chrono::milliseconds timeout);
 
 protected:
-    ImageData fetch(QSize const& size_hint) override;
+    ImageData fetch(QSize const& size_hint) noexcept override;
     void download(std::chrono::milliseconds timeout) override;
 
 private:
@@ -242,7 +250,7 @@ public:
                   chrono::milliseconds timeout);
 
 protected:
-    ImageData fetch(QSize const& size_hint) override;
+    ImageData fetch(QSize const& size_hint) noexcept override;
     void download(std::chrono::milliseconds timeout) override;
 
 private:
@@ -350,40 +358,9 @@ string RequestBase::thumbnail()
                 status_ = ThumbnailRequest::FetchStatus::cached_failure;
                 return "";
             }
-            ImageData image_data;
-            try
-            {
-                image_data = fetch(target_size);
-                status_ = image_data.status;
-                cerr << "fetch did not throw" << endl;
-            }
-            catch (...)
-            {
-                cerr << "fetch threw" << endl;
-                // Record any failure due to an exception. Because GStreamer
-                // is flaky and can hang, if we extracted via vs-thumb and got
-                // an error, we don't add the failure to the failure cache
-                // because the next attempt may work again. For extraction
-                // via vs-thumb, location is local and policy is cache_fullsize.
-                if (image_data.location == Location::local)
-                {
-                    if (image_data.cache_policy != CachePolicy::cache_fullsize)
-                    {
-                        thumbnailer_->failure_cache_->put(key_, "");  // It wasn't vs-thumb that failed.
-                    }
-                }
-                else
-                {
-                    // TODO: This appears to be impossible to cover because because fetch()
-                    //       does not throw when a remote access fails. Consider unifying
-                    //       the error handling in ImageData to do never throw at all,
-                    //       so everthing can be handled via the ImageData::status member;
-                    cerr << "1 Disabling network" << endl;
-                    thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
-                }
-                image_data.status = FetchStatus::error;
-                throw;
-            }
+
+            ImageData image_data = fetch(target_size);
+            status_ = image_data.status;
             switch (status_)
             {
                 cerr << "status: " << int(status_) << endl;
@@ -397,11 +374,12 @@ string RequestBase::thumbnail()
                         auto now = chrono::system_clock::now();
                         if (now <= thumbnailer_->nw_fail_time_ + chrono::hours(thumbnailer_->retry_error_hours_))
                         {
+                            qWarning() << "RequestBase::thumbnail(): server access retry time not reached yet";
                             status_ = ThumbnailRequest::FetchStatus::cached_failure;
                         }
                     }
                     return "";
-                case FetchStatus::no_network:      // Network down, try again next time.
+                case FetchStatus::network_down:  // Try again next time.
                     return "";
                 case FetchStatus::not_found:
                 {
@@ -414,10 +392,18 @@ string RequestBase::thumbnail()
                     {
                         later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_not_found_hours_);
                     }
+                    cerr << "not found, adding to failure cache" << endl;
                     thumbnailer_->failure_cache_->put(key_, "", later);
                     return "";
                 }
-                case FetchStatus::error:
+                case FetchStatus::hard_error:
+                {
+                    // No chance of recovery, the problem is with the request data.
+                    cerr << "adding failure cache entry" << endl;
+                    thumbnailer_->failure_cache_->put(key_, "");
+                    return "";
+                }
+                case FetchStatus::temporary_error:
                 {
                     // Some non-authoritative failure, such as the server not responding,
                     // or an out-of-process codec reporting an error.
@@ -426,20 +412,19 @@ string RequestBase::thumbnail()
                     // For remote files, we record the time of this failure.
                     if (image_data.location == Location::local)
                     {
-                        // TODO: This is currently uncovered because we handle this earlier,
-                        //       when fetch() throws. Consider unifying
-                        //       the error handling in ImageData to do never throw at all,
-                        //       so everthing can be handled here.
-                        thumbnailer_->failure_cache_->put(key_, "");
+                        if (image_data.cache_policy == CachePolicy::dont_cache_fullsize)
+                        {
+                            cerr << "temporary error, adding to failure cache" << endl;
+                            thumbnailer_->failure_cache_->put(key_, "");
+                        }
                     }
                     else
                     {
-                        cerr << "2 Disabling network" << endl;
+                        qWarning() << "RequestBase::thumbnail(): unexpected download error, server access delayed for"
+                                   << thumbnailer_->retry_error_hours_ << "hours";
                         thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
                     }
-                    // TODO: That's really poor. Should store the error data so we can produce
-                    //       a proper diagnostic.
-                    throw runtime_error("fetch() failed");
+                    return "";
                 }
                 default:
                     abort();  // LCOV_EXCL_LINE  // Impossible
@@ -474,7 +459,7 @@ string RequestBase::thumbnail()
     }
     catch (std::exception const& e)
     {
-        status_ = FetchStatus::error;
+        cerr << "throwing from thumbnail()" << endl;
         throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
     }
 }
@@ -543,77 +528,88 @@ void LocalThumbnailRequest::check_client_credentials(uid_t user,
 
 }
 
-RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
+RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noexcept
 {
-    if (image_extractor_)
+    // Default in case something below throws.
+    ImageData image_data(FetchStatus::hard_error, CachePolicy::dont_cache_fullsize, Location::local);
+    try
     {
-        // The image data has been extracted via vs-thumb
-        auto id = ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
-        return id;
-    }
-
-    // Work out content type.
-    gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
-    assert(file);  // Cannot fail according to doc.
-
-    gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                                               G_FILE_QUERY_INFO_NONE,
-                                               /* cancellable */ NULL,
-                                               /* error */ NULL));  // TODO: need decent error reporting
-    if (!info)
-    {
-        return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
-    }
-
-    string content_type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-    if (content_type.empty())
-    {
-        return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
-    }
-
-    if (content_type == "application/octet-stream")
-    {
-        // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
-        // for all files without an extension (as it only uses the extension to
-        // determine file type). In these cases, we fall back to the full content
-        // type detector.
-        gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                                        G_FILE_QUERY_INFO_NONE,
-                                                        /* cancellable */ NULL,
-                                                        /* error */ NULL));
-        if (!full_info)
+        if (image_extractor_)
         {
-            return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+            // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
+            image_data = ImageData(FetchStatus::temporary_error, CachePolicy::cache_fullsize, Location::local);
+            return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         }
 
-        content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-        if (content_type.empty())
+        // Work out content type.
+        gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
+        assert(file);  // Cannot fail according to doc.
+
+        cerr << "file: " << filename_ << endl;
+        gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
+                                                   G_FILE_QUERY_INFO_NONE,
+                                                   /* cancellable */ NULL,
+                                                   /* error */ NULL));
+        string content_type = "application/octet-stream";
+        if (info)
         {
-            return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
+            string content_type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
+            if (content_type.empty())
+            {
+                return image_data;  // LCOV_EXCL_LINE
+            }
+        }
+
+        if (content_type == "application/octet-stream")
+        {
+            // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
+            // for all files without an extension (as it only uses the extension to
+            // determine file type). In these cases, we fall back to the full content
+            // type detector.
+            gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
+                                                            G_FILE_QUERY_INFO_NONE,
+                                                            /* cancellable */ NULL,
+                                                            /* error */ NULL));  // TODO: need decent error reporting
+            if (!full_info)
+            {
+                return image_data;  // LCOV_EXCL_LINE
+            }
+
+            content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
+            if (content_type.empty())
+            {
+                return image_data;  // LCOV_EXCL_LINE
+            }
+        }
+
+        // Call the appropriate image extractor and return the image data as JPEG (not scaled).
+        // We indicate that full-size images are to be cached only for audio and video files,
+        // for which extraction is expensive. For local images, we don't cache full size.
+
+        if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
+        {
+            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
+        }
+        if (content_type.find("image/") == 0)
+        {
+            FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
+            if (fd.get() < 0)
+            {
+                // LCOV_EXCL_START
+                throw runtime_error("LocalThumbnailRequest::fetch(): Could not open " + filename_ + ": " + safe_strerror(errno));
+                // LCOV_EXCL_STOP
+            }
+            Image scaled(fd.get(), size_hint);
+            return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
         }
     }
-
-    // Call the appropriate image extractor and return the image data as JPEG (not scaled).
-    // We indicate that full-size images are to be cached only for audio and video files,
-    // for which extraction is expensive. For local images, we don't cache full size.
-
-    if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
+    catch (std::exception const& e)
     {
-        return ImageData(FetchStatus::needs_download, Location::local);
+        cerr << "setting error message: " << e.what() << endl;
+        set_error_message(e.what());
+        return image_data;
     }
-    if (content_type.find("image/") == 0)
-    {
-        FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
-        if (fd.get() < 0)
-        {
-            // LCOV_EXCL_START
-            throw runtime_error("LocalThumbnailRequest::fetch(): Could not open " + filename_ + ": " + safe_strerror(errno));
-            // LCOV_EXCL_STOP
-        }
-        Image scaled(fd.get(), size_hint);
-        return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
-    }
-    return ImageData(FetchStatus::not_found, Location::local);
+    return ImageData(FetchStatus::not_found, image_data.cache_policy, Location::local);
 }
 
 void LocalThumbnailRequest::download(chrono::milliseconds timeout)
@@ -645,36 +641,57 @@ namespace
 // Logic for AlbumRequest::fetch() and ArtistRequest::fetch() is the same,
 // so we use this helper function for both.
 
-RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
+RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> const& artreply) noexcept
 {
+    assert(request);
+
+    RequestBase::ImageData image_data(RequestBase::FetchStatus::needs_download,
+                                      RequestBase::CachePolicy::cache_fullsize,
+                                      Location::remote);
     if (!artreply)
     {
-        return RequestBase::ImageData(RequestBase::FetchStatus::needs_download, Location::remote);
+        return image_data;
     }
-    // TODO: make this a switch
-    if (artreply->status() == ArtReply::Status::success)
+    cerr << "common fetch, setting error message" << endl;
+    request->set_error_message(artreply->error_string().toStdString());  // Default for below.
+    switch (artreply->status())
     {
-        auto raw_data = artreply->data();
-        Image full_size(string(raw_data.data(), raw_data.size()));
-        return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
+        case ArtReply::Status::success:
+        {
+            try
+            {
+                auto raw_data = artreply->data();
+                Image full_size(string(raw_data.data(), raw_data.size()));
+                return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
+            }
+            catch (std::exception const& e)
+            {
+                cerr << "setting error message: " << e.what() << endl;
+                request->set_error_message(e.what());
+            }
+        }
+        case ArtReply::Status::not_found:
+            image_data.status = RequestBase::FetchStatus::not_found;
+            return image_data;
+        case ArtReply::Status::temporary_error:
+            image_data.status = RequestBase::FetchStatus::temporary_error;
+            return image_data;
+        case ArtReply::Status::hard_error:
+            image_data.status = RequestBase::FetchStatus::hard_error;
+            return image_data;
+        case ArtReply::Status::network_down:
+            image_data.status = RequestBase::FetchStatus::network_down;
+            return image_data;
+        default:
+            abort();  // Impossible
     }
-    if (artreply->status() == ArtReply::Status::not_found)
-    {
-        return RequestBase::ImageData(RequestBase::FetchStatus::not_found, Location::remote);
-    }
-    if (artreply->status() == ArtReply::Status::network_down)
-    {
-        return RequestBase::ImageData(RequestBase::FetchStatus::no_network, Location::remote);
-    }
-    qCritical() << "common_fetch(): Request failed:" << artreply->error_string();
-    return RequestBase::ImageData(RequestBase::FetchStatus::error, Location::remote);
 }
 
 }  // namespace
 
-RequestBase::ImageData AlbumRequest::fetch(QSize const& /*size_hint*/)
+RequestBase::ImageData AlbumRequest::fetch(QSize const& /*size_hint*/) noexcept
 {
-    return common_fetch(artreply_);
+    return common_fetch(this, artreply_);
 }
 
 void AlbumRequest::download(chrono::milliseconds timeout)
@@ -698,9 +715,9 @@ ArtistRequest::ArtistRequest(Thumbnailer* thumbnailer,
 {
 }
 
-RequestBase::ImageData ArtistRequest::fetch(QSize const& /*size_hint*/)
+RequestBase::ImageData ArtistRequest::fetch(QSize const& /*size_hint*/) noexcept
 {
-    return common_fetch(artreply_);
+    return common_fetch(this, artreply_);
 }
 
 void ArtistRequest::download(chrono::milliseconds timeout)

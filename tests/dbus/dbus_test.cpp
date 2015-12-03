@@ -182,8 +182,8 @@ TEST_F(DBusTest, server_error)
         dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
     EXPECT_FALSE(reply.isValid());
     auto message = reply.error().message().toStdString();
-    // TODO: That's a seriously poor error message.
-    EXPECT_TRUE(boost::contains(message, "fetch() failed")) << message;
+    EXPECT_EQ("Handler::createFinished(): could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+              message) << message;
 }
 
 TEST_F(DBusTest, duplicate_requests)

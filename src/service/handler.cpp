@@ -423,7 +423,8 @@ void Handler::sendThumbnail(QDBusUnixFileDescriptor const& unix_fd)
 
 void Handler::sendError(QString const& error)
 {
-    if (p->request->status() == ThumbnailRequest::FetchStatus::error)
+    if (p->request->status() == ThumbnailRequest::FetchStatus::hard_error ||
+        p->request->status() == ThumbnailRequest::FetchStatus::temporary_error)
     {
         qWarning() << error;
     }
@@ -471,15 +472,17 @@ QString Handler::status() const
     case ThumbnailRequest::FetchStatus::cached_failure:
         return QStringLiteral("FAILED PREVIOUSLY");
     case ThumbnailRequest::FetchStatus::needs_download:
-        return QStringLiteral("NEEDS DOWNLOAD");  // LCOV_EXCL_LINE
+        return QStringLiteral("NEEDS DOWNLOAD");
     case ThumbnailRequest::FetchStatus::downloaded:
         return QStringLiteral("MISS");
     case ThumbnailRequest::FetchStatus::not_found:
         return QStringLiteral("NO ARTWORK");
-    case ThumbnailRequest::FetchStatus::no_network:
-        return QStringLiteral("NETWORK DOWN");  // LCOV_EXCL_LINE
-    case ThumbnailRequest::FetchStatus::error:
-        return QStringLiteral("ERROR");  // LCOV_EXCL_LINE
+    case ThumbnailRequest::FetchStatus::network_down:
+        return QStringLiteral("NETWORK DOWN");
+    case ThumbnailRequest::FetchStatus::hard_error:
+        return QStringLiteral("ERROR");
+    case ThumbnailRequest::FetchStatus::temporary_error:
+        return QStringLiteral("TEMPORARY ERROR");
     default:
         abort();  // LCOV_EXCL_LINE  // Impossible.
     }
