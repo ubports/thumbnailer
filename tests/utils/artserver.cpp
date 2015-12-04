@@ -79,7 +79,7 @@ ArtServer::~ArtServer()
     {
         qCritical() << "Failed to terminate fake art server";
     }
-    unsetenv("THUMBNAILER_UBUNTU_APIROOT");
+    unsetenv("THUMBNAILER_UBUNTU_SERVER_URL");
 }
 
 std::string const& ArtServer::apiroot() const
@@ -108,5 +108,5 @@ void ArtServer::unblock_access()
 
 void ArtServer::update_env()
 {
-    setenv("THUMBNAILER_UBUNTU_APIROOT", apiroot().c_str(), true);
+    setenv("THUMBNAILER_UBUNTU_SERVER_URL", apiroot().c_str(), true);
 }

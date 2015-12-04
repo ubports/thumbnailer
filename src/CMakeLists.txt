@@ -13,6 +13,7 @@ set_source_files_properties(settings.cpp PROPERTIES
 add_library(thumbnailer-static STATIC
     artdownloader.cpp
     check_access.cpp
+    env_vars.cpp
     file_io.cpp
     file_lock.cpp
     image.cpp

@@ -20,6 +20,7 @@
 #include <internal/ubuntuserverdownloader.h>
 
 #include <internal/artreply.h>
+#include <internal/env_vars.h>
 #include <settings.h>
 
 #include <QNetworkReply>
@@ -39,7 +40,6 @@ namespace
 
 #define SERVER_DOMAIN_NAME "dash.ubuntu.com"
 
-constexpr const char UBUNTU_SERVER_BASE_URL[] = "https://" SERVER_DOMAIN_NAME;
 constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
 constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
 }
@@ -58,7 +58,7 @@ namespace
 
 // TODO: Hack to work around QNetworkAccessManager problems when the device is in flight mode.
 
-bool network_is_connected()
+bool network_is_connected(QString const& domain_name)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -66,7 +66,7 @@ bool network_is_connected()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
     struct addrinfo *result;
-    if (getaddrinfo(SERVER_DOMAIN_NAME, "80", &hints, &result) != 0)
+    if (getaddrinfo(domain_name.toUtf8().constData(), "80", &hints, &result) != 0)
     {
         return false;  // LCOV_EXCL_LINE
     }
@@ -225,6 +225,7 @@ public Q_SLOTS:
     }
 
 private:
+    QString server_url_;
     bool is_running_;
     QString error_string_;
     QNetworkReply::NetworkError error_;
@@ -237,34 +238,20 @@ private:
 };
 
 // helper methods to retrieve image urls
-QUrl get_art_url(
-    QString const& base_url, QString const& artist, QString const& album, QString const& api_key)
+QUrl get_art_url(QString const& base_url,
+                 QString const& artist,
+                 QString const& album,
+                 QString const& api_key,
+                 QString const& server_url)
 {
-    QString prefix_api_root = UBUNTU_SERVER_BASE_URL;
-    char const* apiroot_c = getenv("THUMBNAILER_UBUNTU_APIROOT");
-    if (apiroot_c)
-    {
-        prefix_api_root = apiroot_c;
-    }
-
     QUrlQuery q;
     q.addQueryItem(QStringLiteral("artist"), artist);
     q.addQueryItem(QStringLiteral("album"), album);
     q.addQueryItem(QStringLiteral("key"), api_key);
 
-    QUrl url(prefix_api_root + "/" + base_url);
+    QUrl url(server_url + "/" + base_url);
     url.setQuery(q);
     return url;
-}
-
-QUrl get_album_art_url(QString const& artist, QString const& album, QString const& api_key)
-{
-    return get_art_url(ALBUM_ART_BASE_URL, artist, album, api_key);
-}
-
-QUrl get_artist_art_url(QString const& artist, QString const& album, QString const& api_key)
-{
-    return get_art_url(ARTIST_ART_BASE_URL, artist, album, api_key);
 }
 
 UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
@@ -272,6 +259,13 @@ UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
     , network_manager_(make_shared<QNetworkAccessManager>(this))
 {
     set_api_key();
+    char const* server_url = getenv(env_vars.at("server_url"));
+    if (server_url && *server_url)
+    {
+        server_url_ = server_url;
+    }
+    QUrl s(server_url_);
+    domain_name_ = s.host();
 }
 
 void UbuntuServerDownloader::set_api_key()
@@ -307,7 +301,7 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chron
 
     // TODO: Hack to work around QNetworkAccessManager problems when in flight mode.
     shared_ptr<UbuntuServerArtReply> art_reply;
-    if (network_is_connected())
+    if (network_is_connected(domain_name_))
     {
         QNetworkReply* reply = network_manager_->get(QNetworkRequest(url));
         art_reply = make_shared<UbuntuServerArtReply>(url.toString(), reply, timeout);
@@ -322,6 +316,17 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chron
     }
     return art_reply;
 }
+
+QUrl UbuntuServerDownloader::get_album_art_url(QString const& artist, QString const& album, QString const& api_key)
+{
+    return get_art_url(ALBUM_ART_BASE_URL, artist, album, api_key, server_url_);
+}
+
+QUrl UbuntuServerDownloader::get_artist_art_url(QString const& artist, QString const& album, QString const& api_key)
+{
+    return get_art_url(ARTIST_ART_BASE_URL, artist, album, api_key, server_url_);
+}
+
 
 std::shared_ptr<QNetworkAccessManager> UbuntuServerDownloader::network_manager() const
 {

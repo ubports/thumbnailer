@@ -18,6 +18,7 @@
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
@@ -618,7 +619,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

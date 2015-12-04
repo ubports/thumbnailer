@@ -16,19 +16,21 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <memory>
-#include <stdexcept>
-#include <string>
-#include <unistd.h>
+#include <internal/env_vars.h>
+#include <testsetup.h>
+#include "utils/artserver.h"
+#include "utils/dbusserver.h"
 
 #include <QGuiApplication>
 #include <QtQml>
 #include <QtQuickTest/quicktest.h>
 #include <QTemporaryDir>
 
-#include <testsetup.h>
-#include "utils/artserver.h"
-#include "utils/dbusserver.h"
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unistd.h>
+
 
 class TestFixture
 {
@@ -69,7 +71,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv("THUMBNAILER_UTIL_DIR", TESTBINDIR "/../src/vs-thumb", true);
     qmlRegisterSingletonType("testconfig", 1, 0, "Config", make_test_config);
     qmlProtectModule("testconfig", 1);
 

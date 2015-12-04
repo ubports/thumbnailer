@@ -24,7 +24,7 @@
 #include <internal/trace.h>
 #include <testsetup.h>
 #include "utils/artserver.h"
-
+#include "utils/env_var_guard.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -462,47 +462,37 @@ TEST_F(ThumbnailerTest, exceptions)
 
 TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
 {
+    // Cause vs-thumb exec failure.
+    EnvVarGuard ev_guard(env_vars.at("util_dir"), "no_such_directory");
+
     Thumbnailer tn;
+
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(15000));
+
+    try
     {
-        // Cause vs-thumb exec failure.
-        char const* tn_util = getenv("TN_UTILDIR");
-        ASSERT_TRUE(tn_util && *tn_util != '\0');
-        string old_env = tn_util;
-
-        setenv("TN_UTILDIR", "no_such_directory", true);
-
-        auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
-        EXPECT_EQ("", request->thumbnail());
-
-        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-        request->download();
-        ASSERT_TRUE(spy.wait(15000));
-
-        try
-        {
-            request->thumbnail();
-            FAIL();
-        }
-        catch (unity::ResourceException const& e)
-        {
-            string msg = e.to_string();
-            string exp = "ImageExtractor::read(): failed to start no_such_directory/vs-thumb";
-            EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
-        }
-        setenv("TN_UTILDIR", old_env.c_str(), true);
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.to_string();
+        string exp = "ImageExtractor::read(): failed to start no_such_directory/vs-thumb";
+        EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
     }
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_1)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that exits with status 1
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(env_vars.at("util_dir"), TESTSRCDIR "/thumbnailer/vs-thumb-exit-1");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-1", true);
+    Thumbnailer tn;
 
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
@@ -521,20 +511,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_1)
         string msg = e.what();
         EXPECT_NE(string::npos, msg.find("could not extract screenshot")) << msg;
     }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_2)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that exits with status 2
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(env_vars.at("util_dir"), TESTSRCDIR "/thumbnailer/vs-thumb-exit-2");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-2", true);
+    Thumbnailer tn;
 
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
@@ -553,20 +537,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_2)
         string msg = e.what();
         EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
     }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_99)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that exits with status 99
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(env_vars.at("util_dir"), TESTSRCDIR "/thumbnailer/vs-thumb-exit-99");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-99", true);
+    Thumbnailer tn;
 
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
@@ -585,20 +563,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_99)
         string msg = e.what();
         EXPECT_NE(string::npos, msg.find("unknown exit status 99 from ")) << msg;
     }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_crash)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that kills itself with SIGTERM
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(env_vars.at("util_dir"), TESTSRCDIR "/thumbnailer/vs-thumb-crash");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-crash", true);
+    Thumbnailer tn;
 
     {
         auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
@@ -633,8 +605,6 @@ TEST_F(ThumbnailerTest, vs_thumb_crash)
         auto thumb = request->thumbnail();
         EXPECT_EQ("", thumb);
     }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, not_regular_file)
@@ -953,17 +923,18 @@ class DeadServer : public ::testing::Test
 protected:
     void SetUp() override
     {
-        auto apiroot = QString("http://deadserver.invalid:80");
-        setenv("THUMBNAILER_UBUNTU_APIROOT", apiroot.toUtf8().constData(), true);
+        ev_guard_.reset(new EnvVarGuard(env_vars.at("server_url"), "http://deadserver.invalid:80"));
     }
 
     void TearDown() override
     {
-        unsetenv("THUMBNAILER_UBUNTU_APIROOT");
     }
+
+private:
+    unique_ptr<EnvVarGuard> ev_guard_;
 };
 
-TEST_F(DeadServer, errors)
+TEST_F(DeadServer, dead_server)
 {
     Thumbnailer tn;
 
@@ -984,7 +955,8 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
+    setenv(env_vars.at("server_url"), "http://127.0.0.1", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
