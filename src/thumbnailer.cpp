@@ -365,7 +365,6 @@ string RequestBase::thumbnail()
             status_ = image_data.status;
             switch (status_)
             {
-                cerr << "status: " << int(status_) << endl;
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
                     break;
                 case FetchStatus::needs_download:  // Caller will call download().
@@ -394,14 +393,12 @@ string RequestBase::thumbnail()
                     {
                         later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_not_found_hours_);
                     }
-                    cerr << "not found, adding to failure cache" << endl;
                     thumbnailer_->failure_cache_->put(key_, "", later);
                     return "";
                 }
                 case FetchStatus::hard_error:
                 {
                     // No chance of recovery, the problem is with the request data.
-                    cerr << "adding failure cache entry" << endl;
                     thumbnailer_->failure_cache_->put(key_, "");
                     return "";
                 }
@@ -540,7 +537,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
         assert(file);  // Cannot fail according to doc.
 
-        cerr << "file: " << filename_ << endl;
         gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
                                                    G_FILE_QUERY_INFO_NONE,
                                                    /* cancellable */ NULL,
@@ -600,7 +596,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
     }
     catch (std::exception const& e)
     {
-        cerr << "ex: setting error message: " << e.what() << endl;
         set_error_message(e.what());
         return image_data;
     }
@@ -647,7 +642,6 @@ RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> c
     {
         return image_data;
     }
-    cerr << "common fetch, setting error message" << endl;
     request->set_error_message(artreply->error_string().toStdString());  // Default for below.
     switch (artreply->status())
     {
