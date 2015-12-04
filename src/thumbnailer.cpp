@@ -78,7 +78,7 @@ class RequestBase : public ThumbnailRequest
 #endif
 public:
     virtual ~RequestBase() = default;
-    string thumbnail() override;
+    QByteArray thumbnail() override;
     FetchStatus status() const override;
 
     string const& key() const override
@@ -298,7 +298,7 @@ RequestBase::RequestBase(Thumbnailer* thumbnailer,
 // size, store the scaled version to the thumbnail cache and return
 // it.
 
-string RequestBase::thumbnail()
+QByteArray RequestBase::thumbnail()
 {
     try
     {
@@ -338,7 +338,7 @@ string RequestBase::thumbnail()
         if (thumbnail)
         {
             status_ = FetchStatus::cache_hit;
-            return *thumbnail;
+            return QByteArray::fromStdString(*thumbnail);
         }
 
         // Don't have the thumbnail yet, see if we have the original image around.
@@ -443,7 +443,7 @@ string RequestBase::thumbnail()
 
         string jpeg = scaled_image.to_jpeg();
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
-        return jpeg;
+        return QByteArray::fromStdString(jpeg);
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)

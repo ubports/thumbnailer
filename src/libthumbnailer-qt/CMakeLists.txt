@@ -7,7 +7,6 @@ add_library(${LIBTHUMBNAILER_QT} SHARED
   libthumbnailer-qt.cpp
   ${CMAKE_SOURCE_DIR}/include/unity/thumbnailer/qt/thumbnailer-qt.h
   ${interface_files}
-  ${CMAKE_SOURCE_DIR}/src/artgeneratorcommon.cpp
 )
 
 set_target_properties(${LIBTHUMBNAILER_QT} PROPERTIES

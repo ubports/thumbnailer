@@ -95,10 +95,10 @@ void GetLocalThumbnail::run(DBusConnection& conn)
         {
             throw reply.error().message();  // LCOV_EXCL_LINE
         }
-        QDBusUnixFileDescriptor thumbnail_fd = reply.value();
+        QByteArray thumbnail = reply.value();
 
         string out_path = make_output_path(input_path_.toStdString(), size_, output_dir_.toStdString());
-        write_file(thumbnail_fd.fileDescriptor(), out_path);
+        write_file(out_path, thumbnail);
     }
     catch (std::exception const& e)
     {

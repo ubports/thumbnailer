@@ -46,7 +46,7 @@ public:
     ImageExtractor& operator=(ImageExtractor const& t) = delete;
 
     void extract();
-    std::string read();
+    QByteArray read();
 
 Q_SIGNALS:
     void finished();

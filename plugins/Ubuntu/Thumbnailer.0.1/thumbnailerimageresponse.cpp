@@ -17,7 +17,6 @@
  */
 
 #include <thumbnailerimageresponse.h>
-#include <utils/artgeneratorcommon.h>
 
 #include <QDebug>
 
