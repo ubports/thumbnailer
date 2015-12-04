@@ -309,12 +309,12 @@ void Handler::checkFinished()
         return;
     }
 
+    p->schedule_start_time = chrono::system_clock::now();
     if (p->request->status() == ThumbnailRequest::FetchStatus::needs_download)
     {
         try
         {
             // otherwise move on to the download phase.
-            p->schedule_start_time = chrono::system_clock::now();
             p->cancel_func = p->limiter->schedule([&]
             {
                 if (!p->cancelled)
