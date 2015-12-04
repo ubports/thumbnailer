@@ -452,8 +452,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
     EXPECT_EQ("", request->thumbnail());
     EXPECT_EQ("ImageExtractor::read(): failed to start no_such_directory/vs-thumb", request->error_message());
     auto new_stats = tn.stats();
-    // vs-thumb failures are never authoritative because we can't trust gstreamer.
-    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    // vs-thumb failures are always authoritative.
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
 }
@@ -481,8 +481,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_1)
     string msg = request->error_message();
     EXPECT_NE(string::npos, msg.find("ImageExtractor::read(): could not extract screenshot for ")) << msg;
     auto new_stats = tn.stats();
-    // vs-thumb failures are never authoritative because we can't trust gstreamer.
-    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    // vs-thumb failures are always authoritative.
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
 }
@@ -510,8 +510,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_2)
     string msg = request->error_message();
     EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
     auto new_stats = tn.stats();
-    // vs-thumb failures are never authoritative because we can't trust gstreamer.
-    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    // vs-thumb failures are always authoritative.
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
 }
@@ -539,8 +539,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_99)
     string msg = request->error_message();
     EXPECT_NE(string::npos, msg.find("unknown exit status 99 from ")) << msg;
     auto new_stats = tn.stats();
-    // vs-thumb failures are never authoritative because we can't trust gstreamer.
-    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    // vs-thumb failures are always authoritative.
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
 }
@@ -568,8 +568,8 @@ TEST_F(ThumbnailerTest, vs_thumb_crash)
     string msg = request->error_message();
     EXPECT_NE(string::npos, msg.find("vs-thumb crashed")) << msg;
     auto new_stats = tn.stats();
-    // vs-thumb failures are never authoritative because we can't trust gstreamer.
-    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    // vs-thumb failures are always authoritative.
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
 }
@@ -790,10 +790,6 @@ TEST_F(RemoteServer, bad_request)
         auto request = tn.get_artist_art("error", "400", QSize(10, 10));
         EXPECT_EQ("", request->thumbnail());
 
-        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-        request->download();
-        ASSERT_TRUE(spy.wait(15000));
-        EXPECT_EQ("", request->thumbnail());
         EXPECT_EQ(ThumbnailRequest::FetchStatus::cached_failure, request->status());
         EXPECT_EQ("", request->error_message());
         auto new_stats = tn.stats();

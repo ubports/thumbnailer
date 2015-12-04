@@ -178,12 +178,22 @@ TEST_F(DBusTest, thumbnail_no_such_file)
 
 TEST_F(DBusTest, server_error)
 {
+    {
     QDBusReply<QDBusUnixFileDescriptor> reply =
         dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
     EXPECT_FALSE(reply.isValid());
     auto message = reply.error().message().toStdString();
     EXPECT_EQ("Handler::createFinished(): could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
               message) << message;
+    }
+    {
+    QDBusReply<QDBusUnixFileDescriptor> reply =
+        dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+    EXPECT_FALSE(reply.isValid());
+    auto message = reply.error().message().toStdString();
+    EXPECT_EQ("Handler::createFinished(): could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+              message) << message;
+    }
 }
 
 TEST_F(DBusTest, duplicate_requests)

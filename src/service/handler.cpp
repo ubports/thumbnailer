@@ -472,15 +472,15 @@ QString Handler::status() const
     case ThumbnailRequest::FetchStatus::cached_failure:
         return QStringLiteral("FAILED PREVIOUSLY");
     case ThumbnailRequest::FetchStatus::needs_download:
-        return QStringLiteral("NEEDS DOWNLOAD");
+        return QStringLiteral("NEEDS DOWNLOAD");          // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::downloaded:
         return QStringLiteral("MISS");
     case ThumbnailRequest::FetchStatus::not_found:
         return QStringLiteral("NO ARTWORK");
     case ThumbnailRequest::FetchStatus::network_down:
-        return QStringLiteral("NETWORK DOWN");
+        return QStringLiteral("NETWORK DOWN");            // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::hard_error:
-        return QStringLiteral("ERROR");
+        return QStringLiteral("ERROR");                   // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::temporary_error:
         return QStringLiteral("TEMPORARY ERROR");
     default:

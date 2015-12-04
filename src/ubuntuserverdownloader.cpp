@@ -144,9 +144,11 @@ public:
 
     void set_status()
     {
-        status_ = ArtReply::Status::temporary_error;  // Default, in case none of the tests below match.
+        // Set the defaults, in case none of the tests below match.
+        status_ = ArtReply::Status::temporary_error;
         error_string_ = reply_->errorString();
 
+        // Deal with expected conditions first.
         auto error_code = reply_->error();
         switch (error_code)
         {
@@ -160,42 +162,34 @@ public:
                 return;
             case QNetworkReply::OperationCanceledError:
                 // Happens if we call reply_->abort() after a timeout.
+                // We need to overwrite the "operation cancelled" message that
+                // is set by this, otherwise the log doesn't tell the real story.
                 error_string_ = QStringLiteral("Request timed out");
                 qDebug() << error_string_ << "for" << url_string_;
                 return;
-            case QNetworkReply::ProtocolInvalidOperationError:
-                // Probably HTTP error 400 (Bad Request) but could
-                // potentially be something else that is surprising,
-                // deal with it below.
-                break;
             default:
-                // All the other errors indicate things that should never happen,
-                // such as BackgroundRequestNotAllowedError, or a temporary
-                // network error, such as TimeoutError.
-                qDebug() << "unexpected QNetworkReply::NetworkError" << int(error_code) << "for" << url_string_;
-                return;
+                break;
         }
 
-        // Pull out the HTTP response code.
+        qDebug() << "unexpected QNetworkReply::NetworkError" << int(error_code) << "for" << url_string_;
+
+        // Pull out the HTTP response code if there is one.
         QVariant att = reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute);
-        if (att.type() != QVariant::Type::Int)
+        if (att.type() == QVariant::Type::Int)
         {
-            return;  // LCOV_EXCL_LINE
-        }
-        auto http_code = att.toInt();
-        qDebug() << "unexpected HTTP error" << http_code << "for" << url_string_;
-
-        // Classify the HTTP error as permanent or potentially recoverable.
-        switch (http_code)
-        {
-            // No chance of recovery with a retry.
-            case 400:  // Bad Request
-            case 403:  // Forbidden
-                status_ = ArtReply::Status::hard_error;
-                break;
-            default:
-                qDebug() << "unexpected QNetworkReply::NetworkError" << int(error_code) << "for" << url_string_;
-                break;
+            int http_code = att.toInt();
+            // Classify the HTTP error as permanent or potentially recoverable.
+            switch (http_code)
+            {
+                // No chance of recovery with a retry.
+                case 400:  // Bad Request
+                case 403:  // Forbidden
+                    status_ = ArtReply::Status::hard_error;
+                    break;
+                default:
+                    break;
+            }
+            qDebug() << "HTTP error code" << http_code << "for" << url_string_;
         }
     }
 

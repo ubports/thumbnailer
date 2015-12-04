@@ -78,7 +78,7 @@ namespace
 
 string to_string(QByteArray const& array)
 {
-    return string(array.data(), array.size());
+    return string(array.constData(), array.size());
 }
 
 }

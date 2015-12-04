@@ -144,6 +144,7 @@ protected:
         return thumbnailer_->downloader_.get();
     }
 
+    // LCOV_EXCL_START
     string printable_key() const
     {
         // Substitute "\\0" for all occurrences of '\0' in key_.
@@ -162,6 +163,7 @@ protected:
         }
         return new_key;
     }
+    // LCOV_EXCL_STOP
 
     Thumbnailer* thumbnailer_;
     string key_;
@@ -375,7 +377,7 @@ string RequestBase::thumbnail()
                         if (now <= thumbnailer_->nw_fail_time_ + chrono::hours(thumbnailer_->retry_error_hours_))
                         {
                             qWarning() << "RequestBase::thumbnail(): server access retry time not reached yet";
-                            status_ = ThumbnailRequest::FetchStatus::cached_failure;
+                            status_ = ThumbnailRequest::FetchStatus::temporary_error;
                         }
                     }
                     return "";
@@ -405,25 +407,14 @@ string RequestBase::thumbnail()
                 }
                 case FetchStatus::temporary_error:
                 {
-                    // Some non-authoritative failure, such as the server not responding,
-                    // or an out-of-process codec reporting an error.
-                    // For local files, we don't set an expiry time because, if the file is
-                    // changed, (say, its permissions change), the file's key will change too.
-                    // For remote files, we record the time of this failure.
-                    if (image_data.location == Location::local)
-                    {
-                        if (image_data.cache_policy == CachePolicy::dont_cache_fullsize)
-                        {
-                            cerr << "temporary error, adding to failure cache" << endl;
-                            thumbnailer_->failure_cache_->put(key_, "");
-                        }
-                    }
-                    else
-                    {
-                        qWarning() << "RequestBase::thumbnail(): unexpected download error, server access delayed for"
-                                   << thumbnailer_->retry_error_hours_ << "hours";
-                        thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
-                    }
+                    // Extraction failure for local media is always a hard error.
+                    assert(image_data.location == Location::remote);
+
+                    // Some non-authoritative failure, such as the server not responding.
+                    // We record the time of this failure.
+                    qWarning() << "RequestBase::thumbnail(): unexpected download error, delaying server access for"
+                               << thumbnailer_->retry_error_hours_ << "hours";
+                    thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
                     return "";
                 }
                 default:
@@ -457,11 +448,15 @@ string RequestBase::thumbnail()
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
         return jpeg;
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        cerr << "throwing from thumbnail()" << endl;
-        throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
+        // Something totally unexpected happened.
+        string msg = "RequestBase::thumbnail(): key = " + printable_key() + ": " + e.what();
+        qCritical() << QString::fromStdString(msg);
+        throw unity::ResourceException(msg);
     }
+    // LCOV_EXCL_STOP
 }
 
 ThumbnailRequest::FetchStatus RequestBase::status() const
@@ -537,7 +532,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         if (image_extractor_)
         {
             // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
-            image_data = ImageData(FetchStatus::temporary_error, CachePolicy::cache_fullsize, Location::local);
+            image_data = ImageData(FetchStatus::hard_error, CachePolicy::cache_fullsize, Location::local);
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         }
 
@@ -661,7 +656,7 @@ RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> c
             try
             {
                 auto raw_data = artreply->data();
-                Image full_size(string(raw_data.data(), raw_data.size()));
+                Image full_size(string(raw_data.constData(), raw_data.size()));
                 return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
             }
             catch (std::exception const& e)
@@ -683,7 +678,7 @@ RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> c
             image_data.status = RequestBase::FetchStatus::network_down;
             return image_data;
         default:
-            abort();  // Impossible
+            abort();  // LCOV_EXCL_LINE  // Impossible
     }
 }
 

@@ -310,8 +310,11 @@ bool ThumbnailExtractor::extract_cover_art()
     auto preview_image = find_cover(tags, GST_TAG_PREVIEW_IMAGE);
     if (preview_image.sample && preview_image.type == cover)
     {
+        // Michi: I have no idea how to create an audio file with this tag :-(
+        // LCOV_EXCL_START
         sample_ = std::move(preview_image.sample);
         return true;
+        // LCOV_EXCL_STOP
     }
 
     // See if we found some other normal image.
