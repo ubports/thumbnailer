@@ -170,9 +170,9 @@ CredentialsCache& DBusInterface::credentials()
     return *credentials_.get();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
-                                                   QString const& album,
-                                                   QSize const& requestedSize)
+QByteArray DBusInterface::GetAlbumArt(QString const& artist,
+                                      QString const& album,
+                                      QSize const& requestedSize)
 {
     try
     {
@@ -193,12 +193,12 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         sendErrorReply(ART_ERROR, e.what());
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
-                                                    QString const& album,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetArtistArt(QString const& artist,
+                                       QString const& album,
+                                       QSize const& requestedSize)
 {
     try
     {
@@ -219,11 +219,10 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         sendErrorReply(ART_ERROR, msg);
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetThumbnail(QString const& filename, QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;
 
@@ -245,7 +244,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         qWarning() << msg;
         sendErrorReply(ART_ERROR, msg);
     }
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
 void DBusInterface::queueRequest(Handler* handler)
