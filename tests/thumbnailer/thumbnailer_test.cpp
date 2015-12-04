@@ -143,13 +143,6 @@ TEST_F(ThumbnailerTest, basic)
     EXPECT_EQ(100, img.width());
     EXPECT_EQ(75, img.height());
 
-    old_stats = tn.stats();
-    request = tn.get_thumbnail(BAD_IMAGE, QSize(10, 10));
-    request->thumbnail();
-    EXPECT_EQ("load_image(): cannot close pixbuf loader: Unrecognized image file format", request->error_message());
-    new_stats = tn.stats();
-    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-
     request = tn.get_thumbnail(RGB_IMAGE, QSize(48, 48));
     thumb = request->thumbnail();
     img = Image(thumb);
@@ -450,9 +443,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
 
     auto old_stats = tn.stats();
     EXPECT_EQ("", request->thumbnail());
-    EXPECT_EQ("ImageExtractor::read(): failed to start no_such_directory/vs-thumb", request->error_message());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
-    // vs-thumb failures are always authoritative.
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
@@ -478,10 +470,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_1)
     ASSERT_TRUE(spy.wait(5000));
 
     EXPECT_EQ("", request->thumbnail());
-    string msg = request->error_message();
-    EXPECT_NE(string::npos, msg.find("ImageExtractor::read(): could not extract screenshot for ")) << msg;
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
-    // vs-thumb failures are always authoritative.
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
@@ -507,10 +497,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_2)
     ASSERT_TRUE(spy.wait(5000));
 
     EXPECT_EQ("", request->thumbnail());
-    string msg = request->error_message();
-    EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
-    // vs-thumb failures are always authoritative.
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
@@ -536,10 +524,8 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_99)
     ASSERT_TRUE(spy.wait(5000));
 
     EXPECT_EQ("", request->thumbnail());
-    string msg = request->error_message();
-    EXPECT_NE(string::npos, msg.find("unknown exit status 99 from ")) << msg;
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
-    // vs-thumb failures are always authoritative.
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
@@ -565,10 +551,8 @@ TEST_F(ThumbnailerTest, vs_thumb_crash)
     ASSERT_TRUE(spy.wait(5000));
 
     EXPECT_EQ("", request->thumbnail());
-    string msg = request->error_message();
-    EXPECT_NE(string::npos, msg.find("vs-thumb crashed")) << msg;
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
-    // vs-thumb failures are always authoritative.
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
@@ -577,9 +561,10 @@ TEST_F(ThumbnailerTest, vs_thumb_crash)
 TEST_F(ThumbnailerTest, not_regular_file)
 {
     Thumbnailer tn;
+
     try
     {
-        auto request = tn.get_thumbnail("/dev/null", QSize(10, 10));
+        tn.get_thumbnail("/dev/null", QSize(10, 10));
         FAIL();
     }
     catch (std::exception const& e)
@@ -591,6 +576,8 @@ TEST_F(ThumbnailerTest, not_regular_file)
 TEST_F(ThumbnailerTest, check_client_access)
 {
     Thumbnailer tn;
+
+    auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(TEST_IMAGE, QSize(10, 10));
     ASSERT_NE(nullptr, request.get());
     // Check succeeds for correct user ID and valid label
@@ -603,13 +590,29 @@ TEST_F(ThumbnailerTest, check_client_access)
     catch (std::exception const& e)
     {
         EXPECT_TRUE(boost::contains(e.what(), "Request comes from a different user ID")) << e.what();
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
 }
+
+TEST_F(ThumbnailerTest, bad_image)
+{
+    Thumbnailer tn;
+
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(BAD_IMAGE, QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
+}
+
 
 TEST_F(ThumbnailerTest, empty_file)
 {
     Thumbnailer tn;
 
+    auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(TESTSRCDIR "/thumbnailer/empty.mp3", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
@@ -627,8 +630,11 @@ TEST_F(ThumbnailerTest, empty_file)
     {
         string msg = e.what();
         EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
+        EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
         thumbnail_failed = true;
     }
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     // Change in glib 2.22: previously, g_file_query_info(..., G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE, ...)
     // for "empty.mp3" returned "audio/mpeg". As of 2.22, it returns "text/plain". This causes
@@ -717,6 +723,7 @@ TEST_F(RemoteServer, no_such_album)
 {
     Thumbnailer tn;
 
+    auto old_stats = tn.stats();
     auto request = tn.get_album_art("no_such_artist", "no_such_album", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
@@ -724,6 +731,9 @@ TEST_F(RemoteServer, no_such_album)
     request->download();
     ASSERT_TRUE(spy.wait(15000));
     EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::not_found, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(RemoteServer, decode_fails)
@@ -739,8 +749,7 @@ TEST_F(RemoteServer, decode_fails)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
-    string msg = request->error_message();
-    EXPECT_EQ("load_image(): cannot close pixbuf loader: Unrecognized image file format", msg) << msg;
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
@@ -749,6 +758,7 @@ TEST_F(RemoteServer, no_such_local_image)
 {
     Thumbnailer tn;
 
+    auto old_stats = tn.stats();
     try
     {
         auto request = tn.get_thumbnail("no_such_file", QSize(10, 10));
@@ -760,6 +770,8 @@ TEST_F(RemoteServer, no_such_local_image)
         EXPECT_TRUE(boost::starts_with(msg,
                                        "unity::ResourceException: Thumbnailer::get_thumbnail():\n"
                                        "    boost::filesystem::canonical: No such file or directory: ")) << msg;
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
 }
 
@@ -779,8 +791,6 @@ TEST_F(RemoteServer, bad_request)
         ASSERT_TRUE(spy.wait(15000));
         EXPECT_EQ("", request->thumbnail());
         EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
-        string msg = request->error_message();
-        EXPECT_NE(string::npos, msg.find("server replied: Bad Request")) << msg;
         auto new_stats = tn.stats();
         EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
     }
@@ -791,7 +801,6 @@ TEST_F(RemoteServer, bad_request)
         EXPECT_EQ("", request->thumbnail());
 
         EXPECT_EQ(ThumbnailRequest::FetchStatus::cached_failure, request->status());
-        EXPECT_EQ("", request->error_message());
         auto new_stats = tn.stats();
         EXPECT_EQ(old_stats.failure_stats.hits() + 1, new_stats.failure_stats.hits());
     }
@@ -811,8 +820,7 @@ TEST_F(RemoteServer, temporary_error)
     request->download();
     ASSERT_TRUE(spy.wait(15000));
     EXPECT_EQ("", request->thumbnail());
-    string msg = request->error_message();
-    EXPECT_NE(string::npos, msg.find("server replied: Payment Required")) << msg;
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
 }
@@ -853,6 +861,7 @@ TEST_F(RemoteServer, timeout)
 {
     Thumbnailer tn;
 
+    auto old_stats = tn.stats();
     auto request = tn.get_album_art("sleep", "3", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
     request->download(chrono::seconds(1));
@@ -861,6 +870,9 @@ TEST_F(RemoteServer, timeout)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
 }
 
 TEST_F(RemoteServer, server_error)
@@ -870,6 +882,7 @@ TEST_F(RemoteServer, server_error)
     // We do this twice, so we get coverage on the transient network error handling.
     for (int i = 0; i < 2; ++i)
     {
+        auto old_stats = tn.stats();
         auto request = tn.get_album_art("error", "429", QSize(10, 10));
         EXPECT_EQ("", request->thumbnail());
 
@@ -877,8 +890,9 @@ TEST_F(RemoteServer, server_error)
         request->download();
         ASSERT_TRUE(spy.wait(15000));
 
-        request->thumbnail();
         EXPECT_EQ("", request->thumbnail());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
 }
 
@@ -888,6 +902,7 @@ TEST_F(RemoteServer, network_error)
 
     art_server_->block_access();
     {
+        auto old_stats = tn.stats();
         auto request = tn.get_album_art("metallica", "load", QSize(10, 10));
         EXPECT_EQ("", request->thumbnail());
 
@@ -897,6 +912,9 @@ TEST_F(RemoteServer, network_error)
 
         // Still fails
         EXPECT_EQ("", request->thumbnail());
+        EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
 
     art_server_->unblock_access();
@@ -953,6 +971,7 @@ TEST_F(DeadServer, errors)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
 }
 
 int main(int argc, char** argv)

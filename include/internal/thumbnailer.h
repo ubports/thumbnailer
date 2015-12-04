@@ -75,23 +75,8 @@ public:
     // exception on authentication failure.
     virtual void check_client_credentials(uid_t user, std::string const& apparmor_label) = 0;
 
-    // Returns an error message if the status in indicates an error.
-    virtual std::string error_message() const
-    {
-        return error_message_;
-    }
-
 Q_SIGNALS:
     void downloadFinished();
-
-protected:
-    void set_error_message(std::string const& msg)
-    {
-        error_message_ = msg;
-    }
-
-private:
-    std::string error_message_;
 };
 
 class RequestBase;

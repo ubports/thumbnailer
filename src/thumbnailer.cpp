@@ -381,8 +381,8 @@ string RequestBase::thumbnail()
                         }
                     }
                     return "";
-                case FetchStatus::network_down:  // Try again next time.
-                    return "";
+                case FetchStatus::network_down:    // Try again next time.
+                    return "";  // LCOV_EXCL_LINE  // No way to test this without physically disabling network.
                 case FetchStatus::not_found:
                 {
                     // Authoritative answer that artwork does not exist.
@@ -532,7 +532,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         if (image_extractor_)
         {
             // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
-            image_data = ImageData(FetchStatus::hard_error, CachePolicy::cache_fullsize, Location::local);
+            image_data.cache_policy = CachePolicy::cache_fullsize;
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         }
 
@@ -600,7 +600,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
     }
     catch (std::exception const& e)
     {
-        cerr << "setting error message: " << e.what() << endl;
+        cerr << "ex: setting error message: " << e.what() << endl;
         set_error_message(e.what());
         return image_data;
     }
@@ -661,8 +661,9 @@ RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> c
             }
             catch (std::exception const& e)
             {
-                cerr << "setting error message: " << e.what() << endl;
                 request->set_error_message(e.what());
+                image_data.status = RequestBase::FetchStatus::hard_error;
+                return image_data;
             }
         }
         case ArtReply::Status::not_found:
@@ -675,8 +676,10 @@ RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> c
             image_data.status = RequestBase::FetchStatus::hard_error;
             return image_data;
         case ArtReply::Status::network_down:
+            // LCOV_EXCL_START
             image_data.status = RequestBase::FetchStatus::network_down;
             return image_data;
+            // LCOV_EXCL_STOP
         default:
             abort();  // LCOV_EXCL_LINE  // Impossible
     }
