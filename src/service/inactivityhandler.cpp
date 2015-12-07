@@ -19,6 +19,8 @@
 
 #include "inactivityhandler.h"
 
+#include <internal/env_vars.h>
+
 #include <QCoreApplication>
 #include <QDebug>
 
@@ -33,7 +35,9 @@ namespace
 
 int get_env_inactivity_time(int default_value)
 {
-    char const* c_idle_time = getenv("THUMBNAILER_MAX_IDLE");
+    using namespace unity::thumbnailer::internal;
+
+    char const* c_idle_time = getenv(env_vars.at("max_idle"));
     if (c_idle_time)
     {
         std::string str_idle_time(c_idle_time);

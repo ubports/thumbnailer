@@ -18,6 +18,7 @@
 
 #include "artserver.h"
 #include <testsetup.h>
+#include <internal/env_vars.h>
 #include <internal/raii.h>
 
 #include <QDebug>
@@ -43,7 +44,7 @@ ArtServer::ArtServer()
         throw std::runtime_error("ArtServer::ArtServer(): wait for read from server failed");
     }
     auto port = QString::fromUtf8(server_.readAllStandardOutput()).trimmed();
-    apiroot_ = "http://127.0.0.1:" + port.toStdString();
+    server_url_ = "http://127.0.0.1:" + port.toStdString();
 
     // Create a bound TCP socket with no listen queue.  Attempts to
     // connect to this port can not succeed.  And as long as we hold
@@ -66,7 +67,7 @@ ArtServer::ArtServer()
     {
         throw std::runtime_error("ArtServer::ArtServer(): Could not get socket name");
     }
-    blocked_apiroot_ = "http://127.0.0.1:" + std::to_string(addr.sin_port);
+    blocked_server_url_ = "http://127.0.0.1:" + std::to_string(addr.sin_port);
 
     setenv("THUMBNAILER_TEST_DEFAULT_IMAGE", THUMBNAILER_TEST_DEFAULT_IMAGE, true);
     update_env();
@@ -79,18 +80,18 @@ ArtServer::~ArtServer()
     {
         qCritical() << "Failed to terminate fake art server";
     }
-    unsetenv("THUMBNAILER_UBUNTU_SERVER_URL");
+    unsetenv(unity::thumbnailer::internal::env_vars.at("server_url"));
 }
 
-std::string const& ArtServer::apiroot() const
+std::string const& ArtServer::server_url() const
 {
     if (blocked_)
     {
-        return blocked_apiroot_;
+        return blocked_server_url_;
     }
     else
     {
-        return apiroot_;
+        return server_url_;
     }
 }
 
@@ -108,5 +109,5 @@ void ArtServer::unblock_access()
 
 void ArtServer::update_env()
 {
-    setenv("THUMBNAILER_UBUNTU_SERVER_URL", apiroot().c_str(), true);
+    setenv(unity::thumbnailer::internal::env_vars.at("server_url"), server_url().c_str(), true);
 }

@@ -17,6 +17,7 @@
  */
 
 //! [AsyncThumbnailProvider_definition]
+
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 class AsyncThumbnailProvider : public QObject
@@ -106,6 +107,7 @@ QImage SyncThumbnailProvider::getThumbnail(QString const& path, QSize const& siz
 #include "qt_example_test.moc"
 
 #include <testsetup.h>
+#include <internal/env_vars.h>
 #include <utils/dbusserver.h>
 
 #include <QCoreApplication>
@@ -140,7 +142,7 @@ protected:
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
         // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "1000", true);
+        setenv(unity::thumbnailer::internal::env_vars.at("max_idle"), "1000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -149,7 +151,7 @@ protected:
     {
         dbus_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(unity::thumbnailer::internal::env_vars.at("max_idle"));
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -179,7 +181,7 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(unity::thumbnailer::internal::env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

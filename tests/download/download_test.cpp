@@ -41,7 +41,7 @@ protected:
     void SetUp() override
     {
         fake_art_server_.reset(new ArtServer());
-        apiroot_ = QString::fromStdString(fake_art_server_->apiroot());
+        server_url_ = QString::fromStdString(fake_art_server_->server_url());
     }
 
     void TearDown() override
@@ -50,7 +50,7 @@ protected:
     }
 
     std::unique_ptr<ArtServer> fake_art_server_;
-    QString apiroot_;
+    QString server_url_;
 };
 
 // Time to wait for an expected signal to arrive. The wait()
@@ -68,12 +68,11 @@ TEST_F(TestDownloaderServer, test_download_album_url)
 
     QUrl check_url(reply->url_string());
     QUrlQuery url_query(check_url.query());
-    EXPECT_EQ(url_query.queryItemValue("artist"), "sia");
-    EXPECT_EQ(url_query.queryItemValue("album"), "fear");
-    EXPECT_EQ(url_query.queryItemValue("size"), "");
-    EXPECT_EQ(check_url.path(), "/musicproxy/v1/album-art");
-    qDebug() << check_url.toString();
-    EXPECT_TRUE(check_url.toString().startsWith(apiroot_));
+    EXPECT_EQ("sia", url_query.queryItemValue("artist"));
+    EXPECT_EQ("fear", url_query.queryItemValue("album"));
+    EXPECT_EQ("", url_query.queryItemValue("size"));
+    EXPECT_EQ("/musicproxy/v1/album-art", check_url.path());
+    EXPECT_TRUE(check_url.toString().startsWith(server_url_));
 }
 
 TEST_F(TestDownloaderServer, test_download_artist_url)
@@ -85,11 +84,11 @@ TEST_F(TestDownloaderServer, test_download_artist_url)
 
     QUrl check_url(reply->url_string());
     QUrlQuery url_query(check_url.query());
-    EXPECT_EQ(url_query.queryItemValue("artist"), "sia");
-    EXPECT_EQ(url_query.queryItemValue("album"), "fear");
-    EXPECT_EQ(url_query.queryItemValue("size"), "");
-    EXPECT_EQ(check_url.path(), "/musicproxy/v1/artist-art");
-    EXPECT_TRUE(check_url.toString().startsWith(apiroot_));
+    EXPECT_EQ("sia", url_query.queryItemValue("artist"));
+    EXPECT_EQ("fear", url_query.queryItemValue("album"));
+    EXPECT_EQ("", url_query.queryItemValue("size"));
+    EXPECT_EQ("/musicproxy/v1/artist-art", check_url.path());
+    EXPECT_TRUE(check_url.toString().startsWith(server_url_));
 }
 
 TEST_F(TestDownloaderServer, test_ok_album)
@@ -101,15 +100,10 @@ TEST_F(TestDownloaderServer, test_ok_album)
 
     QSignalSpy spy(reply.get(), &ArtReply::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
-    EXPECT_EQ(reply->succeeded(), true);
-    EXPECT_EQ(reply->not_found_error(), false);
-    EXPECT_EQ(reply->is_running(), false);
-    EXPECT_EQ(reply->network_down(), false);
-    // Finally check the content of the file downloaded
-    EXPECT_EQ(QString(reply->data()), QString("SIA_FEAR_TEST_STRING_IMAGE_ALBUM"));
+    EXPECT_EQ(ArtReply::Status::success, reply->status());
+    EXPECT_EQ(QString("SIA_FEAR_TEST_STRING_IMAGE_ALBUM"), QString(reply->data()));
 }
 
 TEST_F(TestDownloaderServer, test_ok_artist)
@@ -121,14 +115,10 @@ TEST_F(TestDownloaderServer, test_ok_artist)
 
     QSignalSpy spy(reply.get(), &ArtReply::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
-    EXPECT_EQ(reply->succeeded(), true);
-    EXPECT_EQ(reply->not_found_error(), false);
-    EXPECT_EQ(reply->is_running(), false);
-    EXPECT_EQ(reply->network_down(), false);
-    EXPECT_EQ(QString(reply->data()), QString("SIA_FEAR_TEST_STRING_IMAGE"));
+    EXPECT_EQ(ArtReply::Status::success, reply->status());
+    EXPECT_EQ(QString("SIA_FEAR_TEST_STRING_IMAGE"), QString(reply->data()));
 }
 
 TEST_F(TestDownloaderServer, test_timeout)
@@ -136,17 +126,14 @@ TEST_F(TestDownloaderServer, test_timeout)
     UbuntuServerDownloader downloader;
 
     auto reply = downloader.download_artist("sleep", "4", std::chrono::milliseconds(1000));
-    ASSERT_NE(reply, nullptr);
+    ASSERT_NE(nullptr, reply);
 
     QSignalSpy spy(reply.get(), &ArtReply::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
-    EXPECT_EQ(reply->succeeded(), false);
-    EXPECT_EQ(reply->not_found_error(), false);
-    EXPECT_EQ(reply->is_running(), false);
-    EXPECT_EQ(reply->network_down(), true);
+    EXPECT_EQ(ArtReply::Status::temporary_error, reply->status());
+    EXPECT_TRUE(reply->error_string().endsWith("Request timed out"));
 }
 
 TEST_F(TestDownloaderServer, test_not_found)
@@ -154,18 +141,44 @@ TEST_F(TestDownloaderServer, test_not_found)
     UbuntuServerDownloader downloader;
 
     auto reply = downloader.download_album("test", "test", DOWNLOAD_TIMEOUT);
+    ASSERT_NE(nullptr, reply);
+
+    QSignalSpy spy(reply.get(), &ArtReply::finished);
+    ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
+    ASSERT_EQ(1, spy.count());
+
+    EXPECT_EQ(ArtReply::Status::not_found, reply->status());
+    EXPECT_TRUE(reply->error_string().endsWith("server replied: Not Found"));
+}
+
+TEST_F(TestDownloaderServer, test_bad_request)
+{
+    UbuntuServerDownloader downloader;
+
+    auto reply = downloader.download_album("error", "400", DOWNLOAD_TIMEOUT);
     ASSERT_NE(reply, nullptr);
 
     QSignalSpy spy(reply.get(), &ArtReply::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
-    EXPECT_EQ(reply->succeeded(), false);
-    EXPECT_EQ(reply->not_found_error(), true);
-    EXPECT_EQ(reply->is_running(), false);
-    EXPECT_EQ(reply->network_down(), false);
-    EXPECT_TRUE(reply->error_string().endsWith("server replied: Not Found"));
+    EXPECT_EQ(ArtReply::Status::hard_error, reply->status());
+    EXPECT_TRUE(reply->error_string().endsWith("server replied: Bad Request"));
+}
+
+TEST_F(TestDownloaderServer, test_too_many_requests)
+{
+    UbuntuServerDownloader downloader;
+
+    auto reply = downloader.download_album("error", "429", DOWNLOAD_TIMEOUT);
+    ASSERT_NE(reply, nullptr);
+
+    QSignalSpy spy(reply.get(), &ArtReply::finished);
+    ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
+    ASSERT_EQ(1, spy.count());
+
+    EXPECT_EQ(ArtReply::Status::temporary_error, reply->status());
+    EXPECT_TRUE(reply->error_string().endsWith("server replied: Too Many Requests"));
 }
 
 TEST_F(TestDownloaderServer, test_multiple_downloads)
@@ -191,13 +204,9 @@ TEST_F(TestDownloaderServer, test_multiple_downloads)
             // if it was not called yet, wait for it
             ASSERT_TRUE(replies[i].second->wait());
         }
-        ASSERT_EQ(replies[i].second->count(), 1);
-        EXPECT_EQ(replies[i].first->succeeded(), true);
-        EXPECT_EQ(replies[i].first->not_found_error(), false);
-        EXPECT_EQ(replies[i].first->is_running(), false);
-        EXPECT_EQ(replies[i].first->network_down(), false);
-        // Finally check the content of the file downloaded
-        EXPECT_EQ(QString(replies[i].first->data()), QString("TEST_THREADS_TEST_TEST_%1").arg(i));
+        ASSERT_EQ(1, replies[i].second->count());
+        EXPECT_EQ(ArtReply::Status::success, replies[i].first->status());
+        EXPECT_EQ(QString("TEST_THREADS_TEST_TEST_%1").arg(i), QString(replies[i].first->data()));
     }
 }
 
@@ -211,17 +220,13 @@ TEST_F(TestDownloaderServer, test_connection_error)
     network_manager->setNetworkAccessible(QNetworkAccessManager::NotAccessible);
 
     auto reply = downloader.download_artist("sia", "fear", DOWNLOAD_TIMEOUT);
-    ASSERT_NE(reply, nullptr);
+    ASSERT_NE(nullptr, reply);
 
     QSignalSpy spy(reply.get(), &ArtReply::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
-    EXPECT_EQ(reply->succeeded(), false);
-    EXPECT_EQ(reply->not_found_error(), false);
-    EXPECT_EQ(reply->is_running(), false);
-    EXPECT_EQ(reply->network_down(), true);
+    EXPECT_EQ(ArtReply::Status::temporary_error, reply->status());
 }
 
 int main(int argc, char** argv)

@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <internal/env_vars.h>
-
 #include <cassert>
 #include <cstdlib>
 #include <string>

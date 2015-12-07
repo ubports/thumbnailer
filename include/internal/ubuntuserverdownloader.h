@@ -65,15 +65,10 @@ public:
     std::shared_ptr<QNetworkAccessManager> network_manager() const;
 
 private:
-    void set_api_key();
     std::shared_ptr<ArtReply> download_url(QUrl const& url, std::chrono::milliseconds timeout);
-    QUrl get_album_art_url(QString const& base_url, QString const& artist, QString const& album);
-    QUrl get_artist_art_url(QString const& base_url, QString const& artist, QString const& album);
 
     QString api_key_;
     std::shared_ptr<QNetworkAccessManager> network_manager_;
-    QString server_url_;
-    QString domain_name_;
 };
 
 }  // namespace internal

@@ -22,6 +22,7 @@
 #include <internal/raii.h>
 #include "utils/artserver.h"
 #include "utils/dbusserver.h"
+#include "utils/env_var_guard.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <gtest/gtest.h>
@@ -73,8 +74,8 @@ protected:
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "1000", true);
+        // set 1 second as max idle time
+        setenv(env_vars.at("max_idle"), "1000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -89,7 +90,7 @@ protected:
         dbus_.reset();
         art_server_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(env_vars.at("max_idle"));
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -179,12 +180,24 @@ TEST_F(DBusTest, thumbnail_no_such_file)
 
 TEST_F(DBusTest, server_error)
 {
-    QDBusReply<QByteArray> reply =
-        dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
-    EXPECT_FALSE(reply.isValid());
-    auto message = reply.error().message().toStdString();
-    // TODO: That's a seriously poor error message.
-    EXPECT_TRUE(boost::contains(message, "fetch() failed")) << message;
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+        EXPECT_FALSE(reply.isValid());
+        auto message = reply.error().message().toStdString();
+        EXPECT_EQ("Handler::createFinished(): could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+                  message) << message;
+    }
+
+    // Again, so we cover the network retry limit case.
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+        EXPECT_FALSE(reply.isValid());
+        auto message = reply.error().message().toStdString();
+        EXPECT_EQ("Handler::checkFinished(): no artwork for artist: error/500 (256,256): TEMPORARY ERROR",
+                  message) << message;
+    }
 }
 
 TEST_F(DBusTest, duplicate_requests)
@@ -295,7 +308,7 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    setenv("THUMBNAILER_MAX_IDLE", "bad_value", true);
+    EnvVarGuard ev_guard(env_vars.at("max_idle"), "bad_value");
     try
     {
         unique_ptr<DBusServer> dbus(new DBusServer());
@@ -306,7 +319,6 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
         string err = e.what();
         EXPECT_TRUE(err.find("failed to appear on bus"));
     }
-    unsetenv("THUMBNAILER_MAX_IDLE");
 }
 
 TEST(DBusTestBadIdle, env_variable_out_of_range)
@@ -314,7 +326,7 @@ TEST(DBusTestBadIdle, env_variable_out_of_range)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    setenv("THUMBNAILER_MAX_IDLE", "999", true);
+    EnvVarGuard ev_guard(env_vars.at("max_idle"), "999");
     try
     {
         unique_ptr<DBusServer> dbus(new DBusServer());
@@ -325,7 +337,6 @@ TEST(DBusTestBadIdle, env_variable_out_of_range)
         string err = e.what();
         EXPECT_TRUE(err.find("failed to appear on bus"));
     }
-    unsetenv("THUMBNAILER_MAX_IDLE");
 }
 
 TEST(DBusTestBadIdle, default_timeout)
@@ -333,7 +344,7 @@ TEST(DBusTestBadIdle, default_timeout)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    unsetenv("THUMBNAILER_MAX_IDLE");
+    EnvVarGuard ev_guard(env_vars.at("max_idle"), nullptr);
     unique_ptr<DBusServer> dbus(new DBusServer());  // For coverage with default timeout.
 }
 

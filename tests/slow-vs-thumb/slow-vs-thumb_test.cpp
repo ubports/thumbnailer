@@ -16,6 +16,7 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
+#include <internal/env_vars.h>
 #include <internal/thumbnailer.h>
 
 #include <testsetup.h>
@@ -73,16 +74,7 @@ TEST_F(ThumbnailerTest, slow_vs_thumb)
     request->download();
     ASSERT_TRUE(spy.wait(15000));  // Slow vs-thumb will get killed after 10 seconds.
 
-    try
-    {
-        request->thumbnail();
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("did not return after 10000 milliseconds")) << msg;
-    }
+    EXPECT_EQ("", request->thumbnail());
 }
 
 int main(int argc, char** argv)
@@ -90,7 +82,7 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
 
     // Run fake vs-thumb that does nothing for 20 seconds.
-    setenv("TN_UTILDIR", TESTSRCDIR "/slow-vs-thumb/slow", true);
+    setenv(env_vars.at("util_dir"), TESTSRCDIR "/slow-vs-thumb/slow", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
