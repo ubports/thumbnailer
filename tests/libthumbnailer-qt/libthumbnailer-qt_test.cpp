@@ -18,6 +18,7 @@
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
+#include <internal/gobj_memory.h>
 #include <internal/file_io.h>
 #include <internal/gobj_memory.h>
 #include <utils/artserver.h>
@@ -496,14 +497,24 @@ class Counter : public QObject
 public:
     Counter(int limit)
         : limit_(limit)
-        , count_(0)
-        , cancellations_(0)
+        , completed_(0)
+        , cancelled_(0)
     {
     }
 
-    int cancellations()
+    int cancelled() const
     {
-        return cancellations_;
+        return cancelled_;
+    }
+
+    int completed() const
+    {
+        return completed_;
+    }
+
+    int limit() const
+    {
+        return limit_;
     }
 
 Q_SIGNALS:
@@ -514,9 +525,13 @@ public Q_SLOTS:
     {
         if (cancelled)
         {
-            ++cancellations_;
+            ++cancelled_;
         }
-        if (++count_ == limit_)
+        else
+        {
+            ++completed_;
+        }
+        if (cancelled_ + completed_ == limit_)
         {
             Q_EMIT counterDone();
         }
@@ -524,8 +539,8 @@ public Q_SLOTS:
 
 private:
     int limit_;
-    int count_;
-    int cancellations_;
+    int completed_;
+    int cancelled_;
 };
 
 // Class to run a single request and check that it completed OK.
@@ -538,6 +553,7 @@ public:
     AsyncThumbnailProvider(unity::thumbnailer::qt::Thumbnailer* tn, Counter& counter)
         : thumbnailer_(tn)
         , counter_(counter)
+        , finished_ok_(false)
     {
         assert(tn);
     }
@@ -566,15 +582,22 @@ public:
         request_->waitForFinished();
     }
 
+    bool finishedOK()
+    {
+        return finished_ok_;
+    }
+
 public Q_SLOTS:
     void requestFinished()
     {
         EXPECT_TRUE(request_->isFinished());
-        if (!request_->isValid())
+        finished_ok_ = request_->isValid();
+        if (!finished_ok_)
         {
             EXPECT_TRUE(request_->isCancelled());
             EXPECT_TRUE(request_->image().isNull());
-            EXPECT_TRUE(request_->errorMessage() == QString("Request cancelled"))
+            EXPECT_TRUE(request_->errorMessage() == QString("Request cancelled") ||
+                        request_->errorMessage() == QString("Request destroyed"))
                 << request_->errorMessage().toStdString();
         }
         counter_.thumbnailComplete(request_->isCancelled());
@@ -583,6 +606,7 @@ public Q_SLOTS:
 private:
     unity::thumbnailer::qt::Thumbnailer* thumbnailer_;
     Counter& counter_;
+    bool finished_ok_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
 };
 
@@ -629,6 +653,114 @@ TEST_F(LibThumbnailerTest, cancel)
 
     EXPECT_TRUE(spy.wait(1000));
     EXPECT_EQ(1, spy.count());
+}
+
+TEST_F(LibThumbnailerTest, cancel_many)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    // Turn on trace so we get coverage on those parts of the code.
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+
+    Thumbnailer thumbnailer(dbus_->connection());
+
+    int N_REQUESTS = 200;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir();
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    QString path;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    for (int i = 0; i < N_REQUESTS; ++i)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(&thumbnailer, counter));
+        path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump for a while, so some requests start executing.
+    pump(2000);
+
+    // Cancel all requests.
+    providers.clear();
+
+    // Allow all the signals to trickle in.
+    pump(4000);
+    EXPECT_EQ(1, spy.count());
+
+    // We must have both completed and cancelled requests.
+    EXPECT_GT(counter.completed(), 0);
+    EXPECT_GT(counter.cancelled(), 0);
+}
+
+TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    // Turn on trace so we get coverage on those parts of the code.
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+
+    Thumbnailer thumbnailer(dbus_->connection());
+
+    int N_REQUESTS = 200;
+
+    string source = "short-track.mp3";
+    string target_dir = temp_dir();
+    make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
+
+    QString path;
+
+    Counter counter(N_REQUESTS);
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    for (int i = 0; i < N_REQUESTS; ++i)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(&thumbnailer, counter));
+        path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+        provider->getThumbnail(path, QSize(512, 512));
+        providers.emplace_back(move(provider));
+    }
+
+    // Pump for a while, so some requests start executing.
+    pump(2000);
+
+    // Cancel all but the last few requests.
+    for (int i = 0; i < N_REQUESTS - 5; ++i)
+    {
+        providers[i]->cancel();
+    }
+
+    // Allow all the signals to trickle in (can be slow on Jenkins).
+    EXPECT_TRUE(spy.wait(10000));
+
+    // We must have both completed and cancelled requests.
+    EXPECT_GT(counter.completed(), 5);
+    EXPECT_GT(counter.cancelled(), 0);
+
+    // The last few requests must have finished successfully.
+    for (int i = N_REQUESTS - 5; i < N_REQUESTS; ++i)
+    {
+        EXPECT_TRUE(providers[i]->finishedOK());
+    }
 }
 
 Q_DECLARE_METATYPE(QProcess::ExitStatus)  // Avoid noise from signal spy.
