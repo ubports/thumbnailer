@@ -19,6 +19,7 @@
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <internal/file_io.h>
+#include <internal/gobj_memory.h>
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
 #include <utils/supports_decoder.h>
@@ -27,6 +28,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
+#include <gio/gio.h>
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
@@ -107,47 +109,47 @@ TEST_F(LibThumbnailerTest, get_album_art)
 {
     Thumbnailer thumbnailer(dbus_->connection());
 
-    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
+    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(0, 48));
 
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
     // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(reply->errorMessage(), QString());
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
     QImage image = reply->image();
     EXPECT_EQ(48, image.width());
     EXPECT_EQ(48, image.height());
 
-    EXPECT_EQ(image.pixel(0, 0), QColor("#C80000").rgb());
-    EXPECT_EQ(image.pixel(47, 0), QColor("#00D200").rgb());
-    EXPECT_EQ(image.pixel(0, 47), QColor("#0000DC").rgb());
-    EXPECT_EQ(image.pixel(47, 47), QColor("#646E78").rgb());
+    EXPECT_EQ(QColor("#C80000").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#00D200").rgb(), image.pixel(47, 0));
+    EXPECT_EQ(QColor("#0000DC").rgb(), image.pixel(0, 47));
+    EXPECT_EQ(QColor("#646E78").rgb(), image.pixel(47, 47));
 }
 
 TEST_F(LibThumbnailerTest, get_album_art_sync)
 {
     Thumbnailer thumbnailer(dbus_->connection());
-    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 48));
+    auto reply = thumbnailer.getAlbumArt("metallica", "load", QSize(48, 0));
 
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(reply->errorMessage(), QString());
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
     QImage image = reply->image();
     EXPECT_EQ(48, image.width());
     EXPECT_EQ(48, image.height());
 
-    EXPECT_EQ(image.pixel(0, 0), QColor("#C80000").rgb());
-    EXPECT_EQ(image.pixel(47, 0), QColor("#00D200").rgb());
-    EXPECT_EQ(image.pixel(0, 47), QColor("#0000DC").rgb());
-    EXPECT_EQ(image.pixel(47, 47), QColor("#646E78").rgb());
+    EXPECT_EQ(QColor("#C80000").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#00D200").rgb(), image.pixel(47, 0));
+    EXPECT_EQ(QColor("#0000DC").rgb(), image.pixel(0, 47));
+    EXPECT_EQ(QColor("#646E78").rgb(), image.pixel(47, 47));
 }
 
 
@@ -161,20 +163,20 @@ TEST_F(LibThumbnailerTest, get_artist_art)
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
         // check that we've got exactly one signal
-        ASSERT_EQ(spy.count(), 1);
+        ASSERT_EQ(1, spy.count());
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(reply->errorMessage(), QString());
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
         QImage image = reply->image();
         EXPECT_EQ(48, image.width());
         EXPECT_EQ(48, image.height());
 
-        EXPECT_EQ(image.pixel(0, 0), QColor("#C80000").rgb());
-        EXPECT_EQ(image.pixel(47, 0), QColor("#00D200").rgb());
-        EXPECT_EQ(image.pixel(0, 47), QColor("#0000DC").rgb());
-        EXPECT_EQ(image.pixel(47, 47), QColor("#646E78").rgb());
+        EXPECT_EQ(QColor("#C80000").rgb(), image.pixel(0, 0));
+        EXPECT_EQ(QColor("#00D200").rgb(), image.pixel(47, 0));
+        EXPECT_EQ(QColor("#0000DC").rgb(), image.pixel(0, 47));
+        EXPECT_EQ(QColor("#646E78").rgb(), image.pixel(47, 47));
     }
 }
 
@@ -189,16 +191,16 @@ TEST_F(LibThumbnailerTest, get_artist_art_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(reply->errorMessage(), QString());
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
         QImage image = reply->image();
         EXPECT_EQ(48, image.width());
         EXPECT_EQ(48, image.height());
 
-        EXPECT_EQ(image.pixel(0, 0), QColor("#C80000").rgb());
-        EXPECT_EQ(image.pixel(47, 0), QColor("#00D200").rgb());
-        EXPECT_EQ(image.pixel(0, 47), QColor("#0000DC").rgb());
-        EXPECT_EQ(image.pixel(47, 47), QColor("#646E78").rgb());
+        EXPECT_EQ(QColor("#C80000").rgb(), image.pixel(0, 0));
+        EXPECT_EQ(QColor("#00D200").rgb(), image.pixel(47, 0));
+        EXPECT_EQ(QColor("#0000DC").rgb(), image.pixel(0, 47));
+        EXPECT_EQ(QColor("#646E78").rgb(), image.pixel(47, 47));
     }
 }
 
@@ -211,22 +213,21 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
     // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(reply->errorMessage(), QString());
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
     QImage image = reply->image();
 
     EXPECT_EQ(128, image.width());
     EXPECT_EQ(96, image.height());
 
-
-    EXPECT_EQ(image.pixel(0, 0), QColor("#FE8081").rgb());
-    EXPECT_EQ(image.pixel(127, 0), QColor("#FFFF80").rgb());
-    EXPECT_EQ(image.pixel(0, 95), QColor("#807FFE").rgb());
-    EXPECT_EQ(image.pixel(127, 95), QColor("#81FF81").rgb());
+    EXPECT_EQ(QColor("#FE8081").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#FFFF80").rgb(), image.pixel(127, 0));
+    EXPECT_EQ(QColor("#807FFE").rgb(), image.pixel(0, 95));
+    EXPECT_EQ(QColor("#81FF81").rgb(), image.pixel(127, 95));
 }
 
 TEST_F(LibThumbnailerTest, chinese_filename)
@@ -238,22 +239,21 @@ TEST_F(LibThumbnailerTest, chinese_filename)
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
     // check that we've got exactly one signal
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(reply->errorMessage(), QString());
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
     QImage image = reply->image();
 
     EXPECT_EQ(128, image.width());
     EXPECT_EQ(96, image.height());
 
-
-    EXPECT_EQ(image.pixel(0, 0), QColor("#FE8081").rgb());
-    EXPECT_EQ(image.pixel(127, 0), QColor("#FFFF80").rgb());
-    EXPECT_EQ(image.pixel(0, 95), QColor("#807FFE").rgb());
-    EXPECT_EQ(image.pixel(127, 95), QColor("#81FF81").rgb());
+    EXPECT_EQ(QColor("#FE8081").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#FFFF80").rgb(), image.pixel(127, 0));
+    EXPECT_EQ(QColor("#807FFE").rgb(), image.pixel(0, 95));
+    EXPECT_EQ(QColor("#81FF81").rgb(), image.pixel(127, 95));
 }
 
 TEST_F(LibThumbnailerTest, thumbnail_image_sync)
@@ -266,18 +266,17 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(reply->errorMessage(), QString());
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
     QImage image = reply->image();
 
     EXPECT_EQ(128, image.width());
     EXPECT_EQ(96, image.height());
 
-
-    EXPECT_EQ(image.pixel(0, 0), QColor("#FE8081").rgb());
-    EXPECT_EQ(image.pixel(127, 0), QColor("#FFFF80").rgb());
-    EXPECT_EQ(image.pixel(0, 95), QColor("#807FFE").rgb());
-    EXPECT_EQ(image.pixel(127, 95), QColor("#81FF81").rgb());
+    EXPECT_EQ(QColor("#FE8081").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#FFFF80").rgb(), image.pixel(127, 0));
+    EXPECT_EQ(QColor("#807FFE").rgb(), image.pixel(0, 95));
+    EXPECT_EQ(QColor("#81FF81").rgb(), image.pixel(127, 95));
 }
 
 TEST_F(LibThumbnailerTest, song_image)
@@ -291,20 +290,19 @@ TEST_F(LibThumbnailerTest, song_image)
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
-        ASSERT_EQ(spy.count(), 1);
+        ASSERT_EQ(1, spy.count());
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(reply->errorMessage(), QString());
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
         QImage image = reply->image();
 
         EXPECT_EQ(200, image.width());
         EXPECT_EQ(200, image.height());
 
-        EXPECT_EQ(image.pixel(0, 0), QColor("#FFFFFF").rgb());
-        EXPECT_EQ(image.pixel(199, 199), QColor("#FFFFFF").rgb());
-
+        EXPECT_EQ(QColor("#FFFFFF").rgb(), image.pixel(0, 0));
+        EXPECT_EQ(QColor("#FFFFFF").rgb(), image.pixel(199, 199));
     }
 }
 
@@ -320,16 +318,15 @@ TEST_F(LibThumbnailerTest, song_image_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(reply->errorMessage(), QString());
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
         QImage image = reply->image();
 
         EXPECT_EQ(200, image.width());
         EXPECT_EQ(200, image.height());
 
-        EXPECT_EQ(image.pixel(0, 0), QColor("#FFFFFF").rgb());
-        EXPECT_EQ(image.pixel(199, 199), QColor("#FFFFFF").rgb());
-
+        EXPECT_EQ(QColor("#FFFFFF").rgb(), image.pixel(0, 0));
+        EXPECT_EQ(QColor("#FFFFFF").rgb(), image.pixel(199, 199));
     }
 }
 
@@ -345,11 +342,11 @@ TEST_F(LibThumbnailerTest, video_image)
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
-        ASSERT_EQ(spy.count(), 1);
+        ASSERT_EQ(1, spy.count());
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(reply->errorMessage(), QString());
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
@@ -370,7 +367,7 @@ TEST_F(LibThumbnailerTest, video_image_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(reply->errorMessage(), QString());
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
 
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
@@ -388,13 +385,38 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file)
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "));
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "))
+        << reply->errorMessage().toStdString();
     EXPECT_FALSE(reply->isValid());
 }
 
+TEST_F(LibThumbnailerTest, invalid_size)
+{
+    const char* filename = TESTDATADIR "/orientation-1.jpg";
+
+    Thumbnailer thumbnailer(dbus_->connection());
+    auto reply = thumbnailer.getThumbnail(filename, QSize());
+
+    QSignalSpy spy(reply.data(), &Request::finished);
+    ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
+
+    ASSERT_EQ(1, spy.count());
+
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_FALSE(reply->isValid());
+    EXPECT_TRUE(boost::starts_with(reply->errorMessage().toStdString(), "getThumbnail: (-1,-1) "))
+        << reply->errorMessage().toStdString();
+    EXPECT_TRUE(boost::ends_with(reply->errorMessage().toStdString(), ": invalid QSize"))
+        << reply->errorMessage().toStdString();
+
+    QImage image = reply->image();
+
+    EXPECT_EQ(0, image.width());
+    EXPECT_EQ(0, image.height());
+}
 
 TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
 {
@@ -406,7 +428,8 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "));
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "))
+        << reply->errorMessage().toStdString();
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -418,10 +441,11 @@ TEST_F(LibThumbnailerTest, server_error)
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
-    ASSERT_EQ(spy.count(), 1);
+    ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"))
+        << reply->errorMessage().toStdString();
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -433,7 +457,8 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"));
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"))
+        << reply->errorMessage().toStdString();
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -619,6 +644,11 @@ int main(int argc, char** argv)
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+
+    // Turn on trace so we get coverage on those parts of the code.
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

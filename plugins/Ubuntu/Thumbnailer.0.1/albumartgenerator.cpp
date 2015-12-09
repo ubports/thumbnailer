@@ -49,14 +49,6 @@ AlbumArtGenerator::AlbumArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thu
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
     QSize size = requestedSize;
-    // TODO: Turn this into an error soonish.
-    if (!requestedSize.isValid())
-    {
-        qWarning().nospace() << "AlbumArtGenerator::requestImageResponse(): deprecated invalid QSize: "
-                             << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        // Size will be adjusted by the service to 128x128.
-    }
-
     QUrlQuery query(id);
     if (!query.hasQueryItem(QStringLiteral("artist")) || !query.hasQueryItem(QStringLiteral("album")))
     {
@@ -67,8 +59,16 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     const QString artist = query.queryItemValue(QStringLiteral("artist"), QUrl::FullyDecoded);
     const QString album = query.queryItemValue(QStringLiteral("album"), QUrl::FullyDecoded);
 
-    auto request = thumbnailer->getAlbumArt(artist, album, size);
-    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, request);
+    try
+    {
+        auto request = thumbnailer->getAlbumArt(artist, album, size);
+        return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, request);
+    }
+    catch (std::exception const& e)
+    {
+        qDebug() << "ignoring" << e.what();
+        return nullptr;
+    }
 }
 
 }  // namespace qml

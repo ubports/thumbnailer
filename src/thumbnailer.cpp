@@ -158,10 +158,7 @@ protected:
 
     Thumbnailer* thumbnailer_;
     string key_;
-    // TODO: Make this a const member again once we remove the hack
-    //       that adjusts invalid QSizes to 128x128.
-    //QSize const requested_size_;
-    QSize requested_size_;
+    QSize const requested_size_;
     chrono::milliseconds timeout_;
 
 private:
@@ -292,16 +289,17 @@ QByteArray RequestBase::thumbnail()
 {
     try
     {
-        // TODO: Turn this into an error soonish. This is logged here as well
-        //       as on the Qt/QML size so we don't need to look at the logs for
-        //       all applications to spot when we get an invalid size.
+        // This is logged here as well as on the Qt/QML side because,
+        // at least in theory, someone could talk to the DBus interface
+        // directly without going through the official client-side API.
         if (!requested_size_.isValid())
         {
-            qWarning().nospace() << "deprecated invalid size: "
-                                 << requested_size_
-                                 << ". This feature will be removed soon. Pass the desired size instead.";
-            requested_size_.setWidth(128);
-            requested_size_.setHeight(128);
+            QString msg;
+            QTextStream s(&msg, QIODevice::WriteOnly);
+            s << "invalid size: " << "(" << requested_size_.width() << "," << requested_size_.height()
+              << ")";
+            qWarning().nospace().noquote() << msg << ", key = " << QString::fromStdString(printable_key());
+            throw invalid_argument(msg.toStdString());
         }
 
         // Enforce size limitation.

@@ -13,12 +13,12 @@ Fixture {
 
     function test_artistart() {
         loadArtistArt("beck", "odelay")
-        compare(size.width, 128); // was 640
-        compare(size.height, 96); // was 480
+        compare(size.width, 640);
+        compare(size.height, 480);
         comparePixel(0, 0, "#FE0000");
-        comparePixel(127, 0, "#FFFF00");
-        comparePixel(0, 95, "#0000FE");
-        comparePixel(127, 95, "#00FF01");
+        comparePixel(639, 0, "#FFFF00");
+        comparePixel(0, 479, "#0000FE");
+        comparePixel(639, 479, "#00FF01");
     }
 
     function test_artistart_not_found() {
