@@ -208,8 +208,6 @@ void RequestImpl::dbusCallFinished()
     Q_ASSERT(sent_);
     Q_ASSERT(!finished_);
 
-    limiter_->done();
-
     QDBusPendingReply<QByteArray> reply = *watcher_.get();
     if (!reply.isValid())
     {
