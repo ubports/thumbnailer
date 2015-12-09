@@ -28,6 +28,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
+#pragma clang diagnostic push
 #include <gio/gio.h>
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wparentheses-equality"
