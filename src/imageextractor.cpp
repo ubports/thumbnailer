@@ -73,17 +73,7 @@ void ImageExtractor::extract()
     timer_.start(timeout_ms_);
 }
 
-namespace
-{
-
-string to_string(QByteArray const& array)
-{
-    return string(array.data(), array.size());
-}
-
-}
-
-string ImageExtractor::read()
+QByteArray ImageExtractor::read()
 {
     if (!error_.empty())
     {
@@ -91,8 +81,7 @@ string ImageExtractor::read()
     }
     assert(!read_called_);
     read_called_ = true;
-    // TODO: Not nice. This copies the entire thumbnail.
-    return to_string(process_.readAllStandardOutput());
+    return process_.readAllStandardOutput();
 }
 
 void ImageExtractor::processFinished()

@@ -22,7 +22,6 @@
 #include <ratelimiter.h>
 #include <settings.h>
 #include <thumbnailerinterface.h>
-#include <utils/artgeneratorcommon.h>
 #include <service/dbus_names.h>
 
 #include <QSharedPointer>
@@ -48,7 +47,7 @@ public:
     RequestImpl(QString const& details,
                 QSize const& requested_size,
                 RateLimiter* limiter,
-                std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job,
+                std::function<QDBusPendingReply<QByteArray>()> const& job,
                 bool trace_client);
 
     ~RequestImpl();
@@ -114,7 +113,7 @@ private:
     QString details_;
     QSize requested_size_;
     RateLimiter* limiter_;
-    std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> job_;
+    std::function<QDBusPendingReply<QByteArray>()> job_;
     std::function<void()> send_request_;
 
     std::unique_ptr<QDBusPendingCallWatcher> watcher_;
@@ -144,7 +143,7 @@ public:
 private:
     QSharedPointer<Request> createRequest(QString const& details,
                                           QSize const& requested_size,
-                                          std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job);
+                                          std::function<QDBusPendingReply<QByteArray>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
     RateLimiter limiter_;
     bool trace_client_;
@@ -153,7 +152,7 @@ private:
 RequestImpl::RequestImpl(QString const& details,
                          QSize const& requested_size,
                          RateLimiter* limiter,
-                         std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job,
+                         std::function<QDBusPendingReply<QByteArray>()> const& job,
                          bool trace_client)
     : details_(details)
     , requested_size_(requested_size)
@@ -206,7 +205,12 @@ void RequestImpl::dbusCallFinished()
     }
 
     Q_ASSERT(watcher_);
-    QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
+    Q_ASSERT(sent_);
+    Q_ASSERT(!finished_);
+
+    limiter_->done();
+
+    QDBusPendingReply<QByteArray> reply = *watcher_.get();
     if (!reply.isValid())
     {
         finishWithError("Thumbnailer: RequestImpl::dbusCallFinished(): D-Bus error: " + reply.error().message());
@@ -215,8 +219,7 @@ void RequestImpl::dbusCallFinished()
 
     try
     {
-        QSize realSize;
-        image_ = unity::thumbnailer::internal::imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
+        image_ = QImage::fromData(reply.value(), "JPG");
         finished_ = true;
         is_valid_ = true;
         error_message_ = QLatin1String("");
@@ -337,7 +340,7 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
 
 QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
                                                        QSize const& requested_size,
-                                                       std::function<QDBusPendingReply<QDBusUnixFileDescriptor>()> const& job)
+                                                       std::function<QDBusPendingReply<QByteArray>()> const& job)
 {
     if (trace_client_)
     {
