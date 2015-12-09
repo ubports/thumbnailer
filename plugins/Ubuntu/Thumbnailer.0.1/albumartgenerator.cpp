@@ -59,16 +59,8 @@ QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, 
     const QString artist = query.queryItemValue(QStringLiteral("artist"), QUrl::FullyDecoded);
     const QString album = query.queryItemValue(QStringLiteral("album"), QUrl::FullyDecoded);
 
-    try
-    {
-        auto request = thumbnailer->getAlbumArt(artist, album, size);
-        return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, request);
-    }
-    catch (std::exception const& e)
-    {
-        qDebug() << "ignoring" << e.what();
-        return nullptr;
-    }
+    auto request = thumbnailer->getAlbumArt(artist, album, size);
+    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, request);
 }
 
 }  // namespace qml
