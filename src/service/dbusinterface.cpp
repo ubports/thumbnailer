@@ -45,85 +45,22 @@ namespace service
 namespace
 {
 
-// Return a string identifying hardware for which we need to
-// set max-extractions to some special value.
-// Be careful when making modifications here. We need
-// to find a string in cpuinfo that is unique to the specific
-// hardwares we care about. For example, the output from
-// /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
-
-#if defined(__arm__)
-
-string hardware()
-{
-    string hw;
-
-    string const pattern = R"del([Hh]ardware[ \t]*:(.*))del";
-    boost::regex r(pattern);
-
-    string cpuinfo;
-    try
-    {
-        cpuinfo = read_file("/proc/cpuinfo");
-    }
-    // LCOV_EXCL_START
-    catch (runtime_error const& e)
-    {
-        qWarning() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
-        return "";
-    }
-    // LCOV_EXCL_STOP
-
-    vector<string> lines;
-    boost::split(lines, cpuinfo, boost::is_any_of("\n"));
-    for (auto const& line : lines)
-    {
-        boost::smatch hw_match;
-        if (boost::regex_match(line, hw_match, r))
-        {
-            hw = hw_match[1];
-            boost::trim(hw);
-            break;
-        }
-    }
-    return hw;
-}
-
 // TODO: Hack to work around gstreamer problems.
 //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
 
 int adjusted_limit(int limit)
 {
-    int new_limit = limit;
-
+#if defined(__arm__)
     // Only adjust if max-extractions is at its default of 0.
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
-        string hw = hardware();
-#if 0
-        // TODO: Disabled for now until we can figure out in more
-        //       detail how to deal with the gstreamer problems.
-        // On BQ (MT6582), we can handle only one vs-thumb at a time.
-        new_limit = hw == "MT6582" ? 1 : 2;
-#else
-        new_limit = 1;
-#endif
-        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+        limit = 1;
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << limit << "for Arm";
     }
-    return new_limit;
-}
-
-#else
-
-// Not on Arm, leave as is.
-
-int adjusted_limit(int limit)
-{
+#endif
     return limit;
 }
-
-#endif
 
 }
 
