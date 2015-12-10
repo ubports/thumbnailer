@@ -394,6 +394,30 @@ TEST_F(StressTest, album_art)
     add_stats(N_REQUESTS, start, finish);
 }
 
+TEST_F(StressTest, hits)
+{
+    int const N_REQUESTS = 10000;
+
+    vector<unique_ptr<AsyncThumbnailProvider>> providers;
+
+    Counter counter(N_REQUESTS);
+
+    QSignalSpy spy(&counter, &Counter::counterDone);
+
+    auto start = chrono::system_clock::now();
+    for (int i = 0; i < N_REQUESTS; i++)
+    {
+        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+        provider->getThumbnail(TESTDATADIR "/Photo-with-exif.jpg", QSize(128, 128));
+        providers.emplace_back(move(provider));
+    }
+    ASSERT_TRUE(spy.wait(60000));
+    ASSERT_EQ(1, spy.count());
+    auto finish = chrono::system_clock::now();
+
+    add_stats(N_REQUESTS, start, finish);
+}
+
 TEST_F(StressTest, wait_for_finished_in_queue)
 {
     if (!supports_decoder("audio/mpeg"))

@@ -90,7 +90,7 @@ TEST_F(ThumbnailerTest, basic)
 {
     Thumbnailer tn;
     std::unique_ptr<ThumbnailRequest> request;
-    string thumb;
+    QByteArray thumb;
     Image img;
 
     request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
@@ -204,7 +204,7 @@ TEST_F(ThumbnailerTest, clear)
             QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
             request->download(chrono::milliseconds(15000));
             ASSERT_TRUE(spy.wait(20000));
-            string thumb = request->thumbnail();
+            QByteArray thumb = request->thumbnail();
             ASSERT_NE("", thumb);
             Image img(thumb);
             EXPECT_EQ(200, img.width());
@@ -333,7 +333,7 @@ TEST_F(ThumbnailerTest, DISABLED_replace_photo)
     ASSERT_EQ(0, unlink(testfile.c_str()));
     ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
 
-    string data = request->thumbnail();
+    QByteArray data = request->thumbnail();
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
@@ -351,7 +351,7 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
     {
-        string thumb = request->thumbnail();
+        QByteArray thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
         EXPECT_EQ(1920, img.width());
@@ -362,7 +362,7 @@ TEST_F(ThumbnailerTest, thumbnail_video)
         // Fetch the thumbnail again with the same size.
         // That causes it to come from the thumbnail cache.
         auto request = tn.get_thumbnail(TEST_VIDEO, QSize(1920, 1920));
-        string thumb = request->thumbnail();
+        QByteArray thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
         EXPECT_EQ(1920, img.width());
@@ -373,7 +373,7 @@ TEST_F(ThumbnailerTest, thumbnail_video)
         // Fetch the thumbnail again with a different size.
         // That causes it to be scaled from the thumbnail cache.
         auto request = tn.get_thumbnail(TEST_VIDEO, QSize(500, 500));
-        string thumb = request->thumbnail();
+        QByteArray thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
         EXPECT_EQ(500, img.width());
@@ -399,8 +399,8 @@ TEST_F(ThumbnailerTest, DISABLED_replace_video)
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
 
-    string data = request->thumbnail();
-    Image img(data);
+    QByteArray thumb = request->thumbnail();
+    Image img(thumb);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1080, img.height());
 }
@@ -416,7 +416,7 @@ TEST_F(ThumbnailerTest, thumbnail_song)
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
-    string thumb = request->thumbnail();
+    QByteArray thumb = request->thumbnail();
     ASSERT_NE("", thumb);
     Image img(thumb);
     EXPECT_EQ(200, img.width());
@@ -434,7 +434,7 @@ TEST_F(ThumbnailerTest, thumbnail_song_no_extension)
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
-    string thumb = request->thumbnail();
+    QByteArray thumb = request->thumbnail();
     ASSERT_NE("", thumb);
     Image img(thumb);
     EXPECT_EQ(200, img.width());
@@ -681,7 +681,7 @@ TEST_F(ThumbnailerTest, empty_file)
     ASSERT_TRUE(spy.wait(5000));
 
     bool thumbnail_failed = false;
-    string thumbnail;
+    QByteArray thumbnail;
     try
     {
         thumbnail = request->thumbnail();
