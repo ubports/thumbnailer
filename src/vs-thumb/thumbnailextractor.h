@@ -61,7 +61,7 @@ public:
     bool has_video();
     bool extract_video_frame();
     bool extract_cover_art();
-    void save_screenshot(const std::string& filename);
+    void write_image(const std::string& filename);
 
     typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
 
@@ -74,8 +74,10 @@ private:
 
     std::string uri_;
     SampleUPtr sample_{nullptr, gst_sample_unref};
-    GdkPixbufRotation sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     bool sample_raw_ = true;
+    unity::thumbnailer::internal::gobj_ptr<GdkPixbuf> image_;
+    int width_;
+    int height_;
 };
 
 }  // namespace internal

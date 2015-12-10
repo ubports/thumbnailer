@@ -542,7 +542,8 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
 {
     if (image_extractor_)
     {
-        // The image data has been extracted via vs-thumb
+        // The image data has been extracted via vs-thumb. (Empty image data indicates
+        // an authoritative "no artwork" answer.)
         auto id = ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         return id;
     }

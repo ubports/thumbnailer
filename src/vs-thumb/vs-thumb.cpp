@@ -49,12 +49,12 @@ bool extract_thumbnail(string const& uri, string const& ofname)
     extractor.set_uri(uri);
     if (extractor.extract_cover_art())
     {
-        extractor.save_screenshot(ofname);
+        extractor.write_image(ofname);
         return true;
     }
     if (extractor.has_video() && extractor.extract_video_frame())
     {
-        extractor.save_screenshot(ofname);
+        extractor.write_image(ofname);
         return true;
     }
     return false;

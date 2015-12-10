@@ -195,7 +195,6 @@ void ThumbnailExtractor::reset()
 {
     change_state(playbin_.get(), GST_STATE_NULL);
     sample_.reset();
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     sample_raw_ = true;
 }
 
@@ -226,6 +225,7 @@ bool ThumbnailExtractor::has_video()
 
 bool ThumbnailExtractor::extract_video_frame()
 {
+    // Seek some distance into the video so we don't always get black or a 20th Century Fox logo.
     gint64 seek_point = 10 * GST_SECOND;
     if (duration_ >= 0)
     {
@@ -236,7 +236,7 @@ bool ThumbnailExtractor::extract_video_frame()
                             static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), seek_point);
     gst_element_get_state(playbin_.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
 
-    // Retrieve sample from the playbin
+    // Retrieve sample from the playbin.
     qDebug().nospace() << uri_.c_str() << ": Requesting sample frame";
     std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
         gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", "pixel-aspect-ratio", GST_TYPE_FRACTION, 1,
@@ -251,8 +251,29 @@ bool ThumbnailExtractor::extract_video_frame()
     sample_.reset(s);
     sample_raw_ = true;
 
+    // Convert raw sample into a pixbuf and store it in image_.
+    GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
+    if (!sample_caps)
+    {
+        throw_error("write_image(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
+    }
+    GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
+    width_ = 0;
+    height_ = 0;
+    gst_structure_get_int(sample_struct, "width", &width_);
+    gst_structure_get_int(sample_struct, "height", &height_);
+    if (width_ <= 0 || height_ <= 0)
+    {
+        throw_error("write_image(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
+    }
+
+    BufferMap buffermap;
+    buffermap.map(gst_sample_get_buffer(sample_.get()));
+    image_.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width_, height_,
+                                         GST_ROUND_UP_4(width_ * 3), nullptr, nullptr));
+
     // Does the sample need to be rotated?
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
     GstTagList* tags = nullptr;
     g_signal_emit_by_name(playbin_.get(), "get-video-tags", 0, &tags);
     if (tags)
@@ -263,15 +284,15 @@ bool ThumbnailExtractor::extract_video_frame()
         {
             if (!strcmp(orientation, "rotate-90"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
+                sample_rotation = GDK_PIXBUF_ROTATE_CLOCKWISE;
             }
             else if (!strcmp(orientation, "rotate-180"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
+                sample_rotation = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
             }
             else if (!strcmp(orientation, "rotate-270"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
+                sample_rotation = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
             }
             else
             {
@@ -281,6 +302,18 @@ bool ThumbnailExtractor::extract_video_frame()
         }
         gst_tag_list_unref(tags);
     }
+
+    if (sample_rotation != GDK_PIXBUF_ROTATE_NONE)
+    {
+        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image_.get(), sample_rotation);
+        if (rotated)
+        {
+            image_.reset(rotated);
+            width_ = gdk_pixbuf_get_width(image_.get());
+            height_ = gdk_pixbuf_get_height(image_.get());
+        }
+    }
+
     return true;
 }
 
@@ -295,7 +328,6 @@ bool ThumbnailExtractor::extract_cover_art()
         return false;  // LCOV_EXCL_LINE
     }
     sample_.reset();
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
     sample_raw_ = false;
 
     // Look for a normal image (cover or other image).
@@ -350,7 +382,7 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
 
 }
 
-void ThumbnailExtractor::save_screenshot(const std::string& filename)
+void ThumbnailExtractor::write_image(const std::string& filename)
 {
     assert(sample_);
 
@@ -358,12 +390,14 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
     qDebug().nospace() << uri_.c_str() << ": Saving image";
     BufferMap buffermap;
     gobj_ptr<GdkPixbuf> image;
+
     if (sample_raw_)
     {
+#if 0
         GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
         if (!sample_caps)
         {
-            throw_error("save_screenshot(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
+            throw_error("write_image(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
         }
         GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
         int width = 0, height = 0;
@@ -371,12 +405,15 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         gst_structure_get_int(sample_struct, "height", &height);
         if (width <= 0 || height <= 0)
         {
-            throw_error("save_screenshot(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
+            throw_error("write_image(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
         }
 
         buffermap.map(gst_sample_get_buffer(sample_.get()));
         image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
                                              GST_ROUND_UP_4(width * 3), nullptr, nullptr));
+#else
+    image = std::move(image_);
+#endif
     }
     else
     {
@@ -395,16 +432,7 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         }
         else
         {
-            throw_error("save_screenshot(): decoding image", error);  // LCOV_EXCL_LINE
-        }
-    }
-
-    if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
-    {
-        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
-        if (rotated)
-        {
-            image.reset(rotated);
+            throw_error("write_image(): decoding image", error);  // LCOV_EXCL_LINE
         }
     }
 
@@ -419,14 +447,14 @@ void ThumbnailExtractor::save_screenshot(const std::string& filename)
         int fd = 1;
         if (!gdk_pixbuf_save_to_callback(image.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
         {
-            throw_error("save_screenshot(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
+            throw_error("write_image(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
         }
     }
     else
     {
         if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
         {
-            throw_error("save_screenshot(): cannot save image", error);  // LCOV_EXCL_LINE
+            throw_error("write_image(): cannot save image", error);  // LCOV_EXCL_LINE
         }
     }
     qDebug().nospace() << uri_.c_str() << ": Done";
