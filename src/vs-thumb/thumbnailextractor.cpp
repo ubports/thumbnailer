@@ -128,7 +128,6 @@ CoverImage find_cover(GstTagList* tags, const char* tag_name)
         GstSample* s;
         if (!gst_tag_list_get_sample_index(tags, tag_name, i, &s))
         {
-
             break;
         }
         assert(s);
@@ -389,33 +388,8 @@ void ThumbnailExtractor::write_image(const std::string& filename)
     // Construct a pixbuf from the sample
     qDebug().nospace() << uri_.c_str() << ": Saving image";
     BufferMap buffermap;
-    gobj_ptr<GdkPixbuf> image;
 
-    if (sample_raw_)
-    {
-#if 0
-        GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
-        if (!sample_caps)
-        {
-            throw_error("write_image(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
-        }
-        GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
-        int width = 0, height = 0;
-        gst_structure_get_int(sample_struct, "width", &width);
-        gst_structure_get_int(sample_struct, "height", &height);
-        if (width <= 0 || height <= 0)
-        {
-            throw_error("write_image(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
-        }
-
-        buffermap.map(gst_sample_get_buffer(sample_.get()));
-        image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
-                                             GST_ROUND_UP_4(width * 3), nullptr, nullptr));
-#else
-    image = std::move(image_);
-#endif
-    }
-    else
+    if (!sample_raw_)
     {
         gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
 
@@ -427,7 +401,7 @@ void ThumbnailExtractor::write_image(const std::string& filename)
             GdkPixbuf* pixbuf = gdk_pixbuf_loader_get_pixbuf(loader.get());
             if (pixbuf)
             {
-                image.reset(static_cast<GdkPixbuf*>(g_object_ref(pixbuf)));
+                image_.reset(static_cast<GdkPixbuf*>(g_object_ref(pixbuf)));
             }
         }
         else
@@ -445,14 +419,14 @@ void ThumbnailExtractor::write_image(const std::string& filename)
     {
         // Write to stdout.
         int fd = 1;
-        if (!gdk_pixbuf_save_to_callback(image.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
+        if (!gdk_pixbuf_save_to_callback(image_.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
         {
             throw_error("write_image(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
         }
     }
     else
     {
-        if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
+        if (!gdk_pixbuf_save(image_.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
         {
             throw_error("write_image(): cannot save image", error);  // LCOV_EXCL_LINE
         }

@@ -519,7 +519,7 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_1)
     catch (unity::ResourceException const& e)
     {
         string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("could not extract screenshot")) << msg;
+        EXPECT_NE(string::npos, msg.find("no artwork for ")) << msg;
     }
 
     setenv("TN_UTILDIR", old_env.c_str(), true);
