@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 {
     char const * const progname = basename(argv[0]);
 
-    TraceMessageHandler message_handler("vs-thumb");
+    TraceMessageHandler message_handler(progname);
 
     gst_init(&argc, &argv);
 
