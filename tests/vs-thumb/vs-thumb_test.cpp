@@ -351,7 +351,7 @@ TEST(ExeTest, no_artwork)
     auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
     EXPECT_TRUE(boost::ends_with(err, msg)) << err;
     boost::system::error_code ec;
-    EXPECT_FALSE(boost::filesystem::exists("xyz.diff", ec));
+    EXPECT_FALSE(boost::filesystem::exists("xyz.tiff", ec));
 }
 
 int main(int argc, char** argv)

@@ -64,6 +64,7 @@ public:
     void write_image(const std::string& filename);
 
     typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
+    typedef unity::thumbnailer::internal::gobj_ptr<GdkPixbuf> PixbufUPtr;
 
 private:
     void change_state(GstElement* element, GstState state);
@@ -73,11 +74,8 @@ private:
     gint64 duration_ = -1;
 
     std::string uri_;
-    SampleUPtr sample_{nullptr, gst_sample_unref};
-    bool sample_raw_ = true;
-    unity::thumbnailer::internal::gobj_ptr<GdkPixbuf> image_;
-    int width_;
-    int height_;
+    SampleUPtr sample_{nullptr, gst_sample_unref};  // Contains raw data for cover or still frame.
+    PixbufUPtr still_frame_;                        // Non-null if we extracted still frame.
 };
 
 }  // namespace internal
