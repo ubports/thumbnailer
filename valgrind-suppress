@@ -164,6 +164,17 @@
 }
 
 {
+    QImage_uninitialized_jump
+    Memcheck:Cond
+    ...
+    fun:_ZN12QImageReader4readEP6QImage
+    fun:_ZN12QImageReader4readEv
+    fun:_ZN6QImage8fromDataEPKhiPKc
+    fun:_ZN6QImage8fromDataERK10QByteArrayPKc
+    fun:_ZN5unity11thumbnailer2qt8internal11RequestImpl16dbusCallFinishedEv
+}
+
+{
     gst_plugin_load_file
     Memcheck:Leak
     match-leak-kinds: definite
