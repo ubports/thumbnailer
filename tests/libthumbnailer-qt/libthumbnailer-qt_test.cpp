@@ -672,13 +672,10 @@ TEST_F(LibThumbnailerTest, cancel_many)
     // Cancel all requests.
     providers.clear();
 
-    // Allow all the signals to trickle in.
-    pump(4000);
-    EXPECT_EQ(1, spy.count());
-
-    // We must have both completed and cancelled requests.
+    // We must have some completed requests, but no cancelled requests because
+    // the destructor doesn't emit the finished signal.
     EXPECT_GT(counter.completed(), 0);
-    EXPECT_GT(counter.cancelled(), 0);
+    EXPECT_EQ(counter.cancelled(), 0);
 }
 
 TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)

@@ -56,7 +56,7 @@ public:
     \brief Destroys a request.
 
     If the request is still in progress, it is implicitly cancelled, and
-    the finished() signal is emitted.
+    the finished() signal is _not_ emitted.
     */
     ~Request();
 
