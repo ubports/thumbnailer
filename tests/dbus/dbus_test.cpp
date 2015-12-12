@@ -74,8 +74,7 @@ protected:
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 1 second as max idle time
-        setenv(env_vars.at("max_idle"), "1000", true);
+        setenv(MAX_IDLE, "1000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -90,7 +89,7 @@ protected:
         dbus_.reset();
         art_server_.reset();
 
-        unsetenv(env_vars.at("max_idle"));
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -308,7 +307,7 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    EnvVarGuard ev_guard(env_vars.at("max_idle"), "bad_value");
+    EnvVarGuard ev_guard(MAX_IDLE, "bad_value");
     try
     {
         unique_ptr<DBusServer> dbus(new DBusServer());
@@ -326,7 +325,7 @@ TEST(DBusTestBadIdle, env_variable_out_of_range)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    EnvVarGuard ev_guard(env_vars.at("max_idle"), "999");
+    EnvVarGuard ev_guard(MAX_IDLE, "999");
     try
     {
         unique_ptr<DBusServer> dbus(new DBusServer());
@@ -344,7 +343,7 @@ TEST(DBusTestBadIdle, default_timeout)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    EnvVarGuard ev_guard(env_vars.at("max_idle"), nullptr);
+    EnvVarGuard ev_guard(MAX_IDLE, nullptr);
     unique_ptr<DBusServer> dbus(new DBusServer());  // For coverage with default timeout.
 }
 
@@ -601,7 +600,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv(env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

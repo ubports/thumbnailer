@@ -234,7 +234,7 @@ int main(int argc, char** argv)
     QCoreApplication qt_app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv(env_vars.at("server_url"), "http://127.0.0.1", true);
+    setenv(UBUNTU_SERVER_URL, "http://127.0.0.1", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -37,7 +37,7 @@ int get_env_inactivity_time(int default_value)
 {
     using namespace unity::thumbnailer::internal;
 
-    char const* c_idle_time = getenv(env_vars.at("max_idle"));
+    char const* c_idle_time = getenv(MAX_IDLE);
     if (c_idle_time)
     {
         std::string str_idle_time(c_idle_time);

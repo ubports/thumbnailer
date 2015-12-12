@@ -30,6 +30,7 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
 #ifdef __clang__
+#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
 #include <gst/gst.h>
@@ -162,8 +163,7 @@ protected:
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/stress-test.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 30 seconds as max idle time
-        setenv(env_vars.at("max_idle"), "30000", true);
+        setenv(MAX_IDLE, "30000", true);
 
         dbus_.reset(new DBusServer());
         thumbnailer_.reset(new unity::thumbnailer::qt::Thumbnailer(dbus_->connection()));
@@ -224,7 +224,7 @@ protected:
         dbus_.reset();
         art_server_.reset();
 
-        unsetenv(env_vars.at("max_idle"));
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
 
@@ -593,7 +593,7 @@ int main(int argc, char** argv)
 #endif
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv(env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

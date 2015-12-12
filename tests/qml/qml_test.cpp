@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv(unity::thumbnailer::internal::env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
+    setenv(unity::thumbnailer::internal::UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     qmlRegisterSingletonType("testconfig", 1, 0, "Config", make_test_config);
     qmlProtectModule("testconfig", 1);
 

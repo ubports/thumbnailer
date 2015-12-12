@@ -47,7 +47,7 @@ namespace internal
 namespace
 {
 
-constexpr const char SERVER_URL[] = "https://dash.ubuntu.com";
+constexpr const char DFLT_SERVER_URL[] = "https://dash.ubuntu.com";
 constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
 constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
 
@@ -101,8 +101,8 @@ QString api_key()
 
 char const* server_url()
 {
-    char const* server_url = SERVER_URL;
-    char const* override_url = getenv(env_vars.at("server_url"));
+    char const* server_url = DFLT_SERVER_URL;
+    char const* override_url = getenv(thumbnailer::internal::UBUNTU_SERVER_URL);
     if (override_url && *override_url)
     {
         server_url = override_url;

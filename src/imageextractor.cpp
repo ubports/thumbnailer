@@ -64,7 +64,7 @@ void ImageExtractor::extract()
 {
     // Gstreamer video pipelines are unstable so we need to run an
     // external helper library.
-    char* utildir = getenv(env_vars.at("util_dir"));
+    char* utildir = getenv(UTIL_DIR);
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
     exe_path_ += QLatin1String("/vs-thumb");
     process_.start(exe_path_, {QString::fromStdString(filename_)});

@@ -142,7 +142,7 @@ protected:
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
         // set 3 seconds as max idle time
-        setenv(unity::thumbnailer::internal::env_vars.at("max_idle"), "1000", true);
+        setenv(unity::thumbnailer::internal::MAX_IDLE, "1000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -151,7 +151,7 @@ protected:
     {
         dbus_.reset();
 
-        unsetenv(unity::thumbnailer::internal::env_vars.at("max_idle"));
+        unsetenv(unity::thumbnailer::internal::MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv(unity::thumbnailer::internal::env_vars.at("util_dir"), TESTBINDIR "/../src/vs-thumb", true);
+    setenv(unity::thumbnailer::internal::UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

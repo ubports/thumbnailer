@@ -30,11 +30,9 @@ namespace thumbnailer
 namespace internal
 {
 
-// Map with symbolic keys for the environment variables we read.
-// This avoids having to change code in lots of places if we
-// decide to change the name of an env var.
-
-extern std::map<std::string, char const*> const env_vars;
+constexpr char const* MAX_IDLE = "THUMBNAILER_MAX_IDLE";
+constexpr char const* UBUNTU_SERVER_URL = "THUMBNAILER_UBUNTU_SERVER_URL";
+constexpr char const* UTIL_DIR = "THUMBNAILER_UTIL_DIR";
 
 }  // namespace internal
 
