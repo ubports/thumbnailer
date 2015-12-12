@@ -627,7 +627,7 @@ TEST_F(LibThumbnailerTest, cancel)
     provider.reset(new AsyncThumbnailProvider(&thumbnailer, counter));
     provider->getThumbnail(path, QSize(512, 512));
 
-    EXPECT_TRUE(spy.wait(1000));
+    EXPECT_TRUE(spy.wait(5000));
     EXPECT_EQ(1, spy.count());
 }
 
