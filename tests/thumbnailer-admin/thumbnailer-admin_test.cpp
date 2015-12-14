@@ -19,6 +19,7 @@
 #include "utils/artserver.h"
 #include "utils/dbusserver.h"
 
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <testsetup.h>
@@ -47,8 +48,7 @@ protected:
         ASSERT_NE(-1, chdir(temp_dir().c_str()));
         setenv("XDG_CACHE_HOME", qPrintable(tempdir->path() + "/cache"), true);
 
-        // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "3000", true);
+        setenv(MAX_IDLE, "3000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -62,7 +62,7 @@ protected:
     {
         dbus_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -659,7 +659,7 @@ int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
 
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     setenv("LC_ALL", "C", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
