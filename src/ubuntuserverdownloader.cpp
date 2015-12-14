@@ -15,11 +15,13 @@
  *
  * Authored by: Pawel Stolowski <pawel.stolowski@canonical.com>
  *              Xavi Garcia <xavi.garcia.mena@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #include <internal/ubuntuserverdownloader.h>
 
 #include <internal/artreply.h>
+#include <internal/env_vars.h>
 #include <settings.h>
 
 #include <QNetworkReply>
@@ -33,17 +35,6 @@
 
 using namespace std;
 
-// const strings
-namespace
-{
-
-#define SERVER_DOMAIN_NAME "dash.ubuntu.com"
-
-constexpr const char UBUNTU_SERVER_BASE_URL[] = "https://" SERVER_DOMAIN_NAME;
-constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
-constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
-}
-
 namespace unity
 {
 
@@ -56,9 +47,13 @@ namespace internal
 namespace
 {
 
+constexpr const char DFLT_SERVER_URL[] = "https://dash.ubuntu.com";
+constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
+constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
+
 // TODO: Hack to work around QNetworkAccessManager problems when the device is in flight mode.
 
-bool network_is_connected()
+bool network_is_connected(QString const& domain_name)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -66,7 +61,7 @@ bool network_is_connected()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
     struct addrinfo *result;
-    if (getaddrinfo(SERVER_DOMAIN_NAME, "80", &hints, &result) != 0)
+    if (getaddrinfo(domain_name.toUtf8().constData(), "80", &hints, &result) != 0)
     {
         return false;  // LCOV_EXCL_LINE
     }
@@ -74,7 +69,48 @@ bool network_is_connected()
     return true;
 }
 
+// helper methods to retrieve image urls
+QUrl make_art_url(QString const& server_url,
+                  QString const& base_url,
+                  QString const& artist,
+                  QString const& album,
+                  QString const& api_key)
+{
+    QUrlQuery q;
+    q.addQueryItem(QStringLiteral("artist"), artist);
+    q.addQueryItem(QStringLiteral("album"), album);
+    q.addQueryItem(QStringLiteral("key"), api_key);
+
+    QUrl url(server_url + "/" + base_url);
+    url.setQuery(q);
+    return url;
 }
+
+QString api_key()
+{
+    // the API key is not expected to change, so don't monitor it
+    Settings settings;
+
+    auto key = QString::fromStdString(settings.art_api_key());
+    if (key.isEmpty())
+    {
+        qCritical() << "Failed to get API key";  // LCOV_EXCL_LINE
+    }
+    return key;
+}
+
+char const* server_url()
+{
+    char const* server_url = DFLT_SERVER_URL;
+    char const* override_url = getenv(thumbnailer::internal::UBUNTU_SERVER_URL);
+    if (override_url && *override_url)
+    {
+        server_url = override_url;
+    }
+    return server_url;
+}
+
+}  // namespace
 
 class UbuntuServerArtReply : public ArtReply
 {
@@ -196,7 +232,7 @@ public:
 public Q_SLOTS:
     void download_finished()
     {
-        // TODO: Hack two work around QNetworkAccessManager problems when device is in flight mode.
+        // TODO: Hack to work around QNetworkAccessManager problems when device is in flight mode.
         //       reply_ is nullptr only if the network is down.
         if (!reply_)
         {
@@ -231,55 +267,6 @@ private:
     QTimer timer_;
 };
 
-// helper methods to retrieve image urls
-QUrl get_art_url(
-    QString const& base_url, QString const& artist, QString const& album, QString const& api_key)
-{
-    QString prefix_api_root = UBUNTU_SERVER_BASE_URL;
-    char const* apiroot_c = getenv("THUMBNAILER_UBUNTU_APIROOT");
-    if (apiroot_c)
-    {
-        prefix_api_root = apiroot_c;
-    }
-
-    QUrlQuery q;
-    q.addQueryItem(QStringLiteral("artist"), artist);
-    q.addQueryItem(QStringLiteral("album"), album);
-    q.addQueryItem(QStringLiteral("key"), api_key);
-
-    QUrl url(prefix_api_root + "/" + base_url);
-    url.setQuery(q);
-    return url;
-}
-
-QUrl get_album_art_url(QString const& artist, QString const& album, QString const& api_key)
-{
-    return get_art_url(ALBUM_ART_BASE_URL, artist, album, api_key);
-}
-
-QUrl get_artist_art_url(QString const& artist, QString const& album, QString const& api_key)
-{
-    return get_art_url(ARTIST_ART_BASE_URL, artist, album, api_key);
-}
-
-namespace
-{
-
-QString api_key()
-{
-    // the API key is not expected to change, so don't monitor it
-    Settings settings;
-
-    auto key = QString::fromStdString(settings.art_api_key());
-    if (key.isEmpty())
-    {
-        qCritical() << "Failed to get API key";  // LCOV_EXCL_LINE
-    }
-    return key;
-}
-
-}  // namespace
-
 UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
     : ArtDownloader(parent)
     , api_key_(api_key())
@@ -291,14 +278,16 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_album(QString const& artis
                                                             QString const& album,
                                                             chrono::milliseconds timeout)
 {
-    return download_url(get_album_art_url(artist, album, api_key_), timeout);
+    auto url = make_art_url(server_url(), ALBUM_ART_BASE_URL, artist, album, api_key_);
+    return download_url(url, timeout);
 }
 
 shared_ptr<ArtReply> UbuntuServerDownloader::download_artist(QString const& artist,
                                                              QString const& album,
                                                              chrono::milliseconds timeout)
 {
-    return download_url(get_artist_art_url(artist, album, api_key_), timeout);
+    auto url = make_art_url(server_url(), ARTIST_ART_BASE_URL, artist, album, api_key_);
+    return download_url(url, timeout);
 }
 
 shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chrono::milliseconds timeout)
@@ -307,7 +296,8 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chron
 
     // TODO: Hack to work around QNetworkAccessManager problems when in flight mode.
     shared_ptr<UbuntuServerArtReply> art_reply;
-    if (network_is_connected())
+    auto domain_name = url.host();
+    if (network_is_connected(domain_name))
     {
         QNetworkReply* reply = network_manager_->get(QNetworkRequest(url));
         art_reply = make_shared<UbuntuServerArtReply>(url.toString(), reply, timeout);

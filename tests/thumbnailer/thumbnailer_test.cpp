@@ -18,13 +18,14 @@
 
 #include <internal/thumbnailer.h>
 
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <internal/raii.h>
 #include <internal/trace.h>
 #include <testsetup.h>
 #include "utils/artserver.h"
-
+#include "utils/env_var_guard.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -425,14 +426,10 @@ TEST_F(ThumbnailerTest, exceptions)
 
 TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
 {
-    Thumbnailer tn;
-
     // Cause vs-thumb exec failure.
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(UTIL_DIR, "no_such_directory");
 
-    setenv("TN_UTILDIR", "no_such_directory", true);
+    Thumbnailer tn;
 
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
@@ -446,20 +443,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
     EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_1)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that exits with status 1
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-exit-1");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-1", true);
+    Thumbnailer tn;
 
     auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
@@ -473,20 +464,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_1)
     EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_2)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that exits with status 2
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-exit-2");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-2", true);
+    Thumbnailer tn;
 
     auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
@@ -500,20 +485,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_2)
     EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_99)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that exits with status 99
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-exit-99");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-99", true);
+    Thumbnailer tn;
 
     auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
@@ -527,20 +506,14 @@ TEST_F(ThumbnailerTest, vs_thumb_exit_99)
     EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_crash)
 {
-    Thumbnailer tn;
-
     // Run fake vs-thumb that kills itself with SIGTERM
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-crash");
 
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-crash", true);
+    Thumbnailer tn;
 
     auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
@@ -554,8 +527,6 @@ TEST_F(ThumbnailerTest, vs_thumb_crash)
     EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
 }
 
 TEST_F(ThumbnailerTest, not_regular_file)
@@ -945,26 +916,13 @@ TEST_F(RemoteServer, album_and_artist_have_distinct_keys)
     EXPECT_NE(album_request->key(), artist_request->key());
 }
 
-class DeadServer : public ::testing::Test
+TEST_F(RemoteServer, dead_server)
 {
-protected:
-    void SetUp() override
-    {
-        auto apiroot = QString("http://deadserver.invalid:80");
-        setenv("THUMBNAILER_UBUNTU_APIROOT", apiroot.toUtf8().constData(), true);
-    }
+    // Dead server won't reply.
+    EnvVarGuard ev_guard(UBUNTU_SERVER_URL, "http://deadserver.invalid");
 
-    void TearDown() override
-    {
-        unsetenv("THUMBNAILER_UBUNTU_APIROOT");
-    }
-};
-
-TEST_F(DeadServer, errors)
-{
     Thumbnailer tn;
 
-    // DeadServer won't reply
     auto request = tn.get_album_art("some_artist", "some_album", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
@@ -974,7 +932,7 @@ TEST_F(DeadServer, errors)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
-    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::network_down, request->status());
 }
 
 int main(int argc, char** argv)
@@ -982,7 +940,8 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UBUNTU_SERVER_URL, "http://127.0.0.1", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -13,31 +13,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Authored by: James Henstridge <james.henstridge@canonical.com>
+ * Authored by: Michi Henning <michi@canonical.com>
  */
 
 #pragma once
 
-#include <unity/util/ResourcePtr.h>
-
+#include <map>
 #include <string>
-#include <QProcess>
 
-class ArtServer final {
-public:
-    ArtServer();
-    ~ArtServer();
+namespace unity
+{
 
-    std::string const& server_url() const;
-    void block_access();
-    void unblock_access();
+namespace thumbnailer
+{
 
-private:
-    QProcess server_;
-    unity::util::ResourcePtr<int, void(*)(int)> socket_;
-    std::string server_url_;
-    std::string blocked_server_url_;
-    bool blocked_ = false;
+namespace internal
+{
 
-    void update_env();
-};
+constexpr char const* MAX_IDLE = "THUMBNAILER_MAX_IDLE";
+constexpr char const* UBUNTU_SERVER_URL = "THUMBNAILER_UBUNTU_SERVER_URL";
+constexpr char const* UTIL_DIR = "THUMBNAILER_UTIL_DIR";
+
+}  // namespace internal
+
+}  // namespace thumbnailer
+
+}  // namespace unity

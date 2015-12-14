@@ -18,6 +18,7 @@
 
 #include <internal/ubuntuserverdownloader.h>
 #include <internal/artreply.h>
+#include <internal/env_vars.h>
 #include "utils/artserver.h"
 #include <testsetup.h>
 
@@ -40,7 +41,7 @@ protected:
     void SetUp() override
     {
         fake_art_server_.reset(new ArtServer());
-        apiroot_ = QString::fromStdString(fake_art_server_->apiroot());
+        server_url_ = QString::fromStdString(fake_art_server_->server_url());
     }
 
     void TearDown() override
@@ -49,7 +50,7 @@ protected:
     }
 
     std::unique_ptr<ArtServer> fake_art_server_;
-    QString apiroot_;
+    QString server_url_;
 };
 
 // Time to wait for an expected signal to arrive. The wait()
@@ -71,7 +72,7 @@ TEST_F(TestDownloaderServer, test_download_album_url)
     EXPECT_EQ("fear", url_query.queryItemValue("album"));
     EXPECT_EQ("", url_query.queryItemValue("size"));
     EXPECT_EQ("/musicproxy/v1/album-art", check_url.path());
-    EXPECT_TRUE(check_url.toString().startsWith(apiroot_));
+    EXPECT_TRUE(check_url.toString().startsWith(server_url_));
 }
 
 TEST_F(TestDownloaderServer, test_download_artist_url)
@@ -87,7 +88,7 @@ TEST_F(TestDownloaderServer, test_download_artist_url)
     EXPECT_EQ("fear", url_query.queryItemValue("album"));
     EXPECT_EQ("", url_query.queryItemValue("size"));
     EXPECT_EQ("/musicproxy/v1/artist-art", check_url.path());
-    EXPECT_TRUE(check_url.toString().startsWith(apiroot_));
+    EXPECT_TRUE(check_url.toString().startsWith(server_url_));
 }
 
 TEST_F(TestDownloaderServer, test_ok_album)
@@ -233,6 +234,7 @@ int main(int argc, char** argv)
     QCoreApplication qt_app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
+    setenv(UBUNTU_SERVER_URL, "http://127.0.0.1", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -18,7 +18,7 @@
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
-#include <internal/gobj_memory.h>
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <internal/gobj_memory.h>
 #include <utils/artserver.h>
@@ -32,6 +32,7 @@
 #pragma GCC diagnostic ignored "-Wcast-align"
 #include <gio/gio.h>
 #ifdef __clang__
+#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
 #include <gst/gst.h>
@@ -81,8 +82,7 @@ protected:
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/libthumbnailer-qt.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 10 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "10000", true);
+        setenv(MAX_IDLE, "10000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -97,7 +97,7 @@ protected:
         dbus_.reset();
         art_server_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -771,7 +771,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
 
     // Turn on trace so we get coverage on those parts of the code.
     gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
