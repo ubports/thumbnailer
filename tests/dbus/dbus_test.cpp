@@ -178,12 +178,24 @@ TEST_F(DBusTest, thumbnail_no_such_file)
 
 TEST_F(DBusTest, server_error)
 {
-    QDBusReply<QByteArray> reply =
-        dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
-    EXPECT_FALSE(reply.isValid());
-    auto message = reply.error().message().toStdString();
-    // TODO: That's a seriously poor error message.
-    EXPECT_TRUE(boost::contains(message, "fetch() failed")) << message;
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+        EXPECT_FALSE(reply.isValid());
+        auto message = reply.error().message().toStdString();
+        EXPECT_EQ("Handler::createFinished(): could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+                  message) << message;
+    }
+
+    // Again, so we cover the network retry limit case.
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+        EXPECT_FALSE(reply.isValid());
+        auto message = reply.error().message().toStdString();
+        EXPECT_EQ("Handler::checkFinished(): no artwork for artist: error/500 (256,256): TEMPORARY ERROR",
+                  message) << message;
+    }
 }
 
 TEST_F(DBusTest, duplicate_requests)
