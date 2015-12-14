@@ -121,7 +121,7 @@ TEST_F(LibThumbnailerTest, get_album_art)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+    EXPECT_EQ(QString(), reply->errorMessage());
 
     QImage image = reply->image();
     EXPECT_EQ(48, image.width());
@@ -142,7 +142,7 @@ TEST_F(LibThumbnailerTest, get_album_art_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+    EXPECT_EQ(QString(), reply->errorMessage());
 
     QImage image = reply->image();
     EXPECT_EQ(48, image.width());
@@ -169,7 +169,7 @@ TEST_F(LibThumbnailerTest, get_artist_art)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+        EXPECT_EQ(QString(), reply->errorMessage());
 
         QImage image = reply->image();
         EXPECT_EQ(48, image.width());
@@ -193,7 +193,7 @@ TEST_F(LibThumbnailerTest, get_artist_art_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+        EXPECT_EQ(QString(), reply->errorMessage());
 
         QImage image = reply->image();
         EXPECT_EQ(48, image.width());
@@ -219,7 +219,7 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+    EXPECT_EQ(QString(), reply->errorMessage());
 
     QImage image = reply->image();
 
@@ -245,7 +245,7 @@ TEST_F(LibThumbnailerTest, chinese_filename)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+    EXPECT_EQ(QString(), reply->errorMessage());
 
     QImage image = reply->image();
 
@@ -268,7 +268,7 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+    EXPECT_EQ(QString(), reply->errorMessage());
 
     QImage image = reply->image();
 
@@ -296,7 +296,7 @@ TEST_F(LibThumbnailerTest, song_image)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+        EXPECT_EQ(QString(), reply->errorMessage());
 
         QImage image = reply->image();
 
@@ -320,7 +320,7 @@ TEST_F(LibThumbnailerTest, song_image_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+        EXPECT_EQ(QString(), reply->errorMessage());
 
         QImage image = reply->image();
 
@@ -348,7 +348,7 @@ TEST_F(LibThumbnailerTest, video_image)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+        EXPECT_EQ(QString(), reply->errorMessage());
 
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
@@ -369,7 +369,7 @@ TEST_F(LibThumbnailerTest, video_image_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
+        EXPECT_EQ(QString(), reply->errorMessage());
 
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
