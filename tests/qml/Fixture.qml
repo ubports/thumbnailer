@@ -125,6 +125,7 @@ TestCase {
 
     function cleanup() {
         image.source = "";
+        root.requestedSize = Qt.size(1920, 1920)
         while (image.status !== Image.Null) {
             spy.wait();
         }

@@ -4,7 +4,7 @@ Fixture {
     function test_photo() {
         loadThumbnail("orientation-1.jpg");
         compare(size.width, 640);
-        compare(size.height, 480); // was 480
+        compare(size.height, 480);
         comparePixel(0, 0, "#FE0000");
         comparePixel(639, 0, "#FFFF00");
         comparePixel(0, 479, "#0000FE");
