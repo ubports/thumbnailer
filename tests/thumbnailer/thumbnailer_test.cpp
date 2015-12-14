@@ -566,6 +566,22 @@ TEST_F(ThumbnailerTest, check_client_access)
     }
 }
 
+TEST_F(ThumbnailerTest, invalid_size)
+{
+    Thumbnailer tn;
+
+    auto request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        EXPECT_TRUE(boost::ends_with(e.what(), "invalid size: (-1,-1)")) << e.what();
+    }
+}
+
 TEST_F(ThumbnailerTest, bad_image)
 {
     Thumbnailer tn;

@@ -7,37 +7,46 @@ TestCase {
     id: root
     when: windowShown
 
-    width: canvas.width > 0 ? canvas.width : 100
-    height: canvas.height > 0 ? canvas.height : 100
+    width: image.width > 0 ? image.width : 100
+    height: image.height > 0 ? image.height : 100
 
     readonly property size size: Qt.size(image.implicitWidth, image.implicitHeight)
-    property size requestedSize: Qt.size(-1, -1)
+    property size requestedSize: Qt.size(1920, 1920)
+
+    // This is depending on a private member, but having separate
+    // dumps for each test case is quite useful.
+    property string dumpfile: "%1/qml/dump-%2.png".arg(Config.buildDir).arg(qtest_results.functionName)
+    property variant imageData: null
 
     Image {
         id: image
-        width: parent.width
-        height: parent.height
+        width: implicitWidth
+        height: implicitHeight
         sourceSize: root.requestedSize
 
+        signal grabFinished
+
         SignalSpy {
-            id: spy
+            id: statusSpy
             target: image
             signalName: "statusChanged"
+        }
+
+        SignalSpy {
+            id: grabSpy
+            target: image
+            signalName: "grabFinished"
         }
     }
 
     Canvas {
         id: canvas
-        width: image.implicitWidth
-        height: image.implicitHeight
         contextType: "2d"
-        renderStrategy: Canvas.Immediate
-        renderTarget: Canvas.Image
 
-        property bool paintFinished: false
-        onPaint: {
-            context.drawImage(image, 0, 0);
-            paintFinished = true
+        SignalSpy {
+            id: loadSpy
+            target: canvas
+            signalName: "imageLoaded"
         }
     }
 
@@ -71,24 +80,39 @@ TestCase {
     }
 
     function load(url) {
+        // Have the image component load the image
         image.source = url;
         while (image.status === Image.Loading) {
-            spy.wait();
+            statusSpy.wait();
         }
         compare(image.status, Image.Ready);
 
-        canvas.paintFinished = false;
-        canvas.requestPaint();
-        // We should be able to do this by waiting on the "painted"
-        // signal, but I couldn't get that to work reliably.
-        while (!canvas.paintFinished) {
-            wait(50);
+        // Grab the image component contents to the dump file
+        grabSpy.clear()
+        compare(image.grabToImage(function(result) {
+            result.saveToFile(dumpfile);
+            image.grabFinished();
+        }), true);
+        if (grabSpy.count == 0) {
+            grabSpy.wait();
         }
+
+        // Have the canvas load up the image data
+        canvas.unloadImage(dumpfile);
+        canvas.loadImage(dumpfile);
+        while (canvas.isImageLoading(dumpfile)) {
+            loadSpy.wait();
+        }
+        compare(canvas.isImageError(dumpfile), false);
+
+        // And finally read in the image data
+        imageData = canvas.context.createImageData(dumpfile);
     }
 
     function pixel(x, y) {
-        var data = canvas.context.getImageData(x,y,1,1).data;
-        return Qt.rgba(data[0] / 255, data[1] / 255, data[2] / 255, data[3] / 255);
+        var pos = (imageData.width * y + x) * 4;
+        var data = imageData.data;
+        return Qt.rgba(data[pos] / 255, data[pos+1] / 255, data[pos+2] / 255, data[pos+3] / 255);
     }
 
     function comparePixel(x, y, expected) {
@@ -101,7 +125,7 @@ TestCase {
 
     function cleanup() {
         image.source = "";
-        root.requestedSize = Qt.size(-1, -1);
+        root.requestedSize = Qt.size(1920, 1920)
         while (image.status !== Image.Null) {
             spy.wait();
         }
