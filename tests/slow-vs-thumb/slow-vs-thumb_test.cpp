@@ -73,16 +73,7 @@ TEST_F(ThumbnailerTest, slow_vs_thumb)
     request->download();
     ASSERT_TRUE(spy.wait(15000));  // Slow vs-thumb will get killed after 10 seconds.
 
-    try
-    {
-        request->thumbnail();
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("did not return after 10000 milliseconds")) << msg;
-    }
+    EXPECT_EQ("", request->thumbnail());
 }
 
 int main(int argc, char** argv)

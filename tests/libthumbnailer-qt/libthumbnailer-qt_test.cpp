@@ -116,7 +116,6 @@ TEST_F(LibThumbnailerTest, get_album_art)
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
 
-    // check that we've got exactly one signal
     ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
@@ -164,7 +163,6 @@ TEST_F(LibThumbnailerTest, get_artist_art)
         auto reply = thumbnailer.getArtistArt("metallica", "load", QSize(48, 48));
         QSignalSpy spy(reply.data(), &Request::finished);
         ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-        // check that we've got exactly one signal
         ASSERT_EQ(1, spy.count());
 
         EXPECT_TRUE(reply->isFinished());
@@ -214,7 +212,6 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
     auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
     ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
@@ -240,7 +237,6 @@ TEST_F(LibThumbnailerTest, chinese_filename)
     auto reply = thumbnailer.getThumbnail(filename, QSize(128, 96));
     QSignalSpy spy(reply.data(), &Request::finished);
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
-    // check that we've got exactly one signal
     ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
@@ -443,7 +439,9 @@ TEST_F(LibThumbnailerTest, server_error)
     ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed")) << reply->errorMessage();
+    EXPECT_EQ("Thumbnailer: RequestImpl::dbusCallFinished(): D-Bus error: Handler::createFinished(): "
+              "could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+              reply->errorMessage());
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -455,7 +453,9 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed")) << reply->errorMessage();
+    EXPECT_EQ("Thumbnailer: RequestImpl::dbusCallFinished(): D-Bus error: Handler::createFinished(): "
+              "could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+              reply->errorMessage());
     EXPECT_FALSE(reply->isValid());
 }
 
