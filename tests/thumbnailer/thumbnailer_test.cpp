@@ -929,7 +929,7 @@ TEST_F(RemoteServer, dead_server)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
-    EXPECT_EQ(ThumbnailRequest::FetchStatus::network_down, request->status());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
 }
 
 int main(int argc, char** argv)
