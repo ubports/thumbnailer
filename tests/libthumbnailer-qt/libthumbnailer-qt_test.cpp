@@ -617,12 +617,12 @@ TEST_F(LibThumbnailerTest, cancel)
     path = QString::fromStdString(target_dir + "/0" + source);
     provider->getThumbnail(path, QSize(512, 512));
 
-    pump(500);
+    pump(1000);
 
     provider->cancel();
     provider->waitForFinished();  // For coverage
 
-    pump(500);
+    pump(1000);
 
     provider.reset(new AsyncThumbnailProvider(&thumbnailer, counter));
     provider->getThumbnail(path, QSize(512, 512));
