@@ -24,6 +24,7 @@
 #include <utils/artserver.h>
 #include <utils/dbusserver.h>
 #include <utils/supports_decoder.h>
+#include <utils/testutils.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -120,7 +121,7 @@ TEST_F(LibThumbnailerTest, get_album_art)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
     QImage image = reply->image();
     EXPECT_EQ(48, image.width());
@@ -141,7 +142,7 @@ TEST_F(LibThumbnailerTest, get_album_art_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
     QImage image = reply->image();
     EXPECT_EQ(48, image.width());
@@ -168,7 +169,7 @@ TEST_F(LibThumbnailerTest, get_artist_art)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
         QImage image = reply->image();
         EXPECT_EQ(48, image.width());
@@ -192,7 +193,7 @@ TEST_F(LibThumbnailerTest, get_artist_art_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
         QImage image = reply->image();
         EXPECT_EQ(48, image.width());
@@ -218,7 +219,7 @@ TEST_F(LibThumbnailerTest, thumbnail_image)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
     QImage image = reply->image();
 
@@ -244,7 +245,7 @@ TEST_F(LibThumbnailerTest, chinese_filename)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
     QImage image = reply->image();
 
@@ -267,7 +268,7 @@ TEST_F(LibThumbnailerTest, thumbnail_image_sync)
 
     EXPECT_TRUE(reply->isFinished());
     EXPECT_TRUE(reply->isValid());
-    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+    EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
     QImage image = reply->image();
 
@@ -295,7 +296,7 @@ TEST_F(LibThumbnailerTest, song_image)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
         QImage image = reply->image();
 
@@ -319,7 +320,7 @@ TEST_F(LibThumbnailerTest, song_image_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
         QImage image = reply->image();
 
@@ -347,7 +348,7 @@ TEST_F(LibThumbnailerTest, video_image)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
@@ -368,7 +369,7 @@ TEST_F(LibThumbnailerTest, video_image_sync)
 
         EXPECT_TRUE(reply->isFinished());
         EXPECT_TRUE(reply->isValid());
-        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage().toStdString();
+        EXPECT_EQ(QString(), reply->errorMessage()) << reply->errorMessage();
 
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
@@ -389,8 +390,7 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file)
     ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "))
-        << reply->errorMessage().toStdString();
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: ")) << reply->errorMessage();
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -409,9 +409,8 @@ TEST_F(LibThumbnailerTest, invalid_size)
     EXPECT_TRUE(reply->isFinished());
     EXPECT_FALSE(reply->isValid());
     EXPECT_TRUE(boost::starts_with(reply->errorMessage().toStdString(), "getThumbnail: (-1,-1) "))
-        << reply->errorMessage().toStdString();
-    EXPECT_TRUE(boost::ends_with(reply->errorMessage().toStdString(), ": invalid QSize"))
-        << reply->errorMessage().toStdString();
+        << reply->errorMessage();
+    EXPECT_TRUE(boost::ends_with(reply->errorMessage().toStdString(), ": invalid QSize")) << reply->errorMessage();
 
     QImage image = reply->image();
 
@@ -429,8 +428,7 @@ TEST_F(LibThumbnailerTest, thumbnail_no_such_file_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: "))
-        << reply->errorMessage().toStdString();
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), " No such file or directory: ")) << reply->errorMessage();
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -445,8 +443,7 @@ TEST_F(LibThumbnailerTest, server_error)
     ASSERT_EQ(1, spy.count());
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"))
-        << reply->errorMessage().toStdString();
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed")) << reply->errorMessage();
     EXPECT_FALSE(reply->isValid());
 }
 
@@ -458,8 +455,7 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     reply->waitForFinished();
 
     EXPECT_TRUE(reply->isFinished());
-    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed"))
-        << reply->errorMessage().toStdString();
+    EXPECT_TRUE(boost::contains(reply->errorMessage(), "fetch() failed")) << reply->errorMessage();
     EXPECT_FALSE(reply->isValid());
 }
 

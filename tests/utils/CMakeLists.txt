@@ -26,6 +26,7 @@ add_library(testutils STATIC
     artserver.cpp
     dbusserver.cpp
     supports_decoder.cpp
+    testutils.cpp
     ${interface_files}
     ${CMAKE_SOURCE_DIR}/src/service/stats.cpp
 )
