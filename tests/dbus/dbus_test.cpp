@@ -17,10 +17,12 @@
  *              Michi Henning <michi.henning@canonical.com>
  */
 
+#include <internal/env_vars.h>
 #include <internal/image.h>
 #include <internal/raii.h>
 #include "utils/artserver.h"
 #include "utils/dbusserver.h"
+#include "utils/env_var_guard.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <gtest/gtest.h>
@@ -72,8 +74,7 @@ protected:
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "1000", true);
+        setenv(MAX_IDLE, "1000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -88,7 +89,7 @@ protected:
         dbus_.reset();
         art_server_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -306,7 +307,7 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    setenv("THUMBNAILER_MAX_IDLE", "bad_value", true);
+    EnvVarGuard ev_guard(MAX_IDLE, "bad_value");
     try
     {
         unique_ptr<DBusServer> dbus(new DBusServer());
@@ -317,7 +318,6 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
         string err = e.what();
         EXPECT_TRUE(err.find("failed to appear on bus"));
     }
-    unsetenv("THUMBNAILER_MAX_IDLE");
 }
 
 TEST(DBusTestBadIdle, env_variable_out_of_range)
@@ -325,7 +325,7 @@ TEST(DBusTestBadIdle, env_variable_out_of_range)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    setenv("THUMBNAILER_MAX_IDLE", "999", true);
+    EnvVarGuard ev_guard(MAX_IDLE, "999");
     try
     {
         unique_ptr<DBusServer> dbus(new DBusServer());
@@ -336,7 +336,6 @@ TEST(DBusTestBadIdle, env_variable_out_of_range)
         string err = e.what();
         EXPECT_TRUE(err.find("failed to appear on bus"));
     }
-    unsetenv("THUMBNAILER_MAX_IDLE");
 }
 
 TEST(DBusTestBadIdle, default_timeout)
@@ -344,7 +343,7 @@ TEST(DBusTestBadIdle, default_timeout)
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    unsetenv("THUMBNAILER_MAX_IDLE");
+    EnvVarGuard ev_guard(MAX_IDLE, nullptr);
     unique_ptr<DBusServer> dbus(new DBusServer());  // For coverage with default timeout.
 }
 
@@ -601,7 +600,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

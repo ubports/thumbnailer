@@ -31,5 +31,5 @@ add_library(testutils STATIC
 )
 qt5_use_modules(testutils Core DBus Test)
 target_link_libraries(testutils
-    Qt5::DBus Qt5::Core Qt5::Test ${QTDBUSTEST_DEPS_LIBRARIES}
+    Qt5::DBus Qt5::Core Qt5::Test ${QTDBUSTEST_DEPS_LIBRARIES} thumbnailer-static
 )
