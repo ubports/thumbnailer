@@ -67,7 +67,7 @@ TEST_F(ThumbnailerTest, slow_vs_thumb)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(100, 0));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);

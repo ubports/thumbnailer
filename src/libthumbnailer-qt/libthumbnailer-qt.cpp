@@ -166,6 +166,14 @@ RequestImpl::RequestImpl(QString const& details,
     , trace_client_(trace_client)
     , public_request_(nullptr)
 {
+    if (!requested_size.isValid())
+    {
+        error_message_ = details_ + ": " + "invalid QSize";
+        qCritical().noquote() << error_message_;
+        finished_ = true;
+        return;
+    }
+
     // The limiter does not call send_request_ until the request can be sent
     // without exceeding max_backlog().
     send_request_ = [this]
@@ -346,6 +354,10 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
     auto request_impl = new RequestImpl(details, requested_size, &limiter_, job, trace_client_);
     auto request = QSharedPointer<Request>(new Request(request_impl));
     request_impl->setRequest(request.data());
+    if (request->isFinished() && !request->isValid())
+    {
+        QMetaObject::invokeMethod(request.data(), "finished", Qt::QueuedConnection);
+    }
     return request;
 }
 
