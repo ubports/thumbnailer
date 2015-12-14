@@ -22,7 +22,6 @@
 #include <cstdlib>
 #include <string>
 
-
 class EnvVarGuard final
 {
 public:

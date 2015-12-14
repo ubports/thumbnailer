@@ -594,6 +594,7 @@ int main(int argc, char** argv)
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
+    setenv(LOG_LEVEL, "0", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -88,5 +88,13 @@
         If set to true, this parameter enables request tracing via qDebug() on the client side.
      </description>
     </key>
+
+    <key type="i" name="log-level">
+      <default>1</default>
+      <summary>Sets the level of detail of log messages written to stderr.</summary>
+      <description>
+        At the default setting (1), cache misses are logged, but no messages are written for cache hits. At setting 2, cache hits are logged as well. At setting 0, most messages that are part of normal operation are suppressed. Errors and other unusual operating conditions are always logged, regardless of the logging level.
+     </description>
+    </key>
   </schema>
 </schemalist>

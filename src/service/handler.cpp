@@ -269,7 +269,7 @@ void Handler::checkFinished()
         return;
     }
 
-    sendError("Handler::checkFinished(): no artwork for " + details() + ": " + status());
+    sendError("Handler::checkFinished(): no artwork for " + details() + ": " + status_as_string());
 }
 
 void Handler::downloadFinished()
@@ -311,7 +311,8 @@ QByteArray Handler::create()
     QByteArray art_image = p->request->thumbnail();
     if (art_image.size() == 0)
     {
-        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
+        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " +
+                            status_as_string().toStdString());
     }
     return art_image;
 }
@@ -390,7 +391,12 @@ QString Handler::details() const
     return p->details;
 }
 
-QString Handler::status() const
+ThumbnailRequest::FetchStatus Handler::status() const
+{
+    return p->request->status();
+}
+
+QString Handler::status_as_string() const
 {
     switch (p->request->status())
     {

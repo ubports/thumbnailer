@@ -16,9 +16,11 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
+#include <internal/env_vars.h>
 #include <internal/gobj_memory.h>
 #include <settings.h>
 #include <testsetup.h>
+#include <utils/env_var_guard.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -43,6 +45,10 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(2, settings.failure_cache_size());
     EXPECT_EQ(2, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
+    EXPECT_EQ(10, settings.extraction_timeout());
+    EXPECT_EQ(20, settings.max_backlog());
+    EXPECT_FALSE(settings.trace_client());
+    EXPECT_EQ(1, settings.log_level());
 }
 
 TEST(Settings, missing_schema)
@@ -62,6 +68,10 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(2, settings.retry_error_hours());
     EXPECT_EQ(2, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
+    EXPECT_EQ(10, settings.extraction_timeout());
+    EXPECT_EQ(20, settings.max_backlog());
+    EXPECT_FALSE(settings.trace_client());
+    EXPECT_EQ(1, settings.log_level());
 }
 
 TEST(Settings, changed_settings)
@@ -133,6 +143,30 @@ TEST(Settings, negative_int)
     }
 
     g_settings_reset(gsettings.get(), "max-extractions");
+}
+
+TEST(Settings, log_level_env_override)
+{
+    EnvVarGuard ev_guard(LOG_LEVEL, "0");
+
+    Settings settings;
+    EXPECT_EQ(0, settings.log_level());
+}
+
+TEST(Settings, log_level_env_bad_setting)
+{
+    EnvVarGuard ev_guard(LOG_LEVEL, "abc");
+
+    Settings settings;
+    EXPECT_EQ(1, settings.log_level());
+}
+
+TEST(Settings, log_level_out_of_range)
+{
+    EnvVarGuard ev_guard(LOG_LEVEL, "3");
+
+    Settings settings;
+    EXPECT_EQ(1, settings.log_level());
 }
 
 int main(int argc, char** argv)
