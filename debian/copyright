@@ -21,6 +21,11 @@ Files: plugins/*
        include/internal/gobj_memory.h
        include/internal/safe_strerror.h
        src/safe_strerror.cpp
+       tests/copyright/*
+       tests/gobj_ptr/*
+       tests/headers/*
+       tests/safe_strerror/*
+       tests/whitespace/*
 Copyright: 2015 Canonical ltd
 License: LGPL-3
  This program is free software: you can redistribute it and/or modify

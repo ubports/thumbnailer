@@ -67,6 +67,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
         {
             *job_p = nullptr;
         }
+        return job_p != nullptr;
     };
 }
 
@@ -74,13 +75,16 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 {
     assert(job);
 
-    running_++;
+    ++running_;
     job();
-    return []{};  // Wasn't queued, so cancel does nothing.
+    return []{ return false; };  // Wasn't queued, so cancel does nothing.
 }
 
 void RateLimiter::done()
 {
+    assert(running_ > 0);
+    --running_;
+
     // Find the next job, discarding any cancelled jobs.
     shared_ptr<function<void()>> job_p;
     while (!queue_.empty())
@@ -97,12 +101,7 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
-        (*job_p)();
-    }
-    else if (queue_.empty())
-    {
-        assert(running_ > 0);
-        --running_;
+        schedule_now(*job_p);
     }
 }
 

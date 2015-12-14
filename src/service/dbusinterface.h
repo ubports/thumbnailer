@@ -41,7 +41,7 @@ class DBusInterface : public QObject, protected QDBusContext
     Q_OBJECT
 public:
     DBusInterface(std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer,
-                  InactivityHandler& inactivity_handler,
+                  std::shared_ptr<InactivityHandler> const& inactivity_handler,
                   QObject* parent = nullptr);
     ~DBusInterface();
 
@@ -49,10 +49,9 @@ public:
     DBusInterface& operator=(DBusInterface&) = delete;
 
 public Q_SLOTS:
-    QDBusUnixFileDescriptor GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
-    QDBusUnixFileDescriptor GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
-    QDBusUnixFileDescriptor GetThumbnail(QString const& filename,
-                                         QSize const& requestedSize);
+    QByteArray GetAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QByteArray GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
+    QByteArray GetThumbnail(QString const& filename, QSize const& requestedSize);
 
 private:
     void queueRequest(Handler* handler);
@@ -65,13 +64,12 @@ Q_SIGNALS:
     void stoppedRequest();
 
 private:
+    std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const thumbnailer_;
+    std::unique_ptr<CredentialsCache> credentials_;
     CredentialsCache& credentials();
-
-    std::shared_ptr<unity::thumbnailer::internal::Thumbnailer> const& thumbnailer_;
-    InactivityHandler& inactivity_handler_;
+    std::shared_ptr<InactivityHandler> inactivity_handler_;
     std::shared_ptr<QThreadPool> check_thread_pool_;
     std::shared_ptr<QThreadPool> create_thread_pool_;
-    std::unique_ptr<CredentialsCache> credentials_;
     std::map<Handler*, std::unique_ptr<Handler>> requests_;
     std::map<std::string, std::vector<Handler*>> request_keys_;
     unity::thumbnailer::Settings settings_;

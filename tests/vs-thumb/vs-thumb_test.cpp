@@ -21,6 +21,8 @@
 #include <utils/supports_decoder.h>
 #include "../src/vs-thumb/thumbnailextractor.h"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #pragma GCC diagnostic push
@@ -135,12 +137,7 @@ TEST_F(ExtractorTest, extract_theora)
     EXPECT_EQ(1080, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4)
-#else
 TEST_F(ExtractorTest, extract_mp4)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -160,12 +157,7 @@ TEST_F(ExtractorTest, extract_mp4)
     EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4_rotate_90)
-#else
 TEST_F(ExtractorTest, extract_mp4_rotate_90)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -184,12 +176,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_90)
     EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4_rotate_180)
-#else
 TEST_F(ExtractorTest, extract_mp4_rotate_180)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -208,12 +195,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_180)
     EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4_rotate_270)
-#else
 TEST_F(ExtractorTest, extract_mp4_rotate_270)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -289,12 +271,7 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_m4v_cover_art)
-#else
 TEST_F(ExtractorTest, extract_m4v_cover_art)
-#endif
 {
     ThumbnailExtractor extractor;
 
@@ -366,6 +343,15 @@ TEST(ExeTest, bad_uri)
 {
     auto err = vs_thumb_err_output("file:///no_such_file");
     EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
+}
+
+TEST(ExeTest, no_artwork)
+{
+    auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
+    auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
+    EXPECT_TRUE(boost::ends_with(err, msg)) << err;
+    boost::system::error_code ec;
+    EXPECT_FALSE(boost::filesystem::exists("xyz.diff", ec));
 }
 
 int main(int argc, char** argv)

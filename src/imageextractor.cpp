@@ -21,6 +21,7 @@
 #include <internal/imageextractor.h>
 
 #include <internal/config.h>
+#include <internal/env_vars.h>
 #include <internal/safe_strerror.h>
 
 #include <QDebug>
@@ -63,7 +64,7 @@ void ImageExtractor::extract()
 {
     // Gstreamer video pipelines are unstable so we need to run an
     // external helper library.
-    char* utildir = getenv("TN_UTILDIR");
+    char* utildir = getenv(UTIL_DIR);
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
     exe_path_ += QLatin1String("/vs-thumb");
     process_.start(exe_path_, {QString::fromStdString(filename_)});
@@ -73,17 +74,7 @@ void ImageExtractor::extract()
     timer_.start(timeout_ms_);
 }
 
-namespace
-{
-
-string to_string(QByteArray const& array)
-{
-    return string(array.data(), array.size());
-}
-
-}
-
-string ImageExtractor::read()
+QByteArray ImageExtractor::read()
 {
     if (!error_.empty())
     {
@@ -91,8 +82,7 @@ string ImageExtractor::read()
     }
     assert(!read_called_);
     read_called_ = true;
-    // TODO: Not nice. This copies the entire thumbnail.
-    return to_string(process_.readAllStandardOutput());
+    return process_.readAllStandardOutput();
 }
 
 void ImageExtractor::processFinished()

@@ -45,90 +45,27 @@ namespace service
 namespace
 {
 
-// Return a string identifying hardware for which we need to
-// set max-extractions to some special value.
-// Be careful when making modifications here. We need
-// to find a string in cpuinfo that is unique to the specific
-// hardwares we care about. For example, the output from
-// /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
-
-#if defined(__arm__)
-
-string hardware()
-{
-    string hw;
-
-    string const pattern = R"del([Hh]ardware[ \t]*:(.*))del";
-    boost::regex r(pattern);
-
-    string cpuinfo;
-    try
-    {
-        cpuinfo = read_file("/proc/cpuinfo");
-    }
-    // LCOV_EXCL_START
-    catch (runtime_error const& e)
-    {
-        qWarning() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
-        return "";
-    }
-    // LCOV_EXCL_STOP
-
-    vector<string> lines;
-    boost::split(lines, cpuinfo, boost::is_any_of("\n"));
-    for (auto const& line : lines)
-    {
-        boost::smatch hw_match;
-        if (boost::regex_match(line, hw_match, r))
-        {
-            hw = hw_match[1];
-            boost::trim(hw);
-            break;
-        }
-    }
-    return hw;
-}
-
 // TODO: Hack to work around gstreamer problems.
 //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
 
 int adjusted_limit(int limit)
 {
-    int new_limit = limit;
-
+#if defined(__arm__)
     // Only adjust if max-extractions is at its default of 0.
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
-        string hw = hardware();
-#if 0
-        // TODO: Disabled for now until we can figure out in more
-        //       detail how to deal with the gstreamer problems.
-        // On BQ (MT6582), we can handle only one vs-thumb at a time.
-        new_limit = hw == "MT6582" ? 1 : 2;
-#else
-        new_limit = 1;
-#endif
-        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+        limit = 1;
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << limit << "for Arm";
     }
-    return new_limit;
-}
-
-#else
-
-// Not on Arm, leave as is.
-
-int adjusted_limit(int limit)
-{
+#endif
     return limit;
 }
-
-#endif
 
 }
 
 DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
-                             InactivityHandler& inactivity_handler,
+                             shared_ptr<InactivityHandler> const& inactivity_handler,
                              QObject* parent)
     : QObject(parent)
     , thumbnailer_(thumbnailer)
@@ -170,9 +107,9 @@ CredentialsCache& DBusInterface::credentials()
     return *credentials_.get();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
-                                                   QString const& album,
-                                                   QSize const& requestedSize)
+QByteArray DBusInterface::GetAlbumArt(QString const& artist,
+                                      QString const& album,
+                                      QSize const& requestedSize)
 {
     try
     {
@@ -182,7 +119,7 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(), inactivity_handler_,
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -193,12 +130,12 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         sendErrorReply(ART_ERROR, e.what());
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
-                                                    QString const& album,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetArtistArt(QString const& artist,
+                                       QString const& album,
+                                       QSize const& requestedSize)
 {
     try
     {
@@ -208,7 +145,7 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(), inactivity_handler_,
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -219,11 +156,10 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         sendErrorReply(ART_ERROR, msg);
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetThumbnail(QString const& filename, QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;
 
@@ -236,7 +172,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 extraction_limiter_, credentials(), inactivity_handler_,
+                                 extraction_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)
@@ -245,7 +181,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         qWarning() << msg;
         sendErrorReply(ART_ERROR, msg);
     }
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
 void DBusInterface::queueRequest(Handler* handler)

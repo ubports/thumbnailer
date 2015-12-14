@@ -50,8 +50,15 @@ class Q_DECL_EXPORT Request : public QObject
 public:
     /// @cond
     Q_DISABLE_COPY(Request)
-    ~Request();
     /// @endcond
+
+    /**
+    \brief Destroys a request.
+
+    If the request is still in progress, it is implicitly cancelled, and
+    the finished() signal is emitted.
+    */
+    ~Request();
 
     /**
     \brief Returns whether the request has completed.
@@ -139,11 +146,18 @@ database of albums and musicians.
 
 The requested size for a thumbnail specifies a bounding box (in pixels) of type `QSize` to which
 the thumbnail will be scaled.
-(The aspect ratio of the original image is preserved.) Passing `QSize(0,`<i>n</i>`)` or `QSize(`<i>n</i>`,0)`
-defines a square bounding box of <i>n</i> pixels.
-Sizes with one or both dimensions &lt;&nbsp;0 return an error.
-Sizes with one or both dimensions &ge;&nbsp;<B>max-thumbnail-size</B> (usually 1920) are clamped to
-<B>max-thumbnail-size</B> pixels (see <B>thumbnailer-settings</B>(7)).
+(The aspect ratio of the original image is preserved.)
+
+The returned thumbnails never exceed <B>max-thumbnail-size</B> (usually 1920, see <B>thumbnailer-settings</B>(7))
+in their larger dimension, even if a larger size is requested.
+
+- Passing `QSize(0,`<i>n</i>`)` or `QSize(`<i>n</i>`,0)` defines a bounding box of <i>n</i> pixels
+in one dimension, and unconstrained size in the other dimension (subject to the <B>max-thumbnail-size</B>
+limit).
+- Passing `QSize(0,0)` requests a thumbnail that fits into a square bounding box of <B>max-thumbnail-size</B>.
+- Sizes with one or both dimensions &ge;&nbsp;<B>max-thumbnail-size</B>) are clamped to
+<B>max-thumbnail-size</B> pixels.
+- Sizes with one or both dimensions &lt;&nbsp;0 return an error.
 
 Original images are never scaled up, so the returned thumbnail may be smaller than its requested size.
 

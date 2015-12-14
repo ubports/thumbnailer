@@ -20,6 +20,7 @@
 
 #include <internal/gobj_memory.h>
 
+#include <QByteArray>
 #include <QSize>
 
 #include <string>
@@ -47,7 +48,7 @@ public:
     // the dimensions of the requested size.  The image will be
     // rotated if required by the EXIF metadata.
     Image(std::string const& data, QSize requested_size = QSize());
-
+    Image(QByteArray const& ba, QSize requested_size = QSize());
     Image(int fd, QSize requested_size = QSize());
 
     Image(Image const&) = default;

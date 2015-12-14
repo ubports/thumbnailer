@@ -42,19 +42,24 @@ public:
     RateLimiter(RateLimiter const&) = delete;
     RateLimiter& operator=(RateLimiter const&) = delete;
 
-    typedef std::function<void() noexcept> CancelFunc;
+    typedef std::function<bool() noexcept> CancelFunc;
 
     // Schedule a job to run.  If the concurrency limit has not been
     // reached, the job will be run immediately.  Otherwise it will be
     // added to the queue. Return value is a function that, when
     // called, cancels the job in the queue (if it's still in the queue).
+    // The cancel function returns true if the request could be cancelled because
+    // it was still waiting, false otherwise.
     CancelFunc schedule(std::function<void()> job);
 
     // Schedule a job to run immediately, regardless of the concurrency limit.
     CancelFunc schedule_now(std::function<void()> job);
 
-    // Notify that a job has completed.  If there are queued jobs,
-    // start the one at the head of the queue.
+    // Notify that a job has completed. If there are queued jobs,
+    // start the one at the head of the queue. Every call to schedule()
+    // and schedule_now() *must* be matched by exactly one call to done(),
+    // unless the call is cancelled. If the call is cancelled, done() must
+    // be called only if the cancel function returns false.
     void done();
 
 private:

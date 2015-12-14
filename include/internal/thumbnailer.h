@@ -54,15 +54,16 @@ public:
         needs_download,
         downloaded,
         not_found,
-        no_network,
-        error
+        network_down,
+        temporary_error,
+        hard_error
     };
 
     // Returns the empty string with status needs_download
     // if the thumbnail data needs to be downloaded to complete
     // the request. If this happens, call download() and wait for
     // downloadFinished signal to fire, then call thumbnail() again
-    virtual std::string thumbnail() = 0;
+    virtual QByteArray thumbnail() = 0;
     virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) = 0;
 
     // Returns status of thumbnail() set by thumbnail();
