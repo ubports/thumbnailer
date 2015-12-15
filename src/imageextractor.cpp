@@ -97,7 +97,7 @@ void ImageExtractor::processFinished()
                     error_ = "";
                     break;
                 case 1:
-                    error_ = string("could not extract screenshot for ") + filename_;
+                    error_ = string("no artwork for ") + filename_;
                     break;
                 case 2:
                     error_ = string("extractor pipeline failed for ") + filename_;

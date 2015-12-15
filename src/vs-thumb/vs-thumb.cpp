@@ -49,14 +49,17 @@ bool extract_thumbnail(string const& uri, string const& ofname)
     extractor.set_uri(uri);
     if (extractor.extract_cover_art())
     {
-        extractor.save_screenshot(ofname);
+        // Found embedded cover art (in either audio or video file).
+        extractor.write_image(ofname);
         return true;
     }
+    // Otherwise, if this is a video, try to extract a still frame.
     if (extractor.has_video() && extractor.extract_video_frame())
     {
-        extractor.save_screenshot(ofname);
+        extractor.write_image(ofname);
         return true;
     }
+    // Otherwise, we don't have any artwork.
     return false;
 }
 
@@ -66,7 +69,7 @@ int main(int argc, char** argv)
 {
     char const * const progname = basename(argv[0]);
 
-    TraceMessageHandler message_handler("vs-thumb");
+    TraceMessageHandler message_handler(progname);
 
     gst_init(&argc, &argv);
 
