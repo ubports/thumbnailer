@@ -277,8 +277,10 @@ bool ThumbnailExtractor::extract_video_frame()
         }
         else
         {
+            // LCOV_EXCL_START
             qCritical() << "extract_video_frame(): gdk_pixbuf_rotate_simple() failed, "
-                           "probably out of memory";  // LCOV_EXCL_LINE
+                           "probably out of memory";
+            // LCOV_EXCL_STOP
         }
     }
 
@@ -389,25 +391,21 @@ void ThumbnailExtractor::write_image(const std::string& filename)
         return;
     }
 
-    // If there is no embedded artwork, we are done.
-    if (!sample_)
-    {
-        return;
-    }
-
     // We found embedded artwork. The embedded data is already in some image format, such jpg or png.
     // If we are writing to stdout (to communicate with the thumbnailer), we just dump the image
     // as is; the thumbnailer will decode it.
     BufferMap buffermap;
     buffermap.map(gst_sample_get_buffer(sample_.get()));
 
-    if (fd == 1)
+    if (fd == STDOUT_FILENO)
     {
+        errno = 0;
         int rc = write(fd, buffermap.data(), buffermap.size());
         if (gsize(rc) != buffermap.size())
         {
-            auto msg = std::string("write_image(): cannot write to ") + filename + ": ";
-            msg += errno == -1 ?  strerror(errno) : "short write";
+            auto msg = std::string("write_image(): cannot write to ");
+            msg += (filename.empty() ? std::string("stdout") : filename) + ": ";
+            msg += errno != 0 ?  strerror(errno) : "short write";
             qCritical().nospace() << QString::fromStdString(msg);
             throw std::runtime_error(msg);
         }
