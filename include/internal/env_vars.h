@@ -33,6 +33,7 @@ namespace internal
 constexpr char const* MAX_IDLE = "THUMBNAILER_MAX_IDLE";
 constexpr char const* UBUNTU_SERVER_URL = "THUMBNAILER_UBUNTU_SERVER_URL";
 constexpr char const* UTIL_DIR = "THUMBNAILER_UTIL_DIR";
+constexpr char const* LOG_LEVEL = "THUMBNAILER_LOG_LEVEL";
 
 }  // namespace internal
 

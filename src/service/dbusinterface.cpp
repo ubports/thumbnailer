@@ -19,6 +19,7 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
+#include <settings.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -92,6 +93,9 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
     }
 
     extraction_limiter_ = make_shared<RateLimiter>(limit);
+
+    Settings s;
+    log_level_ = s.log_level();
 }
 
 DBusInterface::~DBusInterface()
@@ -209,35 +213,11 @@ void DBusInterface::queueRequest(Handler* handler)
     requests_for_key.push_back(handler);
 }
 
-void DBusInterface::requestFinished()
+namespace
 {
-    Handler* handler = static_cast<Handler*>(sender());
-    try
-    {
-        auto& h = requests_.at(handler);
-        h.release();
-        requests_.erase(handler);
-    }
-    // LCOV_EXCL_START
-    catch (std::out_of_range const& e)
-    {
-        qWarning() << "finished() called on unknown handler" << handler;
-    }
-    // LCOV_EXCL_STOP
 
-    // Remove ourselves from the chain of requests
-    std::vector<Handler*> &requests_for_key = request_keys_[handler->key()];
-    requests_for_key.erase(
-        std::remove(requests_for_key.begin(), requests_for_key.end(), handler),
-        requests_for_key.end());
-    if (requests_for_key.size() == 0)
-    {
-        request_keys_.erase(handler->key());
-    }
-
-    // Queue deletion of handler when we re-enter the event loop.
-    handler->deleteLater();
-
+void write_log_message(Handler const* handler)
+{
     QString msg;
     QTextStream s(&msg);
     s.setRealNumberNotation(QTextStream::FixedNotation);
@@ -267,8 +247,62 @@ void DBusInterface::requestFinished()
         s << "]";
     }
 
-    s << " sec (" << handler->status() << ")";
+    s << " sec (" << handler->status_as_string() << ")";
     qDebug() << msg;
+}
+
+}  // namespace
+
+void DBusInterface::requestFinished()
+{
+    Handler* handler = static_cast<Handler*>(sender());
+    try
+    {
+        auto& h = requests_.at(handler);
+        h.release();
+        requests_.erase(handler);
+    }
+    // LCOV_EXCL_START
+    catch (std::out_of_range const& e)
+    {
+        qWarning() << "finished() called on unknown handler" << handler;
+    }
+    // LCOV_EXCL_STOP
+
+    // Remove ourselves from the chain of requests
+    std::vector<Handler*> &requests_for_key = request_keys_[handler->key()];
+    requests_for_key.erase(
+        std::remove(requests_for_key.begin(), requests_for_key.end(), handler),
+        requests_for_key.end());
+    if (requests_for_key.size() == 0)
+    {
+        request_keys_.erase(handler->key());
+    }
+
+    // Queue deletion of handler when we re-enter the event loop.
+    handler->deleteLater();
+
+    // Emit log message, depending on log_level_.
+    auto status = handler->status();
+    if (log_level_ == 2 || status == ThumbnailRequest::FetchStatus::hard_error)
+    {
+        write_log_message(handler);
+    }
+    else if (log_level_ == 1)
+    {
+        switch (status)
+        {
+            case ThumbnailRequest::FetchStatus::cached_failure:
+            case ThumbnailRequest::FetchStatus::downloaded:
+            case ThumbnailRequest::FetchStatus::not_found:
+            case ThumbnailRequest::FetchStatus::network_down:
+            case ThumbnailRequest::FetchStatus::temporary_error:
+                write_log_message(handler);
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 }  // namespace service

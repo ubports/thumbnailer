@@ -52,6 +52,7 @@ public:
     int extraction_timeout() const;  // In seconds
     int max_backlog() const;
     bool trace_client() const;
+    int log_level() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;

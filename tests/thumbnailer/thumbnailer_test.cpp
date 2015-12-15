@@ -582,6 +582,19 @@ TEST_F(ThumbnailerTest, invalid_size)
     }
 }
 
+TEST_F(ThumbnailerTest, bad_image)
+{
+    Thumbnailer tn;
+
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(BAD_IMAGE, QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
+}
+
+
 TEST_F(ThumbnailerTest, empty_file)
 {
     Thumbnailer tn;

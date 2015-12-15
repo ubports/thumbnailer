@@ -67,7 +67,8 @@ public:
     std::chrono::microseconds queued_time() const;      // Time spent waiting in download/extract queue.
     std::chrono::microseconds download_time() const;    // Time of that for download/extract, incl. queueing time.
     QString details() const;
-    QString status() const;
+    QString status_as_string() const;
+    unity::thumbnailer::internal::ThumbnailRequest::FetchStatus status() const;
 
 public Q_SLOTS:
     void begin();
