@@ -231,7 +231,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
 
 TEST_F(ExtractorTest, extract_aac_cover_art)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("audio/x-aac"))
     {
         fprintf(stderr, "No support for AAC decoder\n");
         return;
@@ -273,6 +273,12 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
 
 TEST_F(ExtractorTest, extract_m4v_cover_art)
 {
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
     ThumbnailExtractor extractor;
 
     std::string outfile = tempdir + "/out.tiff";
