@@ -637,17 +637,17 @@ TEST_F(LibThumbnailerTest, cancel)
     path = QString::fromStdString(target_dir + "/0" + source);
     provider->getThumbnail(path, QSize(512, 512));
 
-    pump(500);
+    pump(1000);
 
     provider->cancel();
     provider->waitForFinished();  // For coverage
 
-    pump(500);
+    pump(1000);
 
     provider.reset(new AsyncThumbnailProvider(&thumbnailer, counter));
     provider->getThumbnail(path, QSize(512, 512));
 
-    EXPECT_TRUE(spy.wait(1000));
+    EXPECT_TRUE(spy.wait(5000));
     EXPECT_EQ(1, spy.count());
 }
 
@@ -692,13 +692,10 @@ TEST_F(LibThumbnailerTest, cancel_many)
     // Cancel all requests.
     providers.clear();
 
-    // Allow all the signals to trickle in.
-    pump(4000);
-    EXPECT_EQ(1, spy.count());
-
-    // We must have both completed and cancelled requests.
+    // We must have some completed requests, but no cancelled requests because
+    // the destructor doesn't emit the finished signal.
     EXPECT_GT(counter.completed(), 0);
-    EXPECT_GT(counter.cancelled(), 0);
+    EXPECT_EQ(counter.cancelled(), 0);
 }
 
 TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)

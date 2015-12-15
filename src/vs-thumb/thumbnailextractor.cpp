@@ -20,11 +20,13 @@
 #include "thumbnailextractor.h"
 
 #include <QDebug>
+#include <unity/util/ResourcePtr.h>
 
-#include <cassert>
 #include <cstdio>
 #include <stdexcept>
 #include <cstring>
+
+#include <fcntl.h>
 
 namespace unity
 {
@@ -39,52 +41,6 @@ namespace
 {
 
 std::string const class_name = "ThumbnailExtractor";
-
-class BufferMap final
-{
-public:
-    BufferMap()
-        : buffer(nullptr, gst_buffer_unref)
-    {
-    }
-    ~BufferMap()
-    {
-        unmap();
-    }
-
-    void map(GstBuffer* b)
-    {
-        unmap();
-        buffer.reset(gst_buffer_ref(b));
-        gst_buffer_map(buffer.get(), &info, GST_MAP_READ);
-    }
-
-    void unmap()
-    {
-        if (!buffer)
-        {
-            return;
-        }
-        gst_buffer_unmap(buffer.get(), &info);
-        buffer.reset();
-    }
-
-    guint8* data() const
-    {
-        assert(buffer);
-        return info.data;
-    }
-
-    gsize size() const
-    {
-        assert(buffer);
-        return info.size;
-    }
-
-private:
-    std::unique_ptr<GstBuffer, decltype(&gst_buffer_unref)> buffer;
-    GstMapInfo info;
-};
 
 // GstPlayFlags flags from playbin.
 //
@@ -128,7 +84,6 @@ CoverImage find_cover(GstTagList* tags, const char* tag_name)
         GstSample* s;
         if (!gst_tag_list_get_sample_index(tags, tag_name, i, &s))
         {
-
             break;
         }
         assert(s);
@@ -195,8 +150,7 @@ void ThumbnailExtractor::reset()
 {
     change_state(playbin_.get(), GST_STATE_NULL);
     sample_.reset();
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
-    sample_raw_ = true;
+    still_frame_.reset();
 }
 
 void ThumbnailExtractor::set_uri(const std::string& uri)
@@ -205,7 +159,6 @@ void ThumbnailExtractor::set_uri(const std::string& uri)
     reset();
     uri_= uri;
     g_object_set(playbin_.get(), "uri", uri.c_str(), nullptr);
-    qDebug().nospace() << uri_.c_str() << ": Changing to state PAUSED";
     change_state(playbin_.get(), GST_STATE_PAUSED);
 
     if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration_))
@@ -224,20 +177,34 @@ bool ThumbnailExtractor::has_video()
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 
+namespace
+{
+
+extern "C"
+void unmap_callback(guchar* /* pixels */, gpointer data)
+{
+    BufferMap* bm = reinterpret_cast<BufferMap*>(data);
+    assert(bm);
+    bm->unmap();
+}
+
+}
+
+// Extract a still frame from a video. Rotate the frame as needed and leave it in still_frame_ in RGB format.
+
 bool ThumbnailExtractor::extract_video_frame()
 {
+    // Seek some distance into the video so we don't always get black or a 20th Century Fox logo.
     gint64 seek_point = 10 * GST_SECOND;
     if (duration_ >= 0)
     {
         seek_point = 2 * duration_ / 7;
     }
-    qDebug().nospace() << uri_.c_str() << ": Seeking to position " << int(seek_point / GST_SECOND);
     gst_element_seek_simple(playbin_.get(), GST_FORMAT_TIME,
                             static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), seek_point);
     gst_element_get_state(playbin_.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
 
-    // Retrieve sample from the playbin
-    qDebug().nospace() << uri_.c_str() << ": Requesting sample frame";
+    // Retrieve sample from the playbin.
     std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
         gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", "pixel-aspect-ratio", GST_TYPE_FRACTION, 1,
                             1, nullptr),
@@ -249,10 +216,29 @@ bool ThumbnailExtractor::extract_video_frame()
         throw_error("extract_video_frame(): failed to extract still frame");  // LCOV_EXCL_LINE
     }
     sample_.reset(s);
-    sample_raw_ = true;
+
+    // Convert raw sample into a pixbuf and store it in still_frame_.
+    GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
+    if (!sample_caps)
+    {
+        throw_error("write_image(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
+    }
+    GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
+    int width = 0;
+    int height = 0;
+    gst_structure_get_int(sample_struct, "width", &width);
+    gst_structure_get_int(sample_struct, "height", &height);
+    if (width <= 0 || height <= 0)
+    {
+        throw_error("write_image(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
+    }
+
+    buffermap_.map(gst_sample_get_buffer(sample_.get()));
+    still_frame_.reset(gdk_pixbuf_new_from_data(buffermap_.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
+                                                GST_ROUND_UP_4(width * 3), unmap_callback, &buffermap_));
 
     // Does the sample need to be rotated?
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
+    GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
     GstTagList* tags = nullptr;
     g_signal_emit_by_name(playbin_.get(), "get-video-tags", 0, &tags);
     if (tags)
@@ -263,15 +249,15 @@ bool ThumbnailExtractor::extract_video_frame()
         {
             if (!strcmp(orientation, "rotate-90"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_CLOCKWISE;
+                sample_rotation = GDK_PIXBUF_ROTATE_CLOCKWISE;
             }
             else if (!strcmp(orientation, "rotate-180"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
+                sample_rotation = GDK_PIXBUF_ROTATE_UPSIDEDOWN;
             }
             else if (!strcmp(orientation, "rotate-270"))
             {
-                sample_rotation_ = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
+                sample_rotation = GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE;
             }
             else
             {
@@ -281,10 +267,28 @@ bool ThumbnailExtractor::extract_video_frame()
         }
         gst_tag_list_unref(tags);
     }
+
+    if (sample_rotation != GDK_PIXBUF_ROTATE_NONE)
+    {
+        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(still_frame_.get(), sample_rotation);
+        if (rotated)
+        {
+            still_frame_.reset(rotated);
+        }
+        else
+        {
+            qCritical() << "extract_video_frame(): gdk_pixbuf_rotate_simple() failed, "
+                           "probably out of memory";  // LCOV_EXCL_LINE
+        }
+    }
+
     return true;
 }
 
 #pragma GCC diagnostic pop
+
+// Try to find an embedded image in an audio or video file.
+// If an image cover was found, set sample_ to point at the image data and return true.
 
 bool ThumbnailExtractor::extract_cover_art()
 {
@@ -294,9 +298,9 @@ bool ThumbnailExtractor::extract_cover_art()
     {
         return false;  // LCOV_EXCL_LINE
     }
+    std::unique_ptr<GstTagList, decltype(&gst_tag_list_unref)> tag_guard(tags, gst_tag_list_unref);
+
     sample_.reset();
-    sample_rotation_ = GDK_PIXBUF_ROTATE_NONE;
-    sample_raw_ = false;
 
     // Look for a normal image (cover or other image).
     auto image = std::move(find_cover(tags, GST_TAG_IMAGE));
@@ -327,7 +331,6 @@ bool ThumbnailExtractor::extract_cover_art()
     // We might have found a non-cover preview image.
     sample_ = std::move(preview_image.sample);
 
-    gst_tag_list_unref(tags);
     return bool(sample_);
 }
 
@@ -353,86 +356,87 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
 
 }
 
-void ThumbnailExtractor::save_screenshot(const std::string& filename)
+void ThumbnailExtractor::write_image(const std::string& filename)
 {
-    assert(sample_);
+    assert(still_frame_ || sample_);
 
-    // Construct a pixbuf from the sample
-    qDebug().nospace() << uri_.c_str() << ": Saving image";
-    BufferMap buffermap;
-    gobj_ptr<GdkPixbuf> image;
-    if (sample_raw_)
+    // Figure out where to write to.
+
+    int fd = STDOUT_FILENO;
+    if (!filename.empty())
     {
-        GstCaps* sample_caps = gst_sample_get_caps(sample_.get());
-        if (!sample_caps)
+        fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        if (fd == -1)
         {
-            throw_error("save_screenshot(): Could not retrieve caps for sample buffer");  // LCOV_EXCL_LINE
+            auto msg = std::string("write_image(): cannot open ") + filename + ": " + strerror(errno);
+            qCritical().nospace() << QString::fromStdString(msg);
+            throw std::runtime_error(msg);
         }
-        GstStructure* sample_struct = gst_caps_get_structure(sample_caps, 0);
-        int width = 0, height = 0;
-        gst_structure_get_int(sample_struct, "width", &width);
-        gst_structure_get_int(sample_struct, "height", &height);
-        if (width <= 0 || height <= 0)
-        {
-            throw_error("save_screenshot(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
-        }
-
-        buffermap.map(gst_sample_get_buffer(sample_.get()));
-        image.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
-                                             GST_ROUND_UP_4(width * 3), nullptr, nullptr));
     }
-    else
-    {
-        gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
+    auto close_func = [](int fd) { if (fd != STDOUT_FILENO) ::close(fd); };
+    unity::util::ResourcePtr<int, decltype(close_func)> fd_guard(fd, close_func);  // Don't leak fd.
 
-        buffermap.map(gst_sample_get_buffer(sample_.get()));
+    if (still_frame_)
+    {
+        // We extracted a still frame from a video. We save as tiff without compression because that is
+        // lossless and efficient. (There is no point avoiding the tiff encoding step because
+        // still frame extraction is so slow that the gain would be insignificant.)
         GError* error = nullptr;
-        if (gdk_pixbuf_loader_write(loader.get(), buffermap.data(), buffermap.size(), &error) &&
-            gdk_pixbuf_loader_close(loader.get(), &error))
+        if (!gdk_pixbuf_save_to_callback(still_frame_.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
         {
-            GdkPixbuf* pixbuf = gdk_pixbuf_loader_get_pixbuf(loader.get());
-            if (pixbuf)
-            {
-                image.reset(static_cast<GdkPixbuf*>(g_object_ref(pixbuf)));
-            }
+            throw_error("write_image(): cannot write image", error);  // LCOV_EXCL_LINE
         }
-        else
-        {
-            throw_error("save_screenshot(): decoding image", error);  // LCOV_EXCL_LINE
-        }
+        return;
     }
 
-    if (sample_rotation_ != GDK_PIXBUF_ROTATE_NONE)
+    // If there is no embedded artwork, we are done.
+    if (!sample_)
     {
-        GdkPixbuf* rotated = gdk_pixbuf_rotate_simple(image.get(), sample_rotation_);
-        if (rotated)
-        {
-            image.reset(rotated);
-        }
+        return;
     }
 
-    // Saving as TIFF with no compression here to avoid artefacts due to converting to jpg twice.
-    // (The main thumbnailer saves as jpg.) By staying lossless here, we
-    // keep all the policy decisions about image quality in the main thumbnailer.
-    // "compression", "1" means "no compression" for tiff files.
+    // We found embedded artwork. The embedded data is already in some image format, such jpg or png.
+    // If we are writing to stdout (to communicate with the thumbnailer), we just dump the image
+    // as is; the thumbnailer will decode it.
+    BufferMap buffermap;
+    buffermap.map(gst_sample_get_buffer(sample_.get()));
+
+    if (fd == 1)
+    {
+        int rc = write(fd, buffermap.data(), buffermap.size());
+        if (gsize(rc) != buffermap.size())
+        {
+            auto msg = std::string("write_image(): cannot write to ") + filename + ": ";
+            msg += errno == -1 ?  strerror(errno) : "short write";
+            qCritical().nospace() << QString::fromStdString(msg);
+            throw std::runtime_error(msg);
+        }
+        return;
+    }
+
+    // We were told to save to a file. Convert the sample data and write in tiff format.
+    PixbufUPtr image_buf;
+    gobj_ptr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new());
     GError* error = nullptr;
-    if (filename.empty())
+    if (gdk_pixbuf_loader_write(loader.get(), buffermap.data(), buffermap.size(), &error) &&
+        gdk_pixbuf_loader_close(loader.get(), &error))
     {
-        // Write to stdout.
-        int fd = 1;
-        if (!gdk_pixbuf_save_to_callback(image.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
+        GdkPixbuf* pixbuf = gdk_pixbuf_loader_get_pixbuf(loader.get());
+        if (pixbuf)
         {
-            throw_error("save_screenshot(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
+            image_buf.reset(static_cast<GdkPixbuf*>(g_object_ref(pixbuf)));
         }
     }
     else
     {
-        if (!gdk_pixbuf_save(image.get(), filename.c_str(), "tiff", &error, "compression", "1", nullptr))
-        {
-            throw_error("save_screenshot(): cannot save image", error);  // LCOV_EXCL_LINE
-        }
+        throw_error("write_image(): decoding image", error);  // LCOV_EXCL_LINE
     }
-    qDebug().nospace() << uri_.c_str() << ": Done";
+
+    if (!gdk_pixbuf_save_to_callback(image_buf.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
+    {
+        throw_error("write_image(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
+    }
+    return;
 }
 
 #pragma GCC diagnostic push

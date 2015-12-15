@@ -50,8 +50,6 @@ public:
                 std::function<QDBusPendingReply<QByteArray>()> const& job,
                 bool trace_client);
 
-    ~RequestImpl();
-
     bool isFinished() const
     {
         return finished_;
@@ -123,7 +121,6 @@ private:
     bool is_valid_;
     bool cancelled_;                 // true if cancel() was called by client
     bool cancelled_while_waiting_;   // true if cancel() succeeded because request was not sent yet
-    bool signal_sent_;               // true once we have sent the Request::finished signal
     bool trace_client_;
     QImage image_;
     unity::thumbnailer::qt::Request* public_request_;
@@ -162,7 +159,6 @@ RequestImpl::RequestImpl(QString const& details,
     , is_valid_(false)
     , cancelled_(false)
     , cancelled_while_waiting_(false)
-    , signal_sent_(false)
     , trace_client_(trace_client)
     , public_request_(nullptr)
 {
@@ -182,16 +178,6 @@ RequestImpl::RequestImpl(QString const& details,
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
     };
     cancel_func_ = limiter_->schedule(send_request_);
-}
-
-RequestImpl::~RequestImpl()
-{
-    // Make sure that we always send a signal, even if a request is destroyed while in flight.
-    if (!signal_sent_)
-    {
-        cancelled_ = true;
-        finishWithError("Request destroyed");
-    }
 }
 
 void RequestImpl::dbusCallFinished()
@@ -231,7 +217,6 @@ void RequestImpl::dbusCallFinished()
         watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
-        signal_sent_ = true;
         if (trace_client_)
         {
             qDebug().noquote() << "Thumbnailer: completed:" << details_;
@@ -267,7 +252,6 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     watcher_.reset();
     Q_ASSERT(public_request_);
     Q_EMIT public_request_->finished();
-    signal_sent_ = true;
 }
 
 void RequestImpl::cancel()

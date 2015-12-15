@@ -130,7 +130,7 @@ TEST_F(ExtractorTest, extract_theora)
     extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1920, gdk_pixbuf_get_width(image.get()));
@@ -150,7 +150,7 @@ TEST_F(ExtractorTest, extract_mp4)
     extractor.set_uri(filename_to_uri(MP4_LANDSCAPE_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
@@ -169,7 +169,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_90)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_ROTATE_90_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
@@ -188,7 +188,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_180)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_ROTATE_180_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
@@ -207,7 +207,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_270)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_ROTATE_270_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
@@ -222,7 +222,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
     extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
@@ -243,7 +243,7 @@ TEST_F(ExtractorTest, extract_aac_cover_art)
     extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
@@ -264,7 +264,7 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
@@ -278,7 +278,7 @@ TEST_F(ExtractorTest, extract_m4v_cover_art)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1947, gdk_pixbuf_get_width(image.get()));
@@ -351,7 +351,7 @@ TEST(ExeTest, no_artwork)
     auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
     EXPECT_TRUE(boost::ends_with(err, msg)) << err;
     boost::system::error_code ec;
-    EXPECT_FALSE(boost::filesystem::exists("xyz.diff", ec));
+    EXPECT_FALSE(boost::filesystem::exists("xyz.tiff", ec));
 }
 
 int main(int argc, char** argv)
