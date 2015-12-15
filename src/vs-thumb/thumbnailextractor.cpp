@@ -22,7 +22,6 @@
 #include <QDebug>
 #include <unity/util/ResourcePtr.h>
 
-#include <cassert>
 #include <cstdio>
 #include <stdexcept>
 #include <cstring>
@@ -42,52 +41,6 @@ namespace
 {
 
 std::string const class_name = "ThumbnailExtractor";
-
-class BufferMap final
-{
-public:
-    BufferMap()
-        : buffer(nullptr, gst_buffer_unref)
-    {
-    }
-    ~BufferMap()
-    {
-        unmap();
-    }
-
-    void map(GstBuffer* b)
-    {
-        unmap();
-        buffer.reset(gst_buffer_ref(b));
-        gst_buffer_map(buffer.get(), &info, GST_MAP_READ);
-    }
-
-    void unmap()
-    {
-        if (!buffer)
-        {
-            return;
-        }
-        gst_buffer_unmap(buffer.get(), &info);
-        buffer.reset();
-    }
-
-    guint8* data() const
-    {
-        assert(buffer);
-        return info.data;
-    }
-
-    gsize size() const
-    {
-        assert(buffer);
-        return info.size;
-    }
-
-private:
-    std::unique_ptr<GstBuffer, decltype(&gst_buffer_unref)> buffer;
-    GstMapInfo info;
-};
 
 // GstPlayFlags flags from playbin.
 //
@@ -224,6 +177,19 @@ bool ThumbnailExtractor::has_video()
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 
+namespace
+{
+
+extern "C"
+void unmap_callback(guchar* /* pixels */, gpointer data)
+{
+    BufferMap* bm = reinterpret_cast<BufferMap*>(data);
+    assert(bm);
+    bm->unmap();
+}
+
+}
+
 // Extract a still frame from a video. Rotate the frame as needed and leave it in still_frame_ in RGB format.
 
 bool ThumbnailExtractor::extract_video_frame()
@@ -267,10 +233,9 @@ bool ThumbnailExtractor::extract_video_frame()
         throw_error("write_image(): Could not retrieve image dimensions");  // LCOV_EXCL_LINE
     }
 
-    BufferMap buffermap;
-    buffermap.map(gst_sample_get_buffer(sample_.get()));
-    still_frame_.reset(gdk_pixbuf_new_from_data(buffermap.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
-                                         GST_ROUND_UP_4(width * 3), nullptr, nullptr));
+    buffermap_.map(gst_sample_get_buffer(sample_.get()));
+    still_frame_.reset(gdk_pixbuf_new_from_data(buffermap_.data(), GDK_COLORSPACE_RGB, FALSE, 8, width, height,
+                                                GST_ROUND_UP_4(width * 3), unmap_callback, &buffermap_));
 
     // Does the sample need to be rotated?
     GdkPixbufRotation sample_rotation = GDK_PIXBUF_ROTATE_NONE;
@@ -333,7 +298,7 @@ bool ThumbnailExtractor::extract_cover_art()
     {
         return false;  // LCOV_EXCL_LINE
     }
-    unity::util::ResourcePtr<decltype(tags), decltype(&gst_tag_list_unref)> tag_guard(tags, gst_tag_list_unref);
+    std::unique_ptr<GstTagList, decltype(&gst_tag_list_unref)> tag_guard(tags, gst_tag_list_unref);
 
     sample_.reset();
 
@@ -397,7 +362,7 @@ void ThumbnailExtractor::write_image(const std::string& filename)
 
     // Figure out where to write to.
 
-    int fd = 1;               // By default, write to stdout.
+    int fd = STDOUT_FILENO;
     if (!filename.empty())
     {
         fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -408,7 +373,7 @@ void ThumbnailExtractor::write_image(const std::string& filename)
             throw std::runtime_error(msg);
         }
     }
-    auto close_func = [](int fd) { if (fd != 1) ::close(fd); };
+    auto close_func = [](int fd) { if (fd != STDOUT_FILENO) ::close(fd); };
     unity::util::ResourcePtr<int, decltype(close_func)> fd_guard(fd, close_func);  // Don't leak fd.
 
     if (still_frame_)

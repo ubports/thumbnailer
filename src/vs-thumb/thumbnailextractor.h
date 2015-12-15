@@ -38,6 +38,7 @@
 #endif
 #pragma GCC diagnostic pop
 
+#include <cassert>
 #include <memory>
 #include <string>
 
@@ -49,6 +50,52 @@ namespace thumbnailer
 
 namespace internal
 {
+
+class BufferMap final
+{
+public:
+    BufferMap()
+        : buffer(nullptr, gst_buffer_unref)
+    {
+    }
+    ~BufferMap()
+    {
+        unmap();
+    }
+
+    void map(GstBuffer* b)
+    {
+        unmap();
+        buffer.reset(gst_buffer_ref(b));
+        gst_buffer_map(buffer.get(), &info, GST_MAP_READ);
+    }
+
+    void unmap()
+    {
+        if (!buffer)
+        {
+            return;
+        }
+        gst_buffer_unmap(buffer.get(), &info);
+        buffer.reset();
+    }
+
+    guint8* data() const
+    {
+        assert(buffer);
+        return info.data;
+    }
+
+    gsize size() const
+    {
+        assert(buffer);
+        return info.size;
+    }
+
+private:
+    std::unique_ptr<GstBuffer, decltype(&gst_buffer_unref)> buffer;
+    GstMapInfo info;
+};
 
 class ThumbnailExtractor final
 {
@@ -76,6 +123,7 @@ private:
     std::string uri_;
     SampleUPtr sample_{nullptr, gst_sample_unref};  // Contains raw data for cover or still frame.
     PixbufUPtr still_frame_;                        // Non-null if we extracted still frame.
+    BufferMap buffermap_;
 };
 
 }  // namespace internal
