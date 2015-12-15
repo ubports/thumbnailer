@@ -301,6 +301,36 @@ TEST_F(ExtractorTest, no_artwork)
     ASSERT_FALSE(extractor.extract_cover_art());
 }
 
+TEST_F(ExtractorTest, cant_write_to_stdout)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_cover_art());
+
+    int new_stdout = dup(STDOUT_FILENO);
+    ASSERT_EQ(0, close(STDOUT_FILENO));
+
+    try
+    {
+        extractor.write_image("");
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_STREQ("write_image(): cannot write to stdout: Bad file descriptor", e.what());
+    }
+
+    ASSERT_EQ(STDOUT_FILENO, dup2(new_stdout, STDOUT_FILENO));
+    ASSERT_EQ(0, close(new_stdout));
+}
+
+
 TEST_F(ExtractorTest, file_not_found)
 {
     ThumbnailExtractor extractor;
@@ -345,6 +375,13 @@ TEST(ExeTest, bad_uri)
     EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
 }
 
+TEST(ExeTest, no_such_output_path)
+{
+    auto err = vs_thumb_err_output(std::string(MP3_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
+    EXPECT_NE(std::string::npos, err.find("write_image(): cannot open /no_such_dir/no_such_file.tiff: "
+              "No such file or directory")) << err;
+}
+
 TEST(ExeTest, no_artwork)
 {
     auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
@@ -356,6 +393,8 @@ TEST(ExeTest, no_artwork)
 
 int main(int argc, char** argv)
 {
+    setenv("LC_ALL", "C", true);
+
     ::testing::InitGoogleTest(&argc, argv);
     gst_init(&argc, &argv);
     return RUN_ALL_TESTS();
