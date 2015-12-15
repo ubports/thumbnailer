@@ -18,10 +18,14 @@
 # Authored by: Michi Henning <michi.henning@canonical.com>
 #
 
-echo "CPU: $(uname -m)"
 [ $# -ne 2 ] && {
     echo "usage: $(basename $0) error-file plugin-dir" 1>&2
     exit 1
+}
+
+[ "$(uname -m)" == "s390x" ] && {
+    echo "Skipping QML test on s390x"
+    exit 0
 }
 
 xvfb-run -a -s "-screen 0 800x600x24" -e "$1" ./qml_test -import "$2"
