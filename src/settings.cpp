@@ -123,37 +123,31 @@ bool Settings::trace_client() const
 
 int Settings::log_level() const
 {
-    auto get_log_level = [this]()
+    using namespace unity::thumbnailer::internal;
+
+    int log_level = get_positive_or_zero_int("log-level", LOG_LEVEL_DEFAULT);
+    char const* level = getenv(LOG_LEVEL);
+    if (level && *level)
     {
-        using namespace unity::thumbnailer::internal;
-
-        int log_level = get_positive_or_zero_int("log-level", LOG_LEVEL_DEFAULT);
-        char const* level = getenv(LOG_LEVEL);
-        if (level && *level)
+        int l;
+        try
         {
-            int l;
-            try
-            {
-                l = std::stoi(level);
-            }
-            catch (std::exception const& e)
-            {
-                qCritical() << "Environment variable" << LOG_LEVEL << "has invalid setting:" << level
-                            << "(expected value in range 0..2) - variable ignored";
-                return log_level;
-            }
-            if (l < 0 || l > 2)
-            {
-                qCritical() << "Environment variable" << LOG_LEVEL << "has invalid setting:" << level
-                            << "(expected value in range 0..2) - variable ignored";
-                return log_level;
-            }
-            log_level = l;
+            l = std::stoi(level);
         }
-        return log_level;
-    };
-
-    int log_level = get_log_level();
+        catch (std::exception const& e)
+        {
+            qCritical() << "Environment variable" << LOG_LEVEL << "has invalid setting:" << level
+                        << "(expected value in range 0..2) - variable ignored";
+            return log_level;
+        }
+        if (l < 0 || l > 2)
+        {
+            qCritical() << "Environment variable" << LOG_LEVEL << "has invalid setting:" << level
+                        << "(expected value in range 0..2) - variable ignored";
+            return log_level;
+        }
+        log_level = l;
+    }
     return log_level;
 }
 
