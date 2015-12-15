@@ -23,6 +23,11 @@
     exit 1
 }
 
+[ "$(uname -m)" == "s390x" ] && {
+    echo "Skipping QML test on s390x"
+    exit 0
+}
+
 xvfb-run -a -s "-screen 0 800x600x24" -e "$1" ./qml_test -import "$2"
 rc=$?
 [ $rc -ne 0 ] && {
