@@ -8,6 +8,8 @@ thumbnailer (2.3+16.04.20151102.2-0ubuntu2) UNRELEASED; urgency=medium
   * Fixed incorrect handling of 400 (Bad Request) response from
     remote server (LP: #1512608).
   * Passing an invalid size to the QML or Qt APIs is now an error.
+  * Added new gsettings key "log-level". Amount of noise in the logs
+    is now reduced. Set log-level to 2 for verbose logging.
 
  -- Michi Henning <michi.henning@canonical.com>  Wed, 04 Nov 2015 14:08:16 +1000
 

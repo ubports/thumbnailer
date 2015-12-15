@@ -75,6 +75,7 @@ protected:
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
         setenv(MAX_IDLE, "1000", true);
+        setenv(LOG_LEVEL, "2", true);  // For coverage
 
         dbus_.reset(new DBusServer());
     }

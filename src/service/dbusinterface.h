@@ -75,6 +75,7 @@ private:
     unity::thumbnailer::Settings settings_;
     std::shared_ptr<RateLimiter> download_limiter_;
     std::shared_ptr<RateLimiter> extraction_limiter_;
+    int log_level_;
 };
 
 }  // namespace service
