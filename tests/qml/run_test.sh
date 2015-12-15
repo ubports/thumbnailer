@@ -18,6 +18,7 @@
 # Authored by: Michi Henning <michi.henning@canonical.com>
 #
 
+echo "CPU: $(uname -m)"
 [ $# -ne 2 ] && {
     echo "usage: $(basename $0) error-file plugin-dir" 1>&2
     exit 1
