@@ -23,7 +23,7 @@
     exit 1
 }
 
-[ "$(uname -m)" == "s390x" ] && {
+[ "$(uname -m)" = "s390x" ] && {
     echo "Skipping QML test on s390x"
     exit 0
 }
