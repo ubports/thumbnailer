@@ -250,6 +250,7 @@ void RequestImpl::dbusCallFinished()
     {
         finishWithError(QStringLiteral("Thumbnailer: RequestImpl::dbusCallFinished(): unknown exception"));
     }
+    watcher_.reset();
     // LCOV_EXCL_STOP
 }
 
