@@ -204,9 +204,13 @@ bool Settings::get_bool(char const* key, bool default_value) const
 {
     if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))
     {
+        qDebug() << "get_bool, returning default value:" << default_value;
         return default_value;
     }
 
+    bool b = g_settings_get_boolean(settings_.get(), key);
+    qDebug() << "get_bool, returning settings value:" << b;
+    return b;
     return g_settings_get_boolean(settings_.get(), key);
 }
 
