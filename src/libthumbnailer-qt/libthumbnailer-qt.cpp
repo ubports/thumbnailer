@@ -196,7 +196,7 @@ RequestImpl::~RequestImpl()
         qDebug() << "~RequestImpl: already_sent:" << already_sent << details_;
         if (already_sent)
         {
-            qDebug() << "pumping limiter" << details_;
+            qDebug() << "~RequestImpl: pumping limiter" << details_;
             limiter_->done();
         }
     }
@@ -213,6 +213,7 @@ void RequestImpl::dbusCallFinished()
         // We depend on calls to pump the limiter exactly once for each request that was sent.
         // Whenever a (real) DBus call finishes, we inform the limiter, so it can kick off
         // the next pending job.
+        qDebug() << "dbusCallF: pump";
         limiter_->done();
     }
 
@@ -295,6 +296,7 @@ void RequestImpl::doCancel()
         // We fake the call completion, in order to pump the limiter only from within
         // the dbus completion callback. We cannot call limiter_->done() here
         // because that would schedule the next request in the queue.
+        qDebug() << "scheduling fake call:" << details_;
         QMetaObject::invokeMethod(this, "dbusCallFinished", Qt::QueuedConnection);
     }
 }
