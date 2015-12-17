@@ -61,6 +61,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
 
     if (running_ < concurrency_)
     {
+        qDebug() << "scheduling immediately, running:" << running_;
         return schedule_now(job);
     }
 

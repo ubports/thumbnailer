@@ -185,13 +185,13 @@ RequestImpl::RequestImpl(QString const& details,
 
 RequestImpl::~RequestImpl()
 {
-    // TODO: Problematic. If the request is destroyed while in flight, dbusCallFinished is never called,
-    //       because the watcher is destroyed, and we neglect to pump the limiter.
-    if (!finished_ && cancel_func_)
+    if (!finished_)
     {
+        Q_ASSERT(cancel_func_);
         bool still_in_queue = cancel_func_();
         if (!still_in_queue && !cancelled_)
         {
+            qDebug() << "pumping limiter" << details_;
             limiter_->done();
         }
     }
