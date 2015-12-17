@@ -50,6 +50,8 @@ public:
                 std::function<QDBusPendingReply<QByteArray>()> const& job,
                 bool trace_client);
 
+    ~RequestImpl();
+
     bool isFinished() const
     {
         return finished_;
@@ -106,6 +108,7 @@ private Q_SLOTS:
     void dbusCallFinished();
 
 private:
+    void doCancel();
     void finishWithError(QString const& errorMessage);
 
     QString details_;
@@ -180,11 +183,16 @@ RequestImpl::RequestImpl(QString const& details,
     cancel_func_ = limiter_->schedule(send_request_);
 }
 
+RequestImpl::~RequestImpl()
+{
+    doCancel();
+}
+
 void RequestImpl::dbusCallFinished()
 {
     Q_ASSERT(!finished_);
 
-    // If this is a fake call from cancel(), pump the limiter.
+    // If this isn't a fake call from cancel(), pump the limiter.
     if (!cancelled_while_waiting_)
     {
         // Note: Don't pump the limiter from anywhere else! We depend on calls to pump
@@ -254,16 +262,10 @@ void RequestImpl::finishWithError(QString const& errorMessage)
     Q_EMIT public_request_->finished();
 }
 
-void RequestImpl::cancel()
+void RequestImpl::doCancel()
 {
-    if (trace_client_)
-    {
-        qDebug().noquote() << "Thumbnailer: cancelling:" << details_;
-    }
-
     if (finished_ || cancelled_)
     {
-        qDebug().noquote() << "Thumbnailer: already finished or cancelled:" << details_;
         return;  // Too late, do nothing.
     }
 
@@ -277,6 +279,19 @@ void RequestImpl::cancel()
         // because that would schedule the next request in the queue.
         QMetaObject::invokeMethod(this, "dbusCallFinished", Qt::QueuedConnection);
     }
+}
+
+void RequestImpl::cancel()
+{
+    if (trace_client_)
+    {
+        qDebug().noquote() << "Thumbnailer: cancelling:" << details_;
+    }
+    if (finished_ || cancelled_)
+    {
+        qDebug().noquote() << "Thumbnailer: already finished or cancelled:" << details_;
+    }
+    doCancel();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
