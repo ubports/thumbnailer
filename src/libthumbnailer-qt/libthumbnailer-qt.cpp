@@ -185,7 +185,7 @@ RequestImpl::RequestImpl(QString const& details,
 
 RequestImpl::~RequestImpl()
 {
-    if (!finished_)
+    if (watcher_)
     {
         Q_ASSERT(cancel_func_);
         bool still_in_queue = cancel_func_();
