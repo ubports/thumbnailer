@@ -76,7 +76,7 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 
 void ThumbnailerImageResponse::cancel()
 {
-    if (request_ && !request_->isFinished())
+    if (request_ && !request_->isFinished() && !request_->isCancelled())
     {
         request_->cancel();
     }

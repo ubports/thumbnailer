@@ -269,6 +269,7 @@ void RequestImpl::cancel()
 
     cancelled_ = true;
     cancelled_while_waiting_ = cancel_func_();
+    qDebug() << "cancel:" << cancelled_while_waiting_;
     if (cancelled_while_waiting_)
     {
         // We fake the call completion, in order to pump the limiter only from within
@@ -279,7 +280,7 @@ void RequestImpl::cancel()
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : limiter_(Settings().max_backlog())
+    : limiter_(Settings().max_backlog(), "Q")
     , trace_client_(Settings().trace_client())
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));

@@ -20,6 +20,7 @@
 #include "ratelimiter.h"
 
 #include <cassert>
+#include <QDebug>
 
 using namespace std;
 
@@ -32,6 +33,14 @@ namespace thumbnailer
 RateLimiter::RateLimiter(int concurrency)
     : concurrency_(concurrency)
     , running_(0)
+{
+    assert(concurrency > 0);
+}
+
+RateLimiter::RateLimiter(int concurrency, std::string const& name)
+    : concurrency_(concurrency)
+    , running_(0)
+    , name_(name)
 {
     assert(concurrency > 0);
 }
@@ -82,6 +91,10 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
 void RateLimiter::done()
 {
+    if (name_ == "Q")
+    {
+        qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
+    }
     assert(running_ > 0);
     --running_;
 
