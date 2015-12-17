@@ -212,7 +212,7 @@ void RequestImpl::dbusCallFinished()
     {
         // We depend on calls to pump the limiter exactly once for each request that was sent.
         // Whenever a (real) DBus call finishes, we inform the limiter, so it can kick off
-        // the next pending job. 
+        // the next pending job.
         limiter_->done();
     }
 
