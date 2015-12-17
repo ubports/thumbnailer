@@ -192,9 +192,9 @@ RequestImpl::~RequestImpl()
     if (watcher_)
     {
         Q_ASSERT(cancel_func_);
-        bool still_in_queue = cancel_func_();
-        qDebug() << "~RequestImpl: in queue:" << still_in_queue << details_;
-        if (!still_in_queue)
+        bool already_sent = !cancel_func_();
+        qDebug() << "~RequestImpl: already_sent:" << already_sent << details_;
+        if (already_sent)
         {
             qDebug() << "pumping limiter" << details_;
             limiter_->done();
