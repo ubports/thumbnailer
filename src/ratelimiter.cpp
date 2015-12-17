@@ -76,6 +76,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
         {
             *job_p = nullptr;
         }
+        qDebug() << "cancel_func:" << (void*)job_p.get();
         return job_p != nullptr;
     };
 }
@@ -104,9 +105,11 @@ void RateLimiter::done()
     {
         job_p = queue_.front();
         assert(job_p);
+        qDebug() << "done:" << (void*)job_p.get();
         queue_.pop();
         if (*job_p != nullptr)
         {
+            qDebug() << "live job:" << (void*)job_p.get();
             break;
         }
     }
@@ -114,6 +117,7 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
+        qDebug() << "calling job:" << (void*)job_p.get();
         schedule_now(*job_p);
     }
 }
