@@ -107,6 +107,17 @@ TEST_F(ProviderTest, thumbnail_image)
     EXPECT_EQ(QColor("#81FF81").rgb(), image.pixel(127, 95));
 }
 
+TEST_F(ProviderTest, thumbnail_cancel)
+{
+    const char* filename = TESTDATADIR "/orientation-1.jpg";
+
+    ThumbnailGenerator provider(thumbnailer_);
+    unique_ptr<QQuickImageResponse> response(
+        provider.requestImageResponse(filename, QSize(128, 128)));
+    response->cancel();
+    wait(response.get());
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
