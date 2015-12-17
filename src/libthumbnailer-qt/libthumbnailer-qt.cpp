@@ -185,6 +185,9 @@ RequestImpl::RequestImpl(QString const& details,
 
 RequestImpl::~RequestImpl()
 {
+    // If watcher_ is still set, this request was destroyed after being sent,
+    // but before the DBus reply trickled in. We have to pump the watcher here
+    // because we'll never receive the dbusCallFinished callback.
     if (watcher_)
     {
         Q_ASSERT(cancel_func_);
@@ -205,14 +208,16 @@ void RequestImpl::dbusCallFinished()
     qDebug() << "dbusCallFinished()" << details_;
     if (!cancelled_while_waiting_)
     {
-        // Note: Don't pump the limiter from anywhere else! We depend on calls to pump
-        //       the limiter exactly once for each request that was sent.
+        // We depend on calls to pump the limiter exactly once for each request that was sent.
+        // Whenever a (real) DBus call finishes, we inform the limiter, so it can kick off
+        // the next pending job. 
         limiter_->done();
     }
 
     if (cancelled_)
     {
         finishWithError("Request cancelled");
+        Q_ASSERT(!watcher_);
         return;
     }
 
