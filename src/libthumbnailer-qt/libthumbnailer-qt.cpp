@@ -208,7 +208,7 @@ void RequestImpl::dbusCallFinished()
 
     // If this isn't a fake call from cancel(), pump the limiter.
     qDebug() << "dbusCallFinished()" << details_;
-    if (!cancelled_while_waiting_)
+    if (!cancelled_ || !cancelled_while_waiting_)
     {
         // We depend on calls to pump the limiter exactly once for each request that was sent.
         // Whenever a (real) DBus call finishes, we inform the limiter, so it can kick off
