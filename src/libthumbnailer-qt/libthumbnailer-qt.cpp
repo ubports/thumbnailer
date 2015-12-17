@@ -188,11 +188,13 @@ RequestImpl::~RequestImpl()
     // If watcher_ is still set, this request was destroyed after being sent,
     // but before the DBus reply trickled in. We have to pump the watcher here
     // because we'll never receive the dbusCallFinished callback.
+    qDebug() << "~RequestImpl" << details_;
     if (watcher_)
     {
         Q_ASSERT(cancel_func_);
         bool still_in_queue = cancel_func_();
-        if (!still_in_queue && !cancelled_)
+        qDebug() << "~RequestImpl: in queue:" << still_in_queue << details_;
+        if (!still_in_queue)
         {
             qDebug() << "pumping limiter" << details_;
             limiter_->done();
