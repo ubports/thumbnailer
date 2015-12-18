@@ -61,7 +61,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
 
     if (running_ < concurrency_)
     {
-        qDebug() << "scheduling immediately, running:" << running_;
+        if (name_ == "Q") qDebug() << "scheduling immediately, running:" << running_;
         return schedule_now(job);
     }
 
@@ -77,7 +77,7 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
         {
             *job_p = nullptr;
         }
-        qDebug() << "cancel_func:" << (void*)job_p.get();
+        if (name_ == "Q") qDebug() << "cancel_func:" << (void*)job_p.get();
         return job_p != nullptr;
     };
 }
@@ -93,10 +93,7 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
 void RateLimiter::done()
 {
-    if (name_ == "Q")
-    {
-        qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
-    }
+    if (name_ == "Q") qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
     assert(running_ > 0);
     --running_;
 
@@ -106,11 +103,11 @@ void RateLimiter::done()
     {
         job_p = queue_.front();
         assert(job_p);
-        qDebug() << "done:" << (void*)job_p.get();
+        if (name_ == "Q") qDebug() << "done:" << (void*)job_p.get();
         queue_.pop();
         if (*job_p != nullptr)
         {
-            qDebug() << "live job:" << (void*)job_p.get();
+            if (name_ == "Q") qDebug() << "live job:" << (void*)job_p.get();
             break;
         }
     }
@@ -118,7 +115,7 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
-        qDebug() << "calling job:" << (void*)job_p.get();
+        if (name_ == "Q") qDebug() << "calling job:" << (void*)job_p.get();
         schedule_now(*job_p);
     }
 }

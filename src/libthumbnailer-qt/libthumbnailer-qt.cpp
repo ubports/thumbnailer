@@ -240,7 +240,6 @@ void RequestImpl::dbusCallFinished()
         finished_ = true;
         is_valid_ = true;
         error_message_ = QLatin1String("");
-        watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
         if (trace_client_)
