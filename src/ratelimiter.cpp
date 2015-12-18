@@ -93,7 +93,6 @@ RateLimiter::CancelFunc RateLimiter::schedule_now(function<void()> job)
 
 void RateLimiter::done()
 {
-    if (name_ == "Q") qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
     assert(running_ > 0);
     --running_;
 
@@ -118,8 +117,7 @@ void RateLimiter::done()
         if (name_ == "Q") qDebug() << "calling job:" << (void*)job_p.get();
         schedule_now(*job_p);
     }
-}
-
+    if (name_ == "Q") qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
 }  // namespace thumbnailer
 
 }  // namespace unity
