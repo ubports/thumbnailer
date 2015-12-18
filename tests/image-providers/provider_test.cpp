@@ -28,7 +28,7 @@
 #include "utils/testutils.h"
 
 #include <gtest/gtest.h>
-#include <QCoreApplication>
+#include <QGuiApplication>
 #include <QImage>
 #include <QQuickImageProvider>
 #include <QSignalSpy>
@@ -120,7 +120,7 @@ TEST_F(ProviderTest, thumbnail_cancel)
 
 int main(int argc, char **argv)
 {
-    QCoreApplication app(argc, argv);
+    QGuiApplication app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
     setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
