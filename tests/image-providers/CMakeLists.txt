@@ -8,4 +8,4 @@ target_link_libraries(image-providers_test
   Qt5::Quick
   Qt5::Test
   gtest)
-add_test(image-providers image-providers_test)
+add_test(image-providers ${CMAKE_SOURCE_DIR}/tools/run-xvfb.sh ./image-providers_test)

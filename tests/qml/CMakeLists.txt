@@ -8,4 +8,4 @@ target_link_libraries(qml_test
     Qt5::Test
 )
 add_dependencies(qml_test thumbnailer-service thumbnailer-qml)
-add_test(qml ${CMAKE_CURRENT_SOURCE_DIR}/run_test.sh ${CMAKE_BINARY_DIR}/stderr.log ${CMAKE_BINARY_DIR}/plugins)
+add_test(qml ${CMAKE_SOURCE_DIR}/tools/run-xvfb.sh ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)
