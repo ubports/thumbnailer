@@ -118,6 +118,8 @@ void RateLimiter::done()
         schedule_now(*job_p);
     }
     if (name_ == "Q") qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
+}
+
 }  // namespace thumbnailer
 
 }  // namespace unity
