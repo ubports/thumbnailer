@@ -108,6 +108,7 @@ private Q_SLOTS:
     void dbusCallFinished();
 
 private:
+    void pump_limiter();
     void doCancel();
     void finishWithError(QString const& errorMessage);
 
@@ -185,9 +186,11 @@ RequestImpl::RequestImpl(QString const& details,
 
 RequestImpl::~RequestImpl()
 {
-    // If watcher_ is still set, this request was destroyed after being sent,
-    // but before the DBus reply trickled in. We have to pump the watcher here
-    // because we'll never receive the dbusCallFinished callback.
+    // If watcher_ is still set, this request is destroyed while
+    // the request is either still in the queue, or it has been sent
+    // but the reply has not yet trickled in. We have to cancel
+    // and pump the limiter in that case because we'll never receive
+    // the dbusCallFinished callback.
     qDebug() << "~RequestImpl" << details_;
     if (watcher_)
     {
@@ -196,10 +199,19 @@ RequestImpl::~RequestImpl()
         qDebug() << "~RequestImpl: already_sent:" << already_sent << details_;
         if (already_sent)
         {
-            qDebug() << "~RequestImpl: pumping limiter" << details_;
-            limiter_->done();
+            // Delay pumping until we drop back to the event loop. Otherwse,
+            // if the caller destroys a whole bunch of requests at once, we'd
+            // schedule the next request in the queue before the caller gets
+            // a chance to destroy the next request.
+            qDebug() << "~RequestImpl: queueing done()" << details_;
+            QMetaObject::invokeMethod(this, "pump_limiter", Qt::QueuedConnection);
         }
     }
+}
+
+void RequestImpl::pump_limiter()
+{
+    limiter_->done();
 }
 
 void RequestImpl::dbusCallFinished()
