@@ -319,7 +319,6 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     : limiter_(Settings().max_backlog())
     , trace_client_(Settings().trace_client())
 {
-    trace_client_ = true;
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
 }
 
