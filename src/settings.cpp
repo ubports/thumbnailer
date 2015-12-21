@@ -207,8 +207,6 @@ bool Settings::get_bool(char const* key, bool default_value) const
         return default_value;
     }
 
-    bool b = g_settings_get_boolean(settings_.get(), key);
-    return b;
     return g_settings_get_boolean(settings_.get(), key);
 }
 
