@@ -124,7 +124,7 @@ public:
     QSharedPointer<Request> getArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
 
-    RateLimiter* limiter();
+    RateLimiter& limiter();
     Q_INVOKABLE void pump_limiter();
 
 private:
@@ -167,7 +167,7 @@ RequestImpl::RequestImpl(QString const& details,
         watcher_.reset(new QDBusPendingCallWatcher(job_()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
     };
-    cancel_func_ = thumbnailer_->limiter()->schedule(send_request_);
+    cancel_func_ = thumbnailer_->limiter().schedule(send_request_);
 }
 
 RequestImpl::~RequestImpl()
@@ -202,7 +202,7 @@ void RequestImpl::dbusCallFinished()
         // We depend on calls to pump the limiter exactly once for each request that was sent.
         // Whenever a (real) DBus call finishes, we inform the limiter, so it can kick off
         // the next pending job.
-        thumbnailer_->limiter()->done();
+        thumbnailer_->limiter().done();
     }
 
     if (cancelled_)
@@ -289,7 +289,7 @@ void RequestImpl::cancel()
     if (cancelled_while_waiting_)
     {
         // We fake the call completion, in order to pump the limiter only from within
-        // the dbus completion callback. We cannot call thumbnailer_->limiter()->done() here
+        // the dbus completion callback. We cannot call thumbnailer_->limiter().done() here
         // because that would schedule the next request in the queue.
         QMetaObject::invokeMethod(this, "dbusCallFinished", Qt::QueuedConnection);
     }
@@ -310,7 +310,7 @@ void RequestImpl::waitForFinished()
     if (cancel_func_())
     {
         Q_ASSERT(!watcher_);
-        thumbnailer_->limiter()->schedule_now(send_request_);
+        thumbnailer_->limiter().schedule_now(send_request_);
     }
     watcher_->waitForFinished();
 }
@@ -382,9 +382,9 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
     return request;
 }
 
-RateLimiter* ThumbnailerImpl::limiter()
+RateLimiter& ThumbnailerImpl::limiter()
 {
-    return &limiter_;
+    return limiter_;
 }
 
 void ThumbnailerImpl::pump_limiter()
