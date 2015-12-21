@@ -78,14 +78,35 @@ TEST(Settings, changed_settings)
 {
     gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
     g_settings_set_string(gsettings.get(), "dash-ubuntu-com-key", "foo");
+    g_settings_set_int(gsettings.get(), "full-size-cache-size", 41);
     g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 42);
+    g_settings_set_int(gsettings.get(), "failure-cache-size", 43);
+    g_settings_set_int(gsettings.get(), "max-downloads", 5);
+    g_settings_set_int(gsettings.get(), "extraction-timeout", 9);
+    g_settings_set_int(gsettings.get(), "max-backlog", 30);
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+    g_settings_set_int(gsettings.get(), "log-level", 2);
 
     Settings settings;
     EXPECT_EQ("foo", settings.art_api_key());
+    EXPECT_EQ(41, settings.full_size_cache_size());
     EXPECT_EQ(42, settings.thumbnail_cache_size());
+    EXPECT_EQ(43, settings.failure_cache_size());
+    EXPECT_EQ(5, settings.max_downloads());
+    EXPECT_EQ(9, settings.extraction_timeout());
+    EXPECT_EQ(30, settings.max_backlog());
+    EXPECT_TRUE(settings.trace_client());
+    EXPECT_EQ(2, settings.log_level());
 
     g_settings_reset(gsettings.get(), "dash-ubuntu-com-key");
+    g_settings_reset(gsettings.get(), "full-size-cache-size");
     g_settings_reset(gsettings.get(), "thumbnail-cache-size");
+    g_settings_reset(gsettings.get(), "failure-cache-size");
+    g_settings_reset(gsettings.get(), "max-downloads");
+    g_settings_reset(gsettings.get(), "extraction_timeout");
+    g_settings_reset(gsettings.get(), "max-backlog");
+    g_settings_reset(gsettings.get(), "trace-client");
+    g_settings_reset(gsettings.get(), "log-level");
 }
 
 TEST(Settings, non_positive_int)

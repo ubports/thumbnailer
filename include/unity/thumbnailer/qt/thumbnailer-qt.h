@@ -57,6 +57,9 @@ public:
 
     If the request is still in progress, it is implicitly cancelled, and
     the finished() signal is _not_ emitted.
+
+    \warning You _must_ destroy all request instances created by a Thumbnailer _before_
+    destroying the Thumbnailer instance.
     */
     ~Request();
 
@@ -192,9 +195,13 @@ public:
     */
     explicit Thumbnailer(QDBusConnection const& connection);
 
-    /// @endcond
+    /**
+    \brief Destroys a thumbnailer instance.
+
+    \warning You _must_ keep the Thumbnailer instance alive for as long as
+    Request instances created by that Thumbnailer instance exist.
+    */
     ~Thumbnailer();
-    /// @endcond
 
     /**
     \brief Retrieves a thumbnail for an album cover from the remote image server.

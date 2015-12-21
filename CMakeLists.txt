@@ -137,6 +137,7 @@ enable_coverage_report(
         test-seq
         thumbnailer-admin
         thumbnailer-qml
+        thumbnailer-qml-static
         thumbnailer-qt
         thumbnailer-service
         thumbnailer-static
