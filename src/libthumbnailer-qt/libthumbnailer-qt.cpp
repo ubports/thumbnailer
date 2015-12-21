@@ -40,15 +40,19 @@ namespace qt
 namespace internal
 {
 
+class ThumbnailerImpl;
+
 class RequestImpl : public QObject
 {
     Q_OBJECT
 public:
     RequestImpl(QString const& details,
                 QSize const& requested_size,
-                RateLimiter* limiter,
+                ThumbnailerImpl* thumbnailer,
                 std::function<QDBusPendingReply<QByteArray>()> const& job,
                 bool trace_client);
+
+    ~RequestImpl();
 
     bool isFinished() const
     {
@@ -70,25 +74,7 @@ public:
         return is_valid_;
     }
 
-    void waitForFinished()
-    {
-        if (finished_ || cancelled_)
-        {
-            return;
-        }
-
-        // If we are called before the request made it out of the limiter queue,
-        // we have not sent the request yet and, therefore, don't have a watcher.
-        // In that case we send the request right here after removing it
-        // from the limiter queue. This guarantees that we always have
-        // a watcher to wait on.
-        if (cancel_func_())
-        {
-            Q_ASSERT(!watcher_);
-            limiter_->schedule_now(send_request_);
-        }
-        watcher_->waitForFinished();
-    }
+    void waitForFinished();
 
     void setRequest(unity::thumbnailer::qt::Request* request)
     {
@@ -110,7 +96,7 @@ private:
 
     QString details_;
     QSize requested_size_;
-    RateLimiter* limiter_;
+    ThumbnailerImpl* thumbnailer_;
     std::function<QDBusPendingReply<QByteArray>()> job_;
     std::function<void()> send_request_;
 
@@ -126,8 +112,9 @@ private:
     unity::thumbnailer::qt::Request* public_request_;
 };
 
-class ThumbnailerImpl
+class ThumbnailerImpl : public QObject
 {
+    Q_OBJECT
 public:
     Q_DISABLE_COPY(ThumbnailerImpl)
     explicit ThumbnailerImpl(QDBusConnection const& connection);
@@ -136,6 +123,9 @@ public:
     QSharedPointer<Request> getAlbumArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QSharedPointer<Request> getArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QSharedPointer<Request> getThumbnail(QString const& filename, QSize const& requestedSize);
+
+    RateLimiter& limiter();
+    Q_INVOKABLE void pump_limiter();
 
 private:
     QSharedPointer<Request> createRequest(QString const& details,
@@ -148,12 +138,12 @@ private:
 
 RequestImpl::RequestImpl(QString const& details,
                          QSize const& requested_size,
-                         RateLimiter* limiter,
+                         ThumbnailerImpl* thumbnailer,
                          std::function<QDBusPendingReply<QByteArray>()> const& job,
                          bool trace_client)
     : details_(details)
     , requested_size_(requested_size)
-    , limiter_(limiter)
+    , thumbnailer_(thumbnailer)
     , job_(job)
     , finished_(false)
     , is_valid_(false)
@@ -177,24 +167,48 @@ RequestImpl::RequestImpl(QString const& details,
         watcher_.reset(new QDBusPendingCallWatcher(job_()));
         connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &RequestImpl::dbusCallFinished);
     };
-    cancel_func_ = limiter_->schedule(send_request_);
+    cancel_func_ = thumbnailer_->limiter().schedule(send_request_);
+}
+
+RequestImpl::~RequestImpl()
+{
+    // If cancel_func_() returns false and we have a watcher,
+    // the request was sent but the reply has not yet trickled in.
+    // We have to pump the limiter in that case because we'll never
+    // receive the dbusCallFinished callback.
+    bool already_sent = false;
+    if (cancel_func_)
+    {
+        already_sent = !cancel_func_();
+    }
+    if (watcher_ && already_sent)
+    {
+        // Delay pumping until we drop back to the event loop. Otherwse,
+        // if the caller destroys a whole bunch of requests at once, we'd
+        // schedule the next request in the queue before the caller gets
+        // a chance to destroy the next request.
+        QMetaObject::invokeMethod(thumbnailer_, "pump_limiter", Qt::QueuedConnection);
+        disconnect();
+    }
 }
 
 void RequestImpl::dbusCallFinished()
 {
     Q_ASSERT(!finished_);
 
-    // If this is a fake call from cancel(), pump the limiter.
-    if (!cancelled_while_waiting_)
+    // If this isn't a fake call from cancel(), pump the limiter.
+    if (!cancelled_ || !cancelled_while_waiting_)
     {
-        // Note: Don't pump the limiter from anywhere else! We depend on calls to pump
-        //       the limiter exactly once for each request that was sent.
-        limiter_->done();
+        // We depend on calls to pump the limiter exactly once for each request that was sent.
+        // Whenever a (real) DBus call finishes, we inform the limiter, so it can kick off
+        // the next pending job.
+        thumbnailer_->limiter().done();
     }
 
     if (cancelled_)
     {
         finishWithError("Request cancelled");
+        Q_ASSERT(!watcher_);
         return;
     }
 
@@ -214,7 +228,6 @@ void RequestImpl::dbusCallFinished()
         finished_ = true;
         is_valid_ = true;
         error_message_ = QLatin1String("");
-        watcher_.reset();
         Q_ASSERT(public_request_);
         Q_EMIT public_request_->finished();
         if (trace_client_)
@@ -232,6 +245,7 @@ void RequestImpl::dbusCallFinished()
     {
         finishWithError(QStringLiteral("Thumbnailer: RequestImpl::dbusCallFinished(): unknown exception"));
     }
+    watcher_.reset();
     // LCOV_EXCL_STOP
 }
 
@@ -263,7 +277,10 @@ void RequestImpl::cancel()
 
     if (finished_ || cancelled_)
     {
-        qDebug().noquote() << "Thumbnailer: already finished or cancelled:" << details_;
+        if (trace_client_)
+        {
+            qDebug().noquote() << "Thumbnailer: already finished or cancelled:" << details_;
+        }
         return;  // Too late, do nothing.
     }
 
@@ -272,10 +289,30 @@ void RequestImpl::cancel()
     if (cancelled_while_waiting_)
     {
         // We fake the call completion, in order to pump the limiter only from within
-        // the dbus completion callback. We cannot call limiter_->done() here
+        // the dbus completion callback. We cannot call thumbnailer_->limiter().done() here
         // because that would schedule the next request in the queue.
         QMetaObject::invokeMethod(this, "dbusCallFinished", Qt::QueuedConnection);
     }
+}
+
+void RequestImpl::waitForFinished()
+{
+    if (finished_ || cancelled_)
+    {
+        return;
+    }
+
+    // If we are called before the request made it out of the limiter queue,
+    // we have not sent the request yet and, therefore, don't have a watcher.
+    // In that case we send the request right here after removing it
+    // from the limiter queue. This guarantees that we always have
+    // a watcher to wait on.
+    if (cancel_func_())
+    {
+        Q_ASSERT(!watcher_);
+        thumbnailer_->limiter().schedule_now(send_request_);
+    }
+    watcher_->waitForFinished();
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
@@ -335,7 +372,7 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
     {
         qDebug().noquote() << "Thumbnailer:" << details;
     }
-    auto request_impl = new RequestImpl(details, requested_size, &limiter_, job, trace_client_);
+    auto request_impl = new RequestImpl(details, requested_size, this, job, trace_client_);
     auto request = QSharedPointer<Request>(new Request(request_impl));
     request_impl->setRequest(request.data());
     if (request->isFinished() && !request->isValid())
@@ -343,6 +380,16 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
         QMetaObject::invokeMethod(request.data(), "finished", Qt::QueuedConnection);
     }
     return request;
+}
+
+RateLimiter& ThumbnailerImpl::limiter()
+{
+    return limiter_;
+}
+
+void ThumbnailerImpl::pump_limiter()
+{
+    return limiter_.done();
 }
 
 }  // namespace internal
@@ -421,7 +468,6 @@ QSharedPointer<Request> Thumbnailer::getThumbnail(QString const& filePath, QSize
 {
     return p_->getThumbnail(filePath, requestedSize);
 }
-
 }  // namespace qt
 
 }  // namespace thumbnailer
