@@ -556,30 +556,42 @@ TEST_F(StressTest, terminate)
     string target_dir = temp_dir() + "/Music";
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
-    vector<unique_ptr<AsyncThumbnailProvider>> providers;
-
-    Counter counter(N_REQUESTS);
-    QSignalSpy spy(&counter, &Counter::counterDone);
-
-    auto start = chrono::system_clock::now();
-    for (int i = 0; i < N_REQUESTS; i++)
     {
-        unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
-        QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
-        provider->getThumbnail(path, QSize(512, 512));
-        providers.emplace_back(move(provider));
-    }
+        vector<unique_ptr<AsyncThumbnailProvider>> providers;
 
-    // Pump the event loop for a while, to allow some requests to start processing.
+        Counter counter(N_REQUESTS);
+        QSignalSpy spy(&counter, &Counter::counterDone);
+
+        auto start = chrono::system_clock::now();
+        for (int i = 0; i < N_REQUESTS; i++)
+        {
+            unique_ptr<AsyncThumbnailProvider> provider(new AsyncThumbnailProvider(thumbnailer_.get(), counter));
+            QString path = QString::fromStdString(target_dir + "/" + to_string(i) + source);
+            provider->getThumbnail(path, QSize(512, 512));
+            providers.emplace_back(move(provider));
+        }
+
+        // Pump the event loop for a while, to allow some requests to start processing.
+        {
+            QTimer timer;
+            QSignalSpy timer_spy(&timer, &QTimer::timeout);
+            timer.start(2000);
+            timer_spy.wait(2500);
+        }
+        auto finish = chrono::system_clock::now();
+
+        add_stats(N_REQUESTS, start, finish);
+    }
+    // All requests are destroyed now.
+
+    // Pump the event loop once more, so we get coverage for pumping the limiter
+    // from the delayed call scheduled by the RequestImpl destructor.
     {
         QTimer timer;
         QSignalSpy timer_spy(&timer, &QTimer::timeout);
-        timer.start(2000);
-        timer_spy.wait(2500);
+        timer.start(1000);
+        timer_spy.wait(1500);
     }
-    auto finish = chrono::system_clock::now();
-
-    add_stats(N_REQUESTS, start, finish);
 }
 
 int main(int argc, char** argv)
