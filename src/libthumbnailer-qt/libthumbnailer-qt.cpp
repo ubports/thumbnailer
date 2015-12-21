@@ -326,7 +326,7 @@ void RequestImpl::cancel()
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : limiter_(Settings().max_backlog(), "Q")
+    : limiter_(Settings().max_backlog())
     , trace_client_(Settings().trace_client())
 {
     qDebug() << "Thumbnailer: trace_client_" << trace_client_;

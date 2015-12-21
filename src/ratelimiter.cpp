@@ -20,7 +20,6 @@
 #include "ratelimiter.h"
 
 #include <cassert>
-#include <QDebug>
 
 using namespace std;
 
@@ -33,14 +32,6 @@ namespace thumbnailer
 RateLimiter::RateLimiter(int concurrency)
     : concurrency_(concurrency)
     , running_(0)
-{
-    assert(concurrency > 0);
-}
-
-RateLimiter::RateLimiter(int concurrency, std::string const& name)
-    : concurrency_(concurrency)
-    , running_(0)
-    , name_(name)
 {
     assert(concurrency > 0);
 }
@@ -61,7 +52,6 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
 
     if (running_ < concurrency_)
     {
-        if (name_ == "Q") qDebug() << "scheduling immediately, running:" << running_;
         return schedule_now(job);
     }
 
@@ -77,7 +67,6 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
         {
             *job_p = nullptr;
         }
-        if (name_ == "Q") qDebug() << "cancel_func:" << (void*)job_p.get();
         return job_p != nullptr;
     };
 }
@@ -102,11 +91,9 @@ void RateLimiter::done()
     {
         job_p = queue_.front();
         assert(job_p);
-        if (name_ == "Q") qDebug() << "done:" << (void*)job_p.get();
         queue_.pop();
         if (*job_p != nullptr)
         {
-            if (name_ == "Q") qDebug() << "live job:" << (void*)job_p.get();
             break;
         }
     }
@@ -114,10 +101,8 @@ void RateLimiter::done()
     // If we found an uncancelled job, call it.
     if (job_p && *job_p)
     {
-        if (name_ == "Q") qDebug() << "calling job:" << (void*)job_p.get();
         schedule_now(*job_p);
     }
-    if (name_ == "Q") qDebug() << "done, running_:" << running_ << "queue:" << queue_.size();
 }
 
 }  // namespace thumbnailer
