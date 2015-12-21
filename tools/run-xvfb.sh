@@ -18,15 +18,12 @@
 # Authored by: Michi Henning <michi.henning@canonical.com>
 #
 
-[ $# -ne 2 ] && {
-    echo "usage: $(basename $0) error-file plugin-dir" 1>&2
-    exit 1
-}
-
-xvfb-run -a -s "-screen 0 800x600x24" -e "$1" ./qml_test -import "$2"
+xvfb-run -a -s "-screen 0 800x600x24" -e xvfb.log "$@"
 rc=$?
 [ $rc -ne 0 ] && {
-    cat "$1" 1>&2
+    echo >&2
+    echo "---- Xvfb log file ----" >&2
+    cat xvfb.log >&2
 }
 
 exit $rc
