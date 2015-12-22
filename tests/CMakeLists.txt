@@ -23,7 +23,7 @@ set(unit_test_dirs
     file_lock
     gobj_ptr
     image
-    image-providers
+    image-provider
     qml
     libthumbnailer-qt
     recovery
