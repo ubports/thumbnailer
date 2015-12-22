@@ -77,7 +77,7 @@ protected:
 
 namespace
 {
-int const SIGNAL_WAIT_TIME = 5000;
+int const SIGNAL_WAIT_TIME = 10000;
 
 void wait(QQuickImageResponse* response) {
     QSignalSpy spy(response, &QQuickImageResponse::finished);
