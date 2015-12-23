@@ -80,7 +80,9 @@ namespace
 int const SIGNAL_WAIT_TIME = 10000;
 
 void wait(QQuickImageResponse* response) {
-    QSignalSpy spy(response, &QQuickImageResponse::finished);
+    // Using old signal syntax because the new one fails
+    // on arm64 with Vivid.
+    QSignalSpy spy(response, SIGNAL(finished()));
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
     ASSERT_EQ(1, spy.count());
 }
