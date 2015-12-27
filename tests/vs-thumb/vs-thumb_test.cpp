@@ -383,6 +383,12 @@ TEST(ExeTest, bad_uri)
 
 TEST(ExeTest, no_such_output_path)
 {
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
     auto err = vs_thumb_err_output(std::string(MP3_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
     EXPECT_NE(std::string::npos, err.find("write_image(): cannot open /no_such_dir/no_such_file.tiff: "
               "No such file or directory")) << err;
@@ -390,6 +396,12 @@ TEST(ExeTest, no_such_output_path)
 
 TEST(ExeTest, no_artwork)
 {
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
     auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
     auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
     EXPECT_TRUE(boost::ends_with(err, msg)) << err;
