@@ -56,7 +56,8 @@ public:
         not_found,
         network_down,
         temporary_error,
-        hard_error
+        hard_error,
+        timeout
     };
 
     // Returns the empty string with status needs_download
