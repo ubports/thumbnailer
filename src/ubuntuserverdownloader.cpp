@@ -200,6 +200,7 @@ public:
                 // Happens if we call reply_->abort() after a timeout.
                 // We need to overwrite the "operation cancelled" message that
                 // is set by this, otherwise the log doesn't tell the real story.
+                status_ = ArtReply::Status::timeout;
                 error_string_ = QStringLiteral("Request timed out");
                 qDebug() << error_string_ << "for" << url_string_;
                 return;
