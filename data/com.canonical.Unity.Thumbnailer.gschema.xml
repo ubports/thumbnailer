@@ -50,7 +50,7 @@
     </key>
 
     <key type="i" name="max-downloads">
-      <default>2</default>
+      <default>8</default>
       <summary>Maximum number of concurrent downloads</summary>
       <description>
         This parameter sets the maximum number of concurrent downloads for remote artwork.
