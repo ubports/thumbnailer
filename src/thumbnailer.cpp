@@ -346,6 +346,7 @@ QByteArray RequestBase::thumbnail()
         {
             status_ = ThumbnailRequest::FetchStatus::scaled_from_fullsize;
             scaled_image = Image(*full_size, target_size);
+            full_size = "";  // Release memory
         }
         else
         {
@@ -433,23 +434,28 @@ QByteArray RequestBase::thumbnail()
             // artwork a second time.
             if (image_data.cache_policy == CachePolicy::cache_fullsize)
             {
-                Image full_size_image = image_data.image;
-                auto w = full_size_image.width();
-                auto h = full_size_image.height();
+                auto w = image_data.image.width();
+                auto h = image_data.image.height();
                 auto max_size = thumbnailer_->max_size_;
                 if (max(w, h) > max_size)
                 {
                     // Don't put ridiculously large images into the full-size cache.
-                    full_size_image = full_size_image.scale(QSize(max_size, max_size));
+                    // We scale in place here to release memory immediately. This
+                    // might cause a second scaling operation below, but the
+                    // quality loss is negligible when scaling from something larger
+                    // than max_size to max_size, and then scaling a second time.
+                    image_data.image = image_data.image.scale(QSize(max_size, max_size));
                 }
-                thumbnailer_->full_size_cache_->put(key_, full_size_image.to_jpeg(90));  // Keep high-quality image.
+                thumbnailer_->full_size_cache_->put(key_, image_data.image.to_jpeg(90));  // Keep high-quality image.
             }
             // If the image is already within the target dimensions, this
             // will be a no-op.
             scaled_image = image_data.image.scale(target_size);
+            image_data.image = Image();
         }
 
         string jpeg = scaled_image.to_jpeg();
+        scaled_image = Image();
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
         return QByteArray::fromStdString(jpeg);
     }
