@@ -857,7 +857,7 @@ TEST_F(RemoteServer, timeout)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
-    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::timeout, request->status());
     auto new_stats = tn.stats();
     EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
 }

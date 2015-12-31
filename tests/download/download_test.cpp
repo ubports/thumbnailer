@@ -132,7 +132,7 @@ TEST_F(TestDownloaderServer, test_timeout)
     ASSERT_TRUE(spy.wait(SIGNAL_WAIT_TIME));
     ASSERT_EQ(1, spy.count());
 
-    EXPECT_EQ(ArtReply::Status::temporary_error, reply->status());
+    EXPECT_EQ(ArtReply::Status::timeout, reply->status());
     EXPECT_TRUE(reply->error_string().endsWith("Request timed out"));
 }
 
