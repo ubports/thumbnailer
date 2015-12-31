@@ -418,6 +418,8 @@ QString Handler::status_as_string() const
         return QStringLiteral("ERROR");                   // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::temporary_error:
         return QStringLiteral("TEMPORARY ERROR");
+    case ThumbnailRequest::FetchStatus::timeout:
+        return QStringLiteral("TIMEOUT");
     default:
         abort();  // LCOV_EXCL_LINE  // Impossible.
     }

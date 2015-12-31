@@ -412,6 +412,16 @@ QByteArray RequestBase::thumbnail()
                     thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
                     return "";
                 }
+                case FetchStatus::timeout:
+                {
+                    // Extraction for local media does not return a timeout error.
+                    assert(image_data.location == Location::remote);
+
+                    // We do not treat request timeout as a temporary error because the
+                    // remote server can be slow when 7digital is slow.
+                    qWarning() << "RequestBase::thumbnail(): request timed out";
+                    return "";
+                }
                 default:
                     abort();  // LCOV_EXCL_LINE  // Impossible
             }
@@ -666,6 +676,9 @@ RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> c
             return image_data;
         case ArtReply::Status::hard_error:
             image_data.status = RequestBase::FetchStatus::hard_error;
+            return image_data;
+        case ArtReply::Status::timeout:
+            image_data.status = RequestBase::FetchStatus::timeout;
             return image_data;
         case ArtReply::Status::network_down:
             // LCOV_EXCL_START

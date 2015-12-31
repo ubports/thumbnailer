@@ -37,7 +37,7 @@ public:
 
     virtual ~ArtReply() = default;
 
-    enum Status { not_finished, success, not_found, temporary_error, hard_error, network_down };
+    enum Status { not_finished, success, not_found, temporary_error, hard_error, network_down, timeout };
 
     virtual Status status() const = 0;
     virtual QString error_string() const = 0;
