@@ -1,0 +1,3 @@
+add_executable(backoff_adjuster_test backoff_adjuster_test.cpp)
+target_link_libraries(backoff_adjuster_test thumbnailer-static gtest gtest_main)
+add_test(backoff_adjuster backoff_adjuster_test)

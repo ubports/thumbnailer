@@ -274,6 +274,11 @@ TEST_F(DBusTest, test_inactivity_exit)
 
 TEST_F(DBusTest, service_exits_if_run_twice)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
     // Try to start a second copy of the thumbnailer service
     QProcess process;
     process.setStandardInputFile(QProcess::nullDevice());
@@ -305,6 +310,11 @@ TEST_F(DBusTest, service_exits_if_name_taken)
 
 TEST(DBusTestBadIdle, env_variable_bad_value)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
@@ -323,6 +333,11 @@ TEST(DBusTestBadIdle, env_variable_bad_value)
 
 TEST(DBusTestBadIdle, env_variable_out_of_range)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 

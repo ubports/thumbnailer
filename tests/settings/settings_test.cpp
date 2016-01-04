@@ -43,6 +43,7 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
+    EXPECT_EQ(7200, settings.retry_error_max_seconds());
     EXPECT_EQ(8, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
     EXPECT_EQ(10, settings.extraction_timeout());
@@ -65,7 +66,7 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(2, settings.failure_cache_size());
     EXPECT_EQ(1920, settings.max_thumbnail_size());
     EXPECT_EQ(168, settings.retry_not_found_hours());
-    EXPECT_EQ(2, settings.retry_error_hours());
+    EXPECT_EQ(7200, settings.retry_error_max_seconds());
     EXPECT_EQ(8, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
     EXPECT_EQ(10, settings.extraction_timeout());
@@ -81,7 +82,9 @@ TEST(Settings, changed_settings)
     g_settings_set_int(gsettings.get(), "full-size-cache-size", 41);
     g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 42);
     g_settings_set_int(gsettings.get(), "failure-cache-size", 43);
+    g_settings_set_int(gsettings.get(), "retry-error-hours", 1);
     g_settings_set_int(gsettings.get(), "max-downloads", 5);
+    g_settings_set_int(gsettings.get(), "max-extractions", 7);
     g_settings_set_int(gsettings.get(), "extraction-timeout", 9);
     g_settings_set_int(gsettings.get(), "max-backlog", 30);
     g_settings_set_boolean(gsettings.get(), "trace-client", true);
@@ -92,7 +95,9 @@ TEST(Settings, changed_settings)
     EXPECT_EQ(41, settings.full_size_cache_size());
     EXPECT_EQ(42, settings.thumbnail_cache_size());
     EXPECT_EQ(43, settings.failure_cache_size());
+    EXPECT_EQ(3600, settings.retry_error_max_seconds());
     EXPECT_EQ(5, settings.max_downloads());
+    EXPECT_EQ(7, settings.max_extractions());
     EXPECT_EQ(9, settings.extraction_timeout());
     EXPECT_EQ(30, settings.max_backlog());
     EXPECT_TRUE(settings.trace_client());
@@ -102,11 +107,26 @@ TEST(Settings, changed_settings)
     g_settings_reset(gsettings.get(), "full-size-cache-size");
     g_settings_reset(gsettings.get(), "thumbnail-cache-size");
     g_settings_reset(gsettings.get(), "failure-cache-size");
+    g_settings_reset(gsettings.get(), "retry-error-hours");
     g_settings_reset(gsettings.get(), "max-downloads");
+    g_settings_reset(gsettings.get(), "max-extractions");
     g_settings_reset(gsettings.get(), "extraction_timeout");
     g_settings_reset(gsettings.get(), "max-backlog");
     g_settings_reset(gsettings.get(), "trace-client");
     g_settings_reset(gsettings.get(), "log-level");
+}
+
+TEST(Settings, adjusted_error_max_seconds)
+{
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+
+    Settings settings;
+    g_settings_set_int(gsettings.get(), "extraction-timeout", 1801);
+    g_settings_set_int(gsettings.get(), "retry-error-hours", 1);
+    EXPECT_EQ(3602, settings.retry_error_max_seconds());
+
+    g_settings_reset(gsettings.get(), "extraction_timeout");
+    g_settings_reset(gsettings.get(), "retry-error-hours");
 }
 
 TEST(Settings, non_positive_int)

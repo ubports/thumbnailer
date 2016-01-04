@@ -28,6 +28,7 @@
 #pragma GCC diagnostic pop
 #include <QDebug>
 
+#include <chrono>
 #include <memory>
 
 using namespace std;
@@ -91,9 +92,18 @@ int Settings::retry_not_found_hours() const
     return get_positive_int("retry-not-found-hours", RETRY_NOT_FOUND_HOURS_DEFAULT);
 }
 
-int Settings::retry_error_hours() const
+int Settings::retry_error_max_seconds() const
 {
-    return get_positive_int("retry-error-hours", RETRY_ERROR_HOURS_DEFAULT);
+    auto retry_error_hours = get_positive_int("retry-error-hours", RETRY_ERROR_HOURS_DEFAULT);
+    chrono::seconds retry_max = chrono::duration_cast<chrono::seconds>(chrono::hours(retry_error_hours));
+    chrono::seconds retry_min = chrono::seconds(2 * extraction_timeout());
+    if (retry_max < retry_min)
+    {
+        retry_max = retry_min;
+        qWarning() << "retry-error-hours setting is < 2 * extraction-timeout. Adjusted max retry backoff to"
+                   << retry_max.count() << "seconds.";
+    }
+    return retry_max.count();
 }
 
 int Settings::max_downloads() const

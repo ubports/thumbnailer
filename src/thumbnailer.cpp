@@ -365,14 +365,16 @@ QByteArray RequestBase::thumbnail()
             switch (status_)
             {
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
+                    if (image_data.location == Location::remote)
+                    {
+                        thumbnailer_->backoff_.reset();
+                    }
                     break;
                 case FetchStatus::needs_download:  // Caller will call download().
                     if (image_data.location == Location::remote)
                     {
-                        // If we had the last failure within the retry limit,
-                        // don't attempt the download.
-                        auto now = chrono::system_clock::now();
-                        if (now <= thumbnailer_->nw_fail_time_ + chrono::hours(thumbnailer_->retry_error_hours_))
+                        // If we had the last failure within the retry limit, don't attempt the download.
+                        if (!thumbnailer_->backoff_.retry_ok())
                         {
                             qWarning() << "RequestBase::thumbnail(): server access retry time not reached yet";
                             status_ = ThumbnailRequest::FetchStatus::temporary_error;
@@ -393,12 +395,22 @@ QByteArray RequestBase::thumbnail()
                         later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_not_found_hours_);
                     }
                     thumbnailer_->failure_cache_->put(key_, "", later);
+                    if (image_data.location == Location::remote)
+                    {
+                        // Even though we didn't get an image, the request itself worked.
+                        thumbnailer_->backoff_.reset();
+                    }
                     return "";
                 }
                 case FetchStatus::hard_error:
                 {
                     // No chance of recovery, the problem is with the request data.
                     thumbnailer_->failure_cache_->put(key_, "");
+                    if (image_data.location == Location::remote)
+                    {
+                        // Even though we didn't get an image, the request itself worked.
+                        thumbnailer_->backoff_.reset();
+                    }
                     return "";
                 }
                 case FetchStatus::temporary_error:
@@ -407,20 +419,23 @@ QByteArray RequestBase::thumbnail()
                     assert(image_data.location == Location::remote);
 
                     // Some non-authoritative failure, such as the server not responding.
-                    // We record the time of this failure.
-                    qWarning() << "RequestBase::thumbnail(): unexpected download error, delaying server access for"
-                               << thumbnailer_->retry_error_hours_ << "hours";
-                    thumbnailer_->nw_fail_time_ = chrono::system_clock::now();
+                    if (thumbnailer_->backoff_.adjust_retry_limit())
+                    {
+                        qWarning() << "RequestBase::thumbnail(): unexpected download error, disabling server access for"
+                                   << thumbnailer_->backoff_.backoff_period().count() << "seconds";
+                    }
                     return "";
                 }
                 case FetchStatus::timeout:
                 {
-                    // Extraction for local media does not return a timeout error.
+                    // Extraction for local media never returns a timeout error.
                     assert(image_data.location == Location::remote);
 
-                    // We do not treat request timeout as a temporary error because the
-                    // remote server can be slow when 7digital is slow.
+                    // We do not treat remote request timeout as a temporary error because the
+                    // remote server can be slow when 7digital is slow, which happens quite often.
                     qWarning() << "RequestBase::thumbnail(): request timed out";
+                    // No backoff reset here. Timeouts are like requests that don't return an image,
+                    // except that timeout is not authoritative.
                     return "";
                 }
                 default:
@@ -742,10 +757,12 @@ void ArtistRequest::download(chrono::milliseconds timeout)
 namespace
 {
 
-// Key under which we store the last time we had a network failure.
-// No entry in the failure cache ever has this key because keys for
+// Keys under which we store the last time we had a network failure
+// and the current backoff period (in seconds).
+// No entry in the failure cache ever has these keys because keys for
 // local files include inode number and modification times.
 string const LAST_NETWORK_FAIL_TIME_KEY = "/*** LAST_NETWORK_FAIL_TIME ***/";
+string const BACKOFF_PERIOD_KEY = "/*** BACKOFF_PERIOD ***/";
 
 }
 
@@ -770,17 +787,24 @@ Thumbnailer::Thumbnailer()
                                                           core::CacheDiscardPolicy::lru_ttl));
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
-        retry_error_hours_ = settings.retry_error_hours();
         extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout() * 1000);
+        backoff_.set_min_backoff(chrono::seconds(settings.extraction_timeout() * 2));
+        backoff_.set_max_backoff(chrono::seconds(settings.retry_error_max_seconds()));
 
         // For transient remote errors, we read the time at which the last failure
-        // happened. The destructor writes that time back out, so we remember
-        // the time across re-starts. We call contains_key() to avoid generating
+        // happened and the backoff period. The destructor writes these values back out,
+        // so we remember the values across re-starts. We call contains_key() to avoid generating
         // a bogus cache miss in the stats.
         if (failure_cache_->contains_key(LAST_NETWORK_FAIL_TIME_KEY))
         {
-            auto last_network_fail_time = failure_cache_->get(LAST_NETWORK_FAIL_TIME_KEY);
-            nw_fail_time_ = chrono::system_clock::time_point(chrono::seconds(stoll(*last_network_fail_time)));
+            auto last_fail_time = failure_cache_->get(LAST_NETWORK_FAIL_TIME_KEY);
+            auto fail_time_point = chrono::system_clock::time_point(chrono::seconds(stoll(*last_fail_time)));
+            backoff_.set_last_fail_time(fail_time_point);
+        }
+        if (failure_cache_->contains_key(BACKOFF_PERIOD_KEY))
+        {
+            auto backoff = failure_cache_->get(BACKOFF_PERIOD_KEY);
+            backoff_.set_backoff_period(chrono::seconds(stoll(*backoff)));
         }
     }
     catch (std::exception const& e)
@@ -793,8 +817,10 @@ Thumbnailer::~Thumbnailer()
 {
     try
     {
-        auto seconds = chrono::duration_cast<chrono::seconds>(nw_fail_time_.time_since_epoch()).count();
+        auto seconds = chrono::duration_cast<chrono::seconds>(backoff_.last_fail_time().time_since_epoch()).count();
         failure_cache_->put(LAST_NETWORK_FAIL_TIME_KEY, to_string(seconds));
+        seconds = backoff_.backoff_period().count();
+        failure_cache_->put(BACKOFF_PERIOD_KEY, to_string(seconds));
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)
@@ -934,7 +960,8 @@ void Thumbnailer::clear(CacheSelector selector)
     {
         // Force retry on next remote retrieval even if we
         // are still within the timeout period.
-        nw_fail_time_ = chrono::system_clock::time_point();
+        backoff_.set_last_fail_time(chrono::system_clock::time_point())
+                .set_backoff_period(chrono::seconds(0));
     }
     qDebug() << "cleared" << cache_name(selector);
 }

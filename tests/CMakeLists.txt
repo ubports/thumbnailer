@@ -35,6 +35,7 @@ set(unit_test_dirs
 )
 
 set(slow_test_dirs
+    backoff_adjuster
     slow-vs-thumb
     stress
 )
