@@ -19,6 +19,7 @@
 #pragma once
 
 #include <internal/artdownloader.h>
+#include <internal/backoff_adjuster.h>
 #include <internal/cachehelper.h>
 
 #include <QObject>
@@ -131,10 +132,9 @@ private:
     PersistentCacheHelper::UPtr failure_cache_;           // Cache for failed attempts (value is always empty).
     int max_size_;                                        // Max thumbnail size in pixels.
     int retry_not_found_hours_;                           // Retry wait time for authoritative "no artwork" answer.
-    int retry_error_hours_;                               // Retry wait time for unexpected server errors.
     std::chrono::milliseconds extraction_timeout_;        // How long to wait before giving up during extraction.
-    std::chrono::system_clock::time_point nw_fail_time_;  // Last time we had transient network error.
     std::unique_ptr<ArtDownloader> downloader_;
+    BackoffAdjuster backoff_;
 
     friend class RequestBase;
 };
