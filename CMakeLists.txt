@@ -71,6 +71,11 @@ endif()
 # Some tests are slow, so make it possible not to run them
 # during day-to-day development.
 option(slowtests "Run slow tests" ON)
+if (${slowtests})
+    add_definitions(-DSLOW_TESTS=1)
+else()
+    add_definitions(-DSLOW_TESTS=0)
+endif()
 
 # Definitions for testing with valgrind.
 
