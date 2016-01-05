@@ -19,7 +19,6 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
-#include <settings.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -96,6 +95,8 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
 
     Settings s;
     log_level_ = s.log_level();
+    trace_client_ = s.trace_client();
+    max_backlog_ = s.max_backlog();
 }
 
 DBusInterface::~DBusInterface()
@@ -303,6 +304,16 @@ void DBusInterface::requestFinished()
                 break;
         }
     }
+}
+
+bool DBusInterface::TraceClient()
+{
+    return trace_client_;
+}
+
+int DBusInterface::MaxBacklog()
+{
+    return max_backlog_;
 }
 
 }  // namespace service

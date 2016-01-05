@@ -20,5 +20,11 @@
       <arg direction="out" type="ay" name="thumbnail" />
       <annotation name="org.qtproject.QtDBus.QtTypeName.In1" value="QSize" />
     </method>
+    <method name="TraceClient">
+      <arg direction="out" type="b" name="traceClient" />
+    </method>
+    <method name="MaxBacklog">
+      <arg direction="out" type="i" name="maxBacklog" />
+    </method>
   </interface>
 </node>

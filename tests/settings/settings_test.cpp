@@ -18,7 +18,7 @@
 
 #include <internal/env_vars.h>
 #include <internal/gobj_memory.h>
-#include <settings.h>
+#include <internal/settings.h>
 #include <testsetup.h>
 #include <utils/env_var_guard.h>
 

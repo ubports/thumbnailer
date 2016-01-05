@@ -20,7 +20,6 @@
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <ratelimiter.h>
-#include <settings.h>
 #include <thumbnailerinterface.h>
 #include <service/dbus_names.h>
 
@@ -132,8 +131,10 @@ private:
                                           QSize const& requested_size,
                                           std::function<QDBusPendingReply<QByteArray>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
-    RateLimiter limiter_;
+    std::unique_ptr<QDBusPendingCallWatcher> trace_client_watcher_;
+    std::unique_ptr<QDBusPendingCallWatcher> max_backlog_watcher_;
     bool trace_client_;
+    std::unique_ptr<RateLimiter> limiter_;
 };
 
 RequestImpl::RequestImpl(QString const& details,
@@ -316,10 +317,48 @@ void RequestImpl::waitForFinished()
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : limiter_(Settings().max_backlog())
-    , trace_client_(Settings().trace_client())
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
+
+    // We need to retrive config parameters from the server because, when an app runs confined,
+    // it cannot read gsettings. We do this synchronously because we can't do anything else until
+    // after we get the settings.
+
+    QDBusPendingCallWatcher trace_client_watcher(iface_->TraceClient());
+    QDBusPendingCallWatcher max_backlog_watcher(iface_->MaxBacklog());
+
+    {
+        trace_client_watcher.waitForFinished();
+        QDBusPendingReply<bool> reply = trace_client_watcher;
+        if (reply.isValid())
+        {
+            trace_client_ = reply.value();
+        }
+        else
+        {
+            bool const dflt = false;
+            trace_client_ = dflt;
+            qCritical().nospace() << "could not retrieve trace-client setting: " << reply.error().message()
+                                  << " (using default value of " << dflt << ")";
+
+        }
+    }
+
+    {
+        max_backlog_watcher.waitForFinished();
+        QDBusPendingReply<int> reply = max_backlog_watcher;
+        if (reply.isValid())
+        {
+            limiter_.reset(new RateLimiter(reply.value()));
+        }
+        else
+        {
+            int const dflt = 20;
+            limiter_.reset(new RateLimiter(dflt));
+            qCritical().nospace() << "could not retrieve max-backlog setting: " << reply.error().message()
+                                  << " (using default value of " << dflt << ")";
+        }
+    }
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
@@ -384,12 +423,12 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
 
 RateLimiter& ThumbnailerImpl::limiter()
 {
-    return limiter_;
+    return *limiter_;
 }
 
 void ThumbnailerImpl::pump_limiter()
 {
-    return limiter_.done();
+    return limiter_->done();
 }
 
 }  // namespace internal
