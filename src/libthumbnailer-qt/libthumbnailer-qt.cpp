@@ -334,14 +334,16 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
         {
             trace_client_ = reply.value();
         }
+        // LCOV_EXCL_START
         else
         {
-            bool const dflt = false;
+            bool const dflt = true;
             trace_client_ = dflt;
             qCritical().nospace() << "could not retrieve trace-client setting: " << reply.error().message()
                                   << " (using default value of " << dflt << ")";
 
         }
+        // LCOV_EXCL_STOP
     }
 
     {
@@ -351,6 +353,7 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
         {
             limiter_.reset(new RateLimiter(reply.value()));
         }
+        // LCOV_EXCL_START
         else
         {
             int const dflt = 20;
@@ -358,6 +361,7 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
             qCritical().nospace() << "could not retrieve max-backlog setting: " << reply.error().message()
                                   << " (using default value of " << dflt << ")";
         }
+        // LCOV_EXCL_STOP
     }
 }
 
