@@ -16,9 +16,11 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
+#include <internal/env_vars.h>
 #include <internal/gobj_memory.h>
 #include <settings.h>
 #include <testsetup.h>
+#include <utils/env_var_guard.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -41,8 +43,13 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(50, settings.full_size_cache_size());
     EXPECT_EQ(100, settings.thumbnail_cache_size());
     EXPECT_EQ(2, settings.failure_cache_size());
-    EXPECT_EQ(2, settings.max_downloads());
+    EXPECT_EQ(7200, settings.retry_error_max_seconds());
+    EXPECT_EQ(8, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
+    EXPECT_EQ(10, settings.extraction_timeout());
+    EXPECT_EQ(20, settings.max_backlog());
+    EXPECT_FALSE(settings.trace_client());
+    EXPECT_EQ(1, settings.log_level());
 }
 
 TEST(Settings, missing_schema)
@@ -59,23 +66,67 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(2, settings.failure_cache_size());
     EXPECT_EQ(1920, settings.max_thumbnail_size());
     EXPECT_EQ(168, settings.retry_not_found_hours());
-    EXPECT_EQ(2, settings.retry_error_hours());
-    EXPECT_EQ(2, settings.max_downloads());
+    EXPECT_EQ(7200, settings.retry_error_max_seconds());
+    EXPECT_EQ(8, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
+    EXPECT_EQ(10, settings.extraction_timeout());
+    EXPECT_EQ(20, settings.max_backlog());
+    EXPECT_FALSE(settings.trace_client());
+    EXPECT_EQ(1, settings.log_level());
 }
 
 TEST(Settings, changed_settings)
 {
     gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
     g_settings_set_string(gsettings.get(), "dash-ubuntu-com-key", "foo");
+    g_settings_set_int(gsettings.get(), "full-size-cache-size", 41);
     g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 42);
+    g_settings_set_int(gsettings.get(), "failure-cache-size", 43);
+    g_settings_set_int(gsettings.get(), "retry-error-hours", 1);
+    g_settings_set_int(gsettings.get(), "max-downloads", 5);
+    g_settings_set_int(gsettings.get(), "max-extractions", 7);
+    g_settings_set_int(gsettings.get(), "extraction-timeout", 9);
+    g_settings_set_int(gsettings.get(), "max-backlog", 30);
+    g_settings_set_boolean(gsettings.get(), "trace-client", true);
+    g_settings_set_int(gsettings.get(), "log-level", 2);
 
     Settings settings;
     EXPECT_EQ("foo", settings.art_api_key());
+    EXPECT_EQ(41, settings.full_size_cache_size());
     EXPECT_EQ(42, settings.thumbnail_cache_size());
+    EXPECT_EQ(43, settings.failure_cache_size());
+    EXPECT_EQ(3600, settings.retry_error_max_seconds());
+    EXPECT_EQ(5, settings.max_downloads());
+    EXPECT_EQ(7, settings.max_extractions());
+    EXPECT_EQ(9, settings.extraction_timeout());
+    EXPECT_EQ(30, settings.max_backlog());
+    EXPECT_TRUE(settings.trace_client());
+    EXPECT_EQ(2, settings.log_level());
 
     g_settings_reset(gsettings.get(), "dash-ubuntu-com-key");
+    g_settings_reset(gsettings.get(), "full-size-cache-size");
     g_settings_reset(gsettings.get(), "thumbnail-cache-size");
+    g_settings_reset(gsettings.get(), "failure-cache-size");
+    g_settings_reset(gsettings.get(), "retry-error-hours");
+    g_settings_reset(gsettings.get(), "max-downloads");
+    g_settings_reset(gsettings.get(), "max-extractions");
+    g_settings_reset(gsettings.get(), "extraction_timeout");
+    g_settings_reset(gsettings.get(), "max-backlog");
+    g_settings_reset(gsettings.get(), "trace-client");
+    g_settings_reset(gsettings.get(), "log-level");
+}
+
+TEST(Settings, adjusted_error_max_seconds)
+{
+    gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
+
+    Settings settings;
+    g_settings_set_int(gsettings.get(), "extraction-timeout", 1801);
+    g_settings_set_int(gsettings.get(), "retry-error-hours", 1);
+    EXPECT_EQ(3602, settings.retry_error_max_seconds());
+
+    g_settings_reset(gsettings.get(), "extraction_timeout");
+    g_settings_reset(gsettings.get(), "retry-error-hours");
 }
 
 TEST(Settings, non_positive_int)
@@ -133,6 +184,30 @@ TEST(Settings, negative_int)
     }
 
     g_settings_reset(gsettings.get(), "max-extractions");
+}
+
+TEST(Settings, log_level_env_override)
+{
+    EnvVarGuard ev_guard(LOG_LEVEL, "0");
+
+    Settings settings;
+    EXPECT_EQ(0, settings.log_level());
+}
+
+TEST(Settings, log_level_env_bad_setting)
+{
+    EnvVarGuard ev_guard(LOG_LEVEL, "abc");
+
+    Settings settings;
+    EXPECT_EQ(1, settings.log_level());
+}
+
+TEST(Settings, log_level_out_of_range)
+{
+    EnvVarGuard ev_guard(LOG_LEVEL, "3");
+
+    Settings settings;
+    EXPECT_EQ(1, settings.log_level());
 }
 
 int main(int argc, char** argv)

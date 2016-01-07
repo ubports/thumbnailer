@@ -50,6 +50,9 @@ Thumbnail cache
 .B f
 Failure cache
 .SS "Sizes and scaling"
+Thumbnails are never larger than \fBmax\-thumbnail\-size\fP in the larger dimension (usually 1920,
+see \fBthumbnailer\-settings\fR(5)), even if a larger size is requested.
+
 Commands that create thumbnails expect a size in pixels to be specified as follows:
 .TP
 \fIwidth\fP\fBx\fP\fIheight\fP
@@ -57,11 +60,15 @@ Create a thumbnail scaled to fit a bounding box of \fIwidth\fP and \fIheight\fP,
 \fB\-\-size 640x480\fP. If only a single dimension is provided, the thumbnail is scaled to fit into
 a square bounding box of the specified size, for example, \fB\-s 256\fP.
 .IP
-Scaling always maintains the aspect ratio of the original image, and ensures that a thumbnail
-has a size of at least one pixel in the smaller dimension.
+Specifying a size with one dimension explicitly set to zero leaves that dimension unconstrained. For
+example, \fB\-\-size 0x480\fP produces a thumbnail no taller than 480 pixels of any width,
+(subject to the \fBmax\-thumbnail\-size\fP limit).
 .IP
 Specifying a size of zero (or not specifying any size) is equivalent to specifying \fBmax\-thumbnail\-size\fP
-(see \fBthumbnailer\-settings\fR(5)).
+in both dimensions.
+.IP
+Scaling always maintains the aspect ratio of the original image, and ensures that a thumbnail
+has a size of at least one pixel in the smaller dimension.
 .IP
 Requests for thumbnails that are larger than the original image are automatically reduced to the original
 image size, that is, original artwork is never scaled up.

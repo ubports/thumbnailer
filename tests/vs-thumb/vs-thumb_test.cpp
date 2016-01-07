@@ -21,6 +21,8 @@
 #include <utils/supports_decoder.h>
 #include "../src/vs-thumb/thumbnailextractor.h"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #pragma GCC diagnostic push
@@ -128,19 +130,14 @@ TEST_F(ExtractorTest, extract_theora)
     extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1920, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(1080, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4)
-#else
 TEST_F(ExtractorTest, extract_mp4)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -153,19 +150,14 @@ TEST_F(ExtractorTest, extract_mp4)
     extractor.set_uri(filename_to_uri(MP4_LANDSCAPE_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4_rotate_90)
-#else
 TEST_F(ExtractorTest, extract_mp4_rotate_90)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -177,19 +169,14 @@ TEST_F(ExtractorTest, extract_mp4_rotate_90)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_ROTATE_90_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4_rotate_180)
-#else
 TEST_F(ExtractorTest, extract_mp4_rotate_180)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -201,19 +188,14 @@ TEST_F(ExtractorTest, extract_mp4_rotate_180)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_ROTATE_180_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_mp4_rotate_270)
-#else
 TEST_F(ExtractorTest, extract_mp4_rotate_270)
-#endif
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -225,7 +207,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_270)
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_ROTATE_270_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
@@ -240,7 +222,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
     extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
@@ -249,7 +231,7 @@ TEST_F(ExtractorTest, extract_vorbis_cover_art)
 
 TEST_F(ExtractorTest, extract_aac_cover_art)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("audio/x-aac"))
     {
         fprintf(stderr, "No support for AAC decoder\n");
         return;
@@ -261,7 +243,7 @@ TEST_F(ExtractorTest, extract_aac_cover_art)
     extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
@@ -282,26 +264,27 @@ TEST_F(ExtractorTest, extract_mp3_cover_art)
     extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
 
-// MP4 codec is broken on PPC.
-#if defined(__PPC__)
-TEST_F(ExtractorTest, DISABLED_extract_m4v_cover_art)
-#else
 TEST_F(ExtractorTest, extract_m4v_cover_art)
-#endif
 {
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
     ThumbnailExtractor extractor;
 
     std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
     EXPECT_EQ(1947, gdk_pixbuf_get_width(image.get()));
@@ -323,6 +306,36 @@ TEST_F(ExtractorTest, no_artwork)
     ASSERT_FALSE(extractor.has_video());
     ASSERT_FALSE(extractor.extract_cover_art());
 }
+
+TEST_F(ExtractorTest, cant_write_to_stdout)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_cover_art());
+
+    int new_stdout = dup(STDOUT_FILENO);
+    ASSERT_EQ(0, close(STDOUT_FILENO));
+
+    try
+    {
+        extractor.write_image("");
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_STREQ("write_image(): cannot write to stdout: Bad file descriptor", e.what());
+    }
+
+    ASSERT_EQ(STDOUT_FILENO, dup2(new_stdout, STDOUT_FILENO));
+    ASSERT_EQ(0, close(new_stdout));
+}
+
 
 TEST_F(ExtractorTest, file_not_found)
 {
@@ -368,8 +381,38 @@ TEST(ExeTest, bad_uri)
     EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
 }
 
+TEST(ExeTest, no_such_output_path)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    auto err = vs_thumb_err_output(std::string(MP3_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
+    EXPECT_NE(std::string::npos, err.find("write_image(): cannot open /no_such_dir/no_such_file.tiff: "
+              "No such file or directory")) << err;
+}
+
+TEST(ExeTest, no_artwork)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
+    auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
+    EXPECT_TRUE(boost::ends_with(err, msg)) << err;
+    boost::system::error_code ec;
+    EXPECT_FALSE(boost::filesystem::exists("xyz.tiff", ec));
+}
+
 int main(int argc, char** argv)
 {
+    setenv("LC_ALL", "C", true);
+
     ::testing::InitGoogleTest(&argc, argv);
     gst_init(&argc, &argv);
     return RUN_ALL_TESTS();

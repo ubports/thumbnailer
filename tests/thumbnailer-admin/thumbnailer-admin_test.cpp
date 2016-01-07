@@ -19,6 +19,7 @@
 #include "utils/artserver.h"
 #include "utils/dbusserver.h"
 
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <testsetup.h>
@@ -47,8 +48,7 @@ protected:
         ASSERT_NE(-1, chdir(temp_dir().c_str()));
         setenv("XDG_CACHE_HOME", qPrintable(tempdir->path() + "/cache"), true);
 
-        // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "3000", true);
+        setenv(MAX_IDLE, "3000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -62,7 +62,7 @@ protected:
     {
         dbus_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -471,6 +471,58 @@ TEST_F(AdminTest, get_small_thumbnail_square)
     EXPECT_EQ(0x807FFE, img.pixel(0, 35));
 }
 
+TEST_F(AdminTest, get_unconstrained_width)
+{
+    auto filename = temp_dir() + "/orientation-1_0x240.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x240", TESTDATADIR "/orientation-1.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(320, img.width());
+    EXPECT_EQ(240, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_height)
+{
+    auto filename = temp_dir() + "/Photo-with-exif_240x0.jpg";  // Portrait orientation
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=240x0", TESTDATADIR "/Photo-with-exif.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(240, img.width());
+    EXPECT_EQ(426, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_height_large)
+{
+    auto filename = temp_dir() + "/big_0x2048.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x2048", TESTDATADIR "/big.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_both_large)
+{
+    auto filename = temp_dir() + "/big_0x0.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x0", TESTDATADIR "/big.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+}
+
 TEST_F(AdminTest, get_with_dir)
 {
     auto filename = temp_dir() + "/orientation-2_0x0.jpg";
@@ -510,16 +562,14 @@ TEST_F(AdminTest, bad_files)
 {
     AdminRunner ar;
 
-    EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file", QString::fromStdString(temp_dir())}));
     EXPECT_TRUE(starts_with(ar.stderr(),
                             "thumbnailer-admin: DBusInterface::GetThumbnail(): no_such_file: unity::ResourceException: Thumbnailer::get_thumbnail():\n    boost::filesystem::canonical: No such file or directory:"))
         << ar.stderr();
 
     EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", "no_such_directory"}));
-    EXPECT_EQ(
-        "thumbnailer-admin: GetLocalThumbnail::run(): write_file(): "
-        "cannot open no_such_directory/orientation-2_0x0.jpg: No such file or directory\n",
-        ar.stderr())
+    EXPECT_TRUE(starts_with(ar.stderr(),
+                            "thumbnailer-admin: GetLocalThumbnail::run(): write_file(): mkstemp() failed for "))
         << ar.stderr();
 }
 
@@ -609,7 +659,7 @@ int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
 
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     setenv("LC_ALL", "C", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

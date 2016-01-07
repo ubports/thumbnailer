@@ -28,15 +28,15 @@ public:
     ArtServer();
     ~ArtServer();
 
-    std::string const& apiroot() const;
+    std::string const& server_url() const;
     void block_access();
     void unblock_access();
 
 private:
     QProcess server_;
     unity::util::ResourcePtr<int, void(*)(int)> socket_;
-    std::string apiroot_;
-    std::string blocked_apiroot_;
+    std::string server_url_;
+    std::string blocked_server_url_;
     bool blocked_ = false;
 
     void update_env();

@@ -29,7 +29,6 @@
 #include <QObject>
 #include <QDBusConnection>
 #include <QDBusMessage>
-#include <QDBusUnixFileDescriptor>
 #include <QSize>
 
 class QThreadPool;
@@ -68,7 +67,8 @@ public:
     std::chrono::microseconds queued_time() const;      // Time spent waiting in download/extract queue.
     std::chrono::microseconds download_time() const;    // Time of that for download/extract, incl. queueing time.
     QString details() const;
-    QString status() const;
+    QString status_as_string() const;
+    unity::thumbnailer::internal::ThumbnailRequest::FetchStatus status() const;
 
 public Q_SLOTS:
     void begin();
@@ -82,16 +82,16 @@ Q_SIGNALS:
     void finished();
 
 private:
-    void sendThumbnail(QDBusUnixFileDescriptor const& unix_fd);
+    void sendThumbnail(QByteArray const& ba);
     void sendError(QString const& error);
     void gotCredentials(CredentialsCache::Credentials const& credentials);
-    QDBusUnixFileDescriptor check();
-    QDBusUnixFileDescriptor create();
+    QByteArray check();
+    QByteArray create();
 
     std::unique_ptr<HandlerPrivate> p;
 };
 
-}  // namespace unity
+}  // namespace service
 
 }  // namespace thumbnailer
 

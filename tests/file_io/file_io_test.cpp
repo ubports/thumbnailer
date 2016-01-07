@@ -31,7 +31,6 @@ TEST(file_io, read_write)
 {
     string in_file = TESTDATADIR "/testimage.jpg";
     struct stat st;
-    cerr << "in_file: " << in_file << endl;
     ASSERT_NE(-1, stat(in_file.c_str(), &st));
 
     string data = read_file(in_file);
@@ -39,6 +38,13 @@ TEST(file_io, read_write)
 
     string out_file = TESTBINDIR "/testimage.jpg";
     write_file(out_file, data);
+    string data2 = read_file(out_file);
+    ASSERT_EQ(data, data2);
+
+    auto ba = QByteArray::fromStdString(data);
+    write_file(out_file, ba);
+    data2 = read_file(out_file);
+    ASSERT_EQ(data, data2);
 
     string cmd = "cmp " + in_file + " " + out_file;
     int rc = system(cmd.c_str());
@@ -63,7 +69,7 @@ TEST(file_io, read_write)
     ASSERT_NE(-1, in_fd);
     out_file = TESTBINDIR "/out.jpg";
     unlink(out_file.c_str());
-    write_file(in_fd, out_file);
+    write_file(out_file, in_fd);
     close(in_fd);
     cmd = "cmp " + in_file + " " + out_file;
     rc = system(cmd.c_str());
@@ -93,13 +99,13 @@ TEST(file_io, exceptions)
     mkdir(dir.c_str(), 0700);  // If dir doesn't exist, create it.
 
     string out_file = dir + "/no_perm";
-    write_file(out_file, "");
+    write_file(out_file, string());
 
     chmod(dir.c_str(), 0500);  // Remove write permission on directory
 
     try
     {
-        write_file(out_file, "");
+        write_file(out_file, string());
         chmod(dir.c_str(), 0700);
         FAIL();
     }
@@ -138,7 +144,7 @@ TEST(file_io, exceptions)
     {
         int fd = open("/dev/zero", O_WRONLY);
         ASSERT_NE(-1, fd);
-        write_file(fd, "no_such_dir/no_such_file");
+        write_file("no_such_dir/no_such_file", fd);
         FAIL();
     }
     catch (runtime_error const& e)

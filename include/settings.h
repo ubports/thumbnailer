@@ -46,12 +46,13 @@ public:
     int failure_cache_size() const;
     int max_thumbnail_size() const;
     int retry_not_found_hours() const;
-    int retry_error_hours() const;
+    int retry_error_max_seconds() const;
     int max_downloads() const;
     int max_extractions() const;
     int extraction_timeout() const;  // In seconds
     int max_backlog() const;
     bool trace_client() const;
+    int log_level() const;
 
 private:
     std::string get_string(char const* key, std::string const& default_value) const;

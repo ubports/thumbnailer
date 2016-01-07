@@ -18,6 +18,8 @@ add_doxygen(
     EXCLUDE_SYMBOLS
         *::internal*
         *::Priv
+    EXAMPLE_PATH
+        ${CMAKE_CURRENT_SOURCE_DIR}
     DOXYFILE_IN
         ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
     PROJECT_NAME

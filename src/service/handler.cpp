@@ -26,6 +26,8 @@
 #include <QtConcurrent>
 #include <QThreadPool>
 
+#include <atomic>
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -38,70 +40,12 @@ namespace
 {
 char const ART_ERROR[] = "com.canonical.Thumbnailer.Error.Failed";
 
-struct FdOrError
+struct ByteArrayOrError
 {
-    QDBusUnixFileDescriptor fd;
+    QByteArray ba;
     QString error;
 };
 
-QDBusUnixFileDescriptor write_to_tmpfile(string const& image)
-{
-    static auto find_tmpdir = []
-    {
-        char const* dirp = getenv("TMPDIR");
-        string dir = dirp ? dirp : "/tmp";
-        return dir;
-    };
-    static string dir = find_tmpdir();
-
-    FdPtr fd(open(dir.c_str(), O_TMPFILE | O_RDWR | O_CLOEXEC), do_close);
-    // Different kernel verions return different errno if they don't
-    // recognize O_TMPFILE, so we check for all failures here. If it
-    // is a real failure (rather than the flag not being recognized),
-    // mkstemp will fail too.
-    if (fd.get() < 0)
-    {
-        // We are running on an old kernel without O_TMPFILE support:
-        // the flag has been ignored, and treated as an attempt to
-        // open /tmp.
-        //
-        // As a fallback, use mkstemp() and unlink the resulting file.
-        // LCOV_EXCL_START
-        string tmpfile = dir + "/thumbnail.XXXXXX";
-        fd.reset(mkostemp(const_cast<char*>(tmpfile.data()), O_CLOEXEC));
-        if (fd.get() >= 0)
-        {
-            unlink(tmpfile.data());
-        }
-        // LCOV_EXCL_STOP
-    }
-    if (fd.get() < 0)
-    {
-        // LCOV_EXCL_START
-        string err = "Handler: cannot create tmpfile in " + dir + ": " + safe_strerror(errno);
-        throw runtime_error(err);
-        // LCOV_EXCL_STOP
-    }
-    auto rc = write(fd.get(), &image[0], image.size());
-    if (rc == -1)
-    {
-        // LCOV_EXCL_START
-        string err = "Handler: cannot write image data in " + dir + ": " + safe_strerror(errno);
-        throw runtime_error(err);
-        // LCOV_EXCL_STOP
-    }
-    else if (string::size_type(rc) != image.size())
-    {
-        // LCOV_EXCL_START
-        string err = "Handler: short write for image data in " + dir + "(requested = " +
-                          to_string(image.size()) + ", actual = " + to_string(rc) + ")";
-        throw runtime_error(err);
-        // LCOV_EXCL_STOP
-    }
-    lseek(fd.get(), SEEK_SET, 0);  // No error check needed, can't fail.
-
-    return QDBusUnixFileDescriptor(fd.get());
-}
 }
 
 namespace unity
@@ -115,25 +59,26 @@ namespace service
 
 struct HandlerPrivate
 {
-    QDBusConnection bus;
+    QDBusConnection const bus;
     QDBusMessage const message;
-    shared_ptr<QThreadPool> check_pool;
-    shared_ptr<QThreadPool> create_pool;
-    shared_ptr<RateLimiter> limiter;
+    shared_ptr<QThreadPool> const check_pool;
+    shared_ptr<QThreadPool> const create_pool;
+    shared_ptr<RateLimiter> const limiter;
     CredentialsCache& creds;
     InactivityHandler& inactivity_handler;
-    unique_ptr<ThumbnailRequest> request;
-    chrono::system_clock::time_point start_time;            // Overall start time
+    shared_ptr<ThumbnailRequest> request;
+    chrono::system_clock::time_point const start_time;      // Overall start time
     chrono::system_clock::time_point finish_time;           // Overall finish time
     chrono::system_clock::time_point schedule_start_time;   // Time at which download/extract is scheduled.
     chrono::system_clock::time_point download_start_time;   // Time at which download/extract is started.
     chrono::system_clock::time_point download_finish_time;  // Time at which download/extract has completed.
-    QString details;
-    QString status;
+    QString const details;
+    QString const status;
+    RateLimiter::CancelFunc cancel_func;
 
-    bool cancelled = false;
-    QFutureWatcher<FdOrError> checkWatcher;
-    QFutureWatcher<FdOrError> createWatcher;
+    atomic_bool cancelled;                                  // Must be atomic because destructor asynchronously writes to it.
+    QFutureWatcher<ByteArrayOrError> checkWatcher;
+    QFutureWatcher<ByteArrayOrError> createWatcher;
 
     HandlerPrivate(QDBusConnection const& bus,
                    QDBusMessage const& message,
@@ -152,9 +97,10 @@ struct HandlerPrivate
         , creds(creds)
         , inactivity_handler(inactivity_handler)
         , request(move(request))
+        , start_time(chrono::system_clock::now())
         , details(details)
+        , cancelled(false)
     {
-        start_time = chrono::system_clock::now();
     }
 };
 
@@ -172,19 +118,24 @@ Handler::Handler(QDBusConnection const& bus,
                            limiter, creds, inactivity_handler,
                            move(request), details))
 {
-    connect(&p->checkWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::checkFinished);
+    connect(&p->checkWatcher, &QFutureWatcher<ByteArrayOrError>::finished, this, &Handler::checkFinished);
     connect(p->request.get(), &ThumbnailRequest::downloadFinished, this, &Handler::downloadFinished);
-    connect(&p->createWatcher, &QFutureWatcher<FdOrError>::finished, this, &Handler::createFinished);
+    connect(&p->createWatcher, &QFutureWatcher<ByteArrayOrError>::finished, this, &Handler::createFinished);
     p->inactivity_handler.request_started();
 }
 
 Handler::~Handler()
 {
     p->cancelled = true;
+    if (p->cancel_func)
+    {
+        p->cancel_func();
+    }
     // ensure that jobs occurring in the thread pool complete.
     p->checkWatcher.waitForFinished();
     p->createWatcher.waitForFinished();
     p->inactivity_handler.request_completed();
+    p->request.reset();
 }
 
 string const& Handler::key() const
@@ -203,6 +154,12 @@ void Handler::begin()
 
 void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 {
+    if (p->cancelled)
+    {
+        Q_EMIT finished();
+        return;
+    }
+
     if (!credentials.valid)
     {
         // LCOV_EXCL_START
@@ -210,10 +167,10 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
         return;
         // LCOV_EXCL_STOP
     }
+
     try
     {
-        p->request->check_client_credentials(
-            credentials.user, credentials.label);
+        p->request->check_client_credentials(credentials.user, credentials.label);
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)
@@ -223,16 +180,16 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
     }
     // LCOV_EXCL_STOP
 
-    auto do_check = [this]() -> FdOrError
+    auto do_check = [this]() -> ByteArrayOrError
     {
         try
         {
-            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), "gotCredentials(): cancelled"} : FdOrError{check(), nullptr};
+            return ByteArrayOrError{check(), nullptr};
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
         {
-            return FdOrError{QDBusUnixFileDescriptor(), e.what()};
+            return ByteArrayOrError{QByteArray(), e.what()};
         }
         // LCOV_EXCL_STOP
     };
@@ -247,20 +204,13 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 //
 // If not, we continue to the asynchronous download stage.
 
-QDBusUnixFileDescriptor Handler::check()
+QByteArray Handler::check()
 {
     if (p->cancelled)
     {
-        return QDBusUnixFileDescriptor();
+        return QByteArray();
     }
-
-    string art_image = p->request->thumbnail();
-
-    if (art_image.empty())
-    {
-        return QDBusUnixFileDescriptor();
-    }
-    return write_to_tmpfile(art_image);
+    return p->request->thumbnail();
 }
 
 void Handler::checkFinished()
@@ -270,10 +220,10 @@ void Handler::checkFinished()
         return;
     }
 
-    FdOrError fd_error;
+    ByteArrayOrError ba_error;
     try
     {
-        fd_error = p->checkWatcher.result();
+        ba_error = p->checkWatcher.result();
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)
@@ -281,27 +231,34 @@ void Handler::checkFinished()
         sendError("Handler::checkFinished(): exception: " + details() + ": " + e.what());
         return;
     }
-    if (!fd_error.error.isNull())
+    if (!ba_error.error.isNull())
     {
-        sendError("Handler::checkFinished(): result error: " + details() + ": " + fd_error.error);
+        sendError("Handler::checkFinished(): result error: " + details() + ": " + ba_error.error);
         return;
     }
     // LCOV_EXCL_STOP
 
     // Did we find a valid thumbnail in the cache or generated it locally from an image file?
-    if (fd_error.fd.isValid())
+    if (ba_error.ba.size() != 0)
     {
-        sendThumbnail(fd_error.fd);
+        sendThumbnail(ba_error.ba);
         return;
     }
 
+    p->schedule_start_time = chrono::system_clock::now();
     if (p->request->status() == ThumbnailRequest::FetchStatus::needs_download)
     {
         try
         {
             // otherwise move on to the download phase.
-            p->schedule_start_time = chrono::system_clock::now();
-            p->limiter->schedule([&]{ p->download_start_time = chrono::system_clock::now(); p->request->download(); });
+            p->cancel_func = p->limiter->schedule([&]
+            {
+                if (!p->cancelled)
+                {
+                    p->download_start_time = chrono::system_clock::now();
+                    p->request->download();
+                }
+            });
         }
         // LCOV_EXCL_START
         catch (std::exception const& e)
@@ -312,7 +269,7 @@ void Handler::checkFinished()
         return;
     }
 
-    sendError("Handler::checkFinished(): no artwork for " + details() + ": " + status());
+    sendError("Handler::checkFinished(): no artwork for " + details() + ": " + status_as_string());
 }
 
 void Handler::downloadFinished()
@@ -325,15 +282,15 @@ void Handler::downloadFinished()
         return;
     }
 
-    auto do_create = [this]() -> FdOrError
+    auto do_create = [this]() -> ByteArrayOrError
     {
         try
         {
-            return p->cancelled ? FdOrError{QDBusUnixFileDescriptor(), nullptr} : FdOrError{create(), nullptr};
+            return ByteArrayOrError{create(), nullptr};
         }
         catch (std::exception const& e)
         {
-            return FdOrError{QDBusUnixFileDescriptor(), e.what()};
+            return ByteArrayOrError{QByteArray(), e.what()};
         }
     };
     p->createWatcher.setFuture(QtConcurrent::run(p->create_pool.get(), do_create));
@@ -344,20 +301,20 @@ void Handler::downloadFinished()
 // failures are now errors.  It is called synchronously in the thread
 // pool.
 
-QDBusUnixFileDescriptor Handler::create()
+QByteArray Handler::create()
 {
     if (p->cancelled)
     {
-        return QDBusUnixFileDescriptor();
+        return QByteArray();
     }
 
-    string art_image = p->request->thumbnail();
-
-    if (art_image.empty())
+    QByteArray art_image = p->request->thumbnail();
+    if (art_image.size() == 0)
     {
-        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " + status().toStdString());
+        throw runtime_error("could not get thumbnail for " + details().toStdString() + ": " +
+                            status_as_string().toStdString());
     }
-    return write_to_tmpfile(art_image);
+    return art_image;
 }
 
 void Handler::createFinished()
@@ -367,10 +324,10 @@ void Handler::createFinished()
         return;
     }
 
-    FdOrError fd_error;
+    ByteArrayOrError ba_error;
     try
     {
-        fd_error = p->createWatcher.result();
+        ba_error = p->createWatcher.result();
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)
@@ -378,32 +335,26 @@ void Handler::createFinished()
         sendError(QStringLiteral("Handler::createFinished(): ") + details() + ": " + e.what());
         return;
     }
-    if (!fd_error.error.isEmpty())
+    if (!ba_error.error.isEmpty())
     {
-        sendError("Handler::createFinished(): " + fd_error.error);
+        sendError("Handler::createFinished(): " + ba_error.error);
         return;
     }
     // LCOV_EXCL_STOP
-    if (fd_error.fd.isValid())
-    {
-        sendThumbnail(fd_error.fd);
-    }
-    else
-    {
-        sendError("Handler::createFinished(): invalid file descriptor for " + details());  // LCOV_EXCL_LINE
-    }
+    sendThumbnail(ba_error.ba);
 }
 
-void Handler::sendThumbnail(QDBusUnixFileDescriptor const& unix_fd)
+void Handler::sendThumbnail(QByteArray const& ba)
 {
-    p->bus.send(p->message.createReply(QVariant::fromValue(unix_fd)));
+    p->bus.send(p->message.createReply(QVariant(ba)));
     p->finish_time = chrono::system_clock::now();
     Q_EMIT finished();
 }
 
 void Handler::sendError(QString const& error)
 {
-    if (p->request->status() == ThumbnailRequest::FetchStatus::error)
+    if (p->request->status() == ThumbnailRequest::FetchStatus::hard_error ||
+        p->request->status() == ThumbnailRequest::FetchStatus::temporary_error)
     {
         qWarning() << error;
     }
@@ -440,7 +391,12 @@ QString Handler::details() const
     return p->details;
 }
 
-QString Handler::status() const
+ThumbnailRequest::FetchStatus Handler::status() const
+{
+    return p->request->status();
+}
+
+QString Handler::status_as_string() const
 {
     switch (p->request->status())
     {
@@ -451,15 +407,19 @@ QString Handler::status() const
     case ThumbnailRequest::FetchStatus::cached_failure:
         return QStringLiteral("FAILED PREVIOUSLY");
     case ThumbnailRequest::FetchStatus::needs_download:
-        return QStringLiteral("NEEDS DOWNLOAD");  // LCOV_EXCL_LINE
+        return QStringLiteral("NEEDS DOWNLOAD");          // LCOV_EXCL_LINE
     case ThumbnailRequest::FetchStatus::downloaded:
         return QStringLiteral("MISS");
     case ThumbnailRequest::FetchStatus::not_found:
         return QStringLiteral("NO ARTWORK");
-    case ThumbnailRequest::FetchStatus::no_network:
-        return QStringLiteral("NETWORK DOWN");  // LCOV_EXCL_LINE
-    case ThumbnailRequest::FetchStatus::error:
-        return QStringLiteral("ERROR");  // LCOV_EXCL_LINE
+    case ThumbnailRequest::FetchStatus::network_down:
+        return QStringLiteral("NETWORK DOWN");            // LCOV_EXCL_LINE
+    case ThumbnailRequest::FetchStatus::hard_error:
+        return QStringLiteral("ERROR");                   // LCOV_EXCL_LINE
+    case ThumbnailRequest::FetchStatus::temporary_error:
+        return QStringLiteral("TEMPORARY ERROR");
+    case ThumbnailRequest::FetchStatus::timeout:
+        return QStringLiteral("TIMEOUT");
     default:
         abort();  // LCOV_EXCL_LINE  // Impossible.
     }

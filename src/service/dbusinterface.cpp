@@ -19,6 +19,7 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
+#include <settings.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -45,90 +46,27 @@ namespace service
 namespace
 {
 
-// Return a string identifying hardware for which we need to
-// set max-extractions to some special value.
-// Be careful when making modifications here. We need
-// to find a string in cpuinfo that is unique to the specific
-// hardwares we care about. For example, the output from
-// /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
-
-#if defined(__arm__)
-
-string hardware()
-{
-    string hw;
-
-    string const pattern = R"del([Hh]ardware[ \t]*:(.*))del";
-    boost::regex r(pattern);
-
-    string cpuinfo;
-    try
-    {
-        cpuinfo = read_file("/proc/cpuinfo");
-    }
-    // LCOV_EXCL_START
-    catch (runtime_error const& e)
-    {
-        qWarning() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
-        return "";
-    }
-    // LCOV_EXCL_STOP
-
-    vector<string> lines;
-    boost::split(lines, cpuinfo, boost::is_any_of("\n"));
-    for (auto const& line : lines)
-    {
-        boost::smatch hw_match;
-        if (boost::regex_match(line, hw_match, r))
-        {
-            hw = hw_match[1];
-            boost::trim(hw);
-            break;
-        }
-    }
-    return hw;
-}
-
 // TODO: Hack to work around gstreamer problems.
 //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
 
 int adjusted_limit(int limit)
 {
-    int new_limit = limit;
-
+#if defined(__arm__)
     // Only adjust if max-extractions is at its default of 0.
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
-        string hw = hardware();
-#if 0
-        // TODO: Disabled for now until we can figure out in more
-        //       detail how to deal with the gstreamer problems.
-        // On BQ (MT6582), we can handle only one vs-thumb at a time.
-        new_limit = hw == "MT6582" ? 1 : 2;
-#else
-        new_limit = 1;
-#endif
-        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+        limit = 1;
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << limit << "for Arm";
     }
-    return new_limit;
-}
-
-#else
-
-// Not on Arm, leave as is.
-
-int adjusted_limit(int limit)
-{
+#endif
     return limit;
 }
-
-#endif
 
 }
 
 DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
-                             InactivityHandler& inactivity_handler,
+                             shared_ptr<InactivityHandler> const& inactivity_handler,
                              QObject* parent)
     : QObject(parent)
     , thumbnailer_(thumbnailer)
@@ -155,6 +93,9 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
     }
 
     extraction_limiter_ = make_shared<RateLimiter>(limit);
+
+    Settings s;
+    log_level_ = s.log_level();
 }
 
 DBusInterface::~DBusInterface()
@@ -170,9 +111,9 @@ CredentialsCache& DBusInterface::credentials()
     return *credentials_.get();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
-                                                   QString const& album,
-                                                   QSize const& requestedSize)
+QByteArray DBusInterface::GetAlbumArt(QString const& artist,
+                                      QString const& album,
+                                      QSize const& requestedSize)
 {
     try
     {
@@ -182,7 +123,7 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(), inactivity_handler_,
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -193,12 +134,12 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         sendErrorReply(ART_ERROR, e.what());
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
-                                                    QString const& album,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetArtistArt(QString const& artist,
+                                       QString const& album,
+                                       QSize const& requestedSize)
 {
     try
     {
@@ -208,7 +149,7 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(), inactivity_handler_,
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -219,11 +160,10 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         sendErrorReply(ART_ERROR, msg);
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetThumbnail(QString const& filename, QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;
 
@@ -236,7 +176,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 extraction_limiter_, credentials(), inactivity_handler_,
+                                 extraction_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)
@@ -245,7 +185,7 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         qWarning() << msg;
         sendErrorReply(ART_ERROR, msg);
     }
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
 void DBusInterface::queueRequest(Handler* handler)
@@ -272,6 +212,46 @@ void DBusInterface::queueRequest(Handler* handler)
     }
     requests_for_key.push_back(handler);
 }
+
+namespace
+{
+
+void write_log_message(Handler const* handler)
+{
+    QString msg;
+    QTextStream s(&msg);
+    s.setRealNumberNotation(QTextStream::FixedNotation);
+    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000;
+
+    auto queued_time = double(handler->queued_time().count()) / 1000000;
+    auto download_time = double(handler->download_time().count()) / 1000000;
+
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << " [";
+    }
+    if (queued_time > 0)
+    {
+        s << "q: " << queued_time;
+        if (download_time > 0)
+        {
+            s << ", ";
+        }
+    }
+    if (download_time > 0)
+    {
+        s << "d: " << download_time;
+    }
+    if (queued_time > 0 || download_time > 0)
+    {
+        s << "]";
+    }
+
+    s << " sec (" << handler->status_as_string() << ")";
+    qDebug() << msg;
+}
+
+}  // namespace
 
 void DBusInterface::requestFinished()
 {
@@ -302,37 +282,27 @@ void DBusInterface::requestFinished()
     // Queue deletion of handler when we re-enter the event loop.
     handler->deleteLater();
 
-    QString msg;
-    QTextStream s(&msg);
-    s.setRealNumberNotation(QTextStream::FixedNotation);
-    s << handler->details() << ": " << double(handler->completion_time().count()) / 1000000;
-
-    auto queued_time = double(handler->queued_time().count()) / 1000000;
-    auto download_time = double(handler->download_time().count()) / 1000000;
-
-    if (queued_time > 0 || download_time > 0)
+    // Emit log message, depending on log_level_.
+    auto status = handler->status();
+    if (log_level_ == 2 || status == ThumbnailRequest::FetchStatus::hard_error)
     {
-        s << " [";
+        write_log_message(handler);
     }
-    if (queued_time > 0)
+    else if (log_level_ == 1)
     {
-        s << "q: " << queued_time;
-        if (download_time > 0)
+        switch (status)
         {
-            s << ", ";
+            case ThumbnailRequest::FetchStatus::cached_failure:
+            case ThumbnailRequest::FetchStatus::downloaded:
+            case ThumbnailRequest::FetchStatus::not_found:
+            case ThumbnailRequest::FetchStatus::network_down:
+            case ThumbnailRequest::FetchStatus::temporary_error:
+                write_log_message(handler);
+                break;
+            default:
+                break;
         }
     }
-    if (download_time > 0)
-    {
-        s << "d: " << download_time;
-    }
-    if (queued_time > 0 || download_time > 0)
-    {
-        s << "]";
-    }
-
-    s << " sec (" << handler->status() << ")";
-    qDebug() << msg;
 }
 
 }  // namespace service

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <internal/artdownloader.h>
+#include <internal/backoff_adjuster.h>
 #include <internal/cachehelper.h>
 
 #include <QObject>
@@ -54,15 +55,17 @@ public:
         needs_download,
         downloaded,
         not_found,
-        no_network,
-        error
+        network_down,
+        temporary_error,
+        hard_error,
+        timeout
     };
 
     // Returns the empty string with status needs_download
     // if the thumbnail data needs to be downloaded to complete
     // the request. If this happens, call download() and wait for
     // downloadFinished signal to fire, then call thumbnail() again
-    virtual std::string thumbnail() = 0;
+    virtual QByteArray thumbnail() = 0;
     virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) = 0;
 
     // Returns status of thumbnail() set by thumbnail();
@@ -129,10 +132,9 @@ private:
     PersistentCacheHelper::UPtr failure_cache_;           // Cache for failed attempts (value is always empty).
     int max_size_;                                        // Max thumbnail size in pixels.
     int retry_not_found_hours_;                           // Retry wait time for authoritative "no artwork" answer.
-    int retry_error_hours_;                               // Retry wait time for unexpected server errors.
     std::chrono::milliseconds extraction_timeout_;        // How long to wait before giving up during extraction.
-    std::chrono::system_clock::time_point nw_fail_time_;  // Last time we had transient network error.
     std::unique_ptr<ArtDownloader> downloader_;
+    BackoffAdjuster backoff_;
 
     friend class RequestBase;
 };

@@ -34,7 +34,7 @@ for details.
 .SH ENVIRONMENT
 The service reads the following environment variables:
 .TP
-.B TN_UTILDIR
+.B THUMBNAILER_UTIL_DIR
 The directory in which to look for the \fBvs\-thumb\fP executable, which is used
 to extract images from streaming media. If not set, the program is expected to be in
 \fB/usr/lib/\fP\fI<arch>\fP\fB/thumbnailer\fP.
@@ -43,9 +43,12 @@ to extract images from streaming media. If not set, the program is expected to b
 The service exits once it has been idle for the number of milliseconds specified by this variable. If not set,
 a default value of 30000 is assumed.
 .TP
-.B THUMBNAILER_UBUNTU_APIROOT
+.B THUMBNAILER_UBUNTU_SERVER_URL
 This variable overrides the URI of the remote image server. If not set, the default URI
 \fBhttps://dash.ubuntu.com\fP is used.
+.TP
+.B THUMBNAILER_LOG_LEVEL
+This variable overrides the value of the \fBlog-level\fP setting.
 
 .SH "SEE ALSO"
 .B thumbnailer\-admin\fR(1)\fP, thumbnailer\-settings\fR(5)\fP, dconf\fR(7)\fP, gsettings\fR(1)\fP
