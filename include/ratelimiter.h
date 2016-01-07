@@ -21,7 +21,7 @@
 
 #include <functional>
 #include <memory>
-#include <queue>
+#include <list>
 
 namespace unity
 {
@@ -67,7 +67,7 @@ private:
     int running_;            // Actual number of outstanding requests.
     // We store a shared_ptr so we can detect on cancellation
     // whether a job completed before it was cancelled.
-    std::queue<std::shared_ptr<std::function<void()>>> queue_;
+    std::list<std::shared_ptr<std::function<void()>>> list_;
 };
 
 }  // namespace thumbnailer
