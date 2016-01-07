@@ -48,18 +48,17 @@ RateLimiter::CancelFunc RateLimiter::schedule(function<void()> job)
 {
     assert(job);
     assert (running_ >= 0);
-    assert (running_ <= concurrency_);
 
     if (running_ < concurrency_)
     {
         return schedule_now(job);
     }
 
-    queue_.emplace(make_shared<function<void()>>(move(job)));
+    list_.emplace_back(make_shared<function<void()>>(move(job)));
 
     // Returned function clears the job when called, provided the job is still in the queue.
     // done() removes any cleared jobs from the queue without calling them.
-    weak_ptr<function<void()>> weak_p(queue_.back());
+    weak_ptr<function<void()>> weak_p(list_.back());
     return [this, weak_p]() noexcept
     {
         auto job_p = weak_p.lock();
@@ -87,11 +86,11 @@ void RateLimiter::done()
 
     // Find the next job, discarding any cancelled jobs.
     shared_ptr<function<void()>> job_p;
-    while (!queue_.empty())
+    while (!list_.empty())
     {
-        job_p = queue_.front();
+        job_p = list_.back();
         assert(job_p);
-        queue_.pop();
+        list_.pop_back();
         if (*job_p != nullptr)
         {
             break;
