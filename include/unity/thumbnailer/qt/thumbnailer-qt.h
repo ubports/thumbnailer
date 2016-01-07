@@ -182,6 +182,9 @@ public:
 
     A default-constructed Thumbnailer instance communicates with the
     thumbnailer service via the session bus.
+
+    \warning Instantiation and finalization of Thumbnailer instances are expensive
+    operations. Do not needlessly destroy a Thumbnailer only to re-create it again later.
     */
     Thumbnailer();
 
@@ -192,6 +195,9 @@ public:
     supplied DBus connection to contact the thumbnailer service.
 
     \param connection The DBus connection via which to send requests.
+
+    \warning Instantiation and finalization of Thumbnailer instances are expensive
+    operations. Do not needlessly destroy a Thumbnailer only to re-create it again later.
     */
     explicit Thumbnailer(QDBusConnection const& connection);
 
