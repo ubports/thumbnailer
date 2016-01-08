@@ -1,3 +1,10 @@
+thumbnailer (2.3+16.04.20160107.1-0ubuntu1) xenial; urgency=medium
+
+  * Fix for lp:1531038. Much better user experience this way. (LP:
+    #1531038)
+
+ -- Michi Henning <michi.henning@canonical.com>  Thu, 07 Jan 2016 06:33:30 +0000
+
 thumbnailer (2.3+16.04.20160107-0ubuntu1) xenial; urgency=medium
 
   [ Michi Henning ]
