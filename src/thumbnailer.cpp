@@ -565,8 +565,10 @@ void LocalThumbnailRequest::verify_image_is_acceptable(string const& content_typ
     auto constexpr max_gif_size = 2 * 1024 * 1024;
     if (content_type == "image/gif" && filesize_ > max_gif_size)
     {
-        throw runtime_error("LocalThumbnailRequest::fetch(): GIF image " + filename_ +
-                            " exceeds maximum file size of " + to_string(max_gif_size) + " bytes");
+        string msg = "LocalThumbnailRequest::fetch(): GIF image " + filename_ +
+                     " exceeds maximum file size of " + to_string(max_gif_size) + " bytes";
+        qDebug() << msg.c_str();
+        throw runtime_error(msg);
     }
 }
 
