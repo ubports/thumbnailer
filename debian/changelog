@@ -1,6 +1,8 @@
 thumbnailer (2.3+16.04.20160107.1-0ubuntu2) UNRELEASED; urgency=medium
 
+  [ Michi Henning ]
   * Fixed incorrect display of cache policy by "thumbnailer-admin stats".
+  * Limit GIF file size to 2 MB (LP: #1527315).
 
  -- Michi Henning <michi.henning@canonical.com>  Fri, 08 Jan 2016 12:42:12 +1000
 
