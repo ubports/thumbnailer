@@ -459,6 +459,25 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     EXPECT_FALSE(reply->isValid());
 }
 
+TEST_F(LibThumbnailerTest, request_timeout)
+{
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
+    Thumbnailer thumbnailer(dbus_->connection());
+    auto reply = thumbnailer.getArtistArt("sleep", "12", QSize(256, 256));
+
+    reply->waitForFinished();
+
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_EQ("Thumbnailer: RequestImpl::dbusCallFinished(): D-Bus error: Handler::createFinished(): "
+              "could not get thumbnail for artist: sleep/12 (256,256): TIMEOUT",
+              reply->errorMessage());
+    EXPECT_FALSE(reply->isValid());
+}
+
 void make_links(string const& source_path, string const& target_dir, int num_copies)
 {
     using namespace boost::filesystem;

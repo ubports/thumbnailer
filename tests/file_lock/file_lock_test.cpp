@@ -45,6 +45,10 @@ TEST(file_lock, basic)
 
 TEST(file_lock, timeout_fail)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
     system("./hold_lock &");  // Holds lock for three seconds
     sleep(1);
     AdvisoryFileLock lock(lockfile);
@@ -53,6 +57,10 @@ TEST(file_lock, timeout_fail)
 
 TEST(file_lock, timeout_success)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
     system("./hold_lock &");  // Holds lock for three seconds
     sleep(1);
     AdvisoryFileLock lock(lockfile);
