@@ -123,6 +123,7 @@ TEST_F(AdminTest, image_stats)
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     auto output = ar.stdout();
     EXPECT_TRUE(output.find("Image cache:") != string::npos) << output;
+    EXPECT_TRUE(output.find("lru_only") != string::npos) << output;
     EXPECT_FALSE(output.find("Thumbnail cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Failure cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Histogram:") != string::npos) << output;
@@ -135,6 +136,7 @@ TEST_F(AdminTest, thumbnail_stats)
     auto output = ar.stdout();
     EXPECT_FALSE(output.find("Image cache:") != string::npos) << output;
     EXPECT_TRUE(output.find("Thumbnail cache:") != string::npos) << output;
+    EXPECT_TRUE(output.find("lru_only") != string::npos) << output;
     EXPECT_FALSE(output.find("Failure cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Histogram:") != string::npos) << output;
 }
@@ -147,6 +149,7 @@ TEST_F(AdminTest, failure_stats)
     EXPECT_FALSE(output.find("Image cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Thumbnail cache:") != string::npos) << output;
     EXPECT_TRUE(output.find("Failure cache:") != string::npos) << output;
+    EXPECT_TRUE(output.find("lru_ttl") != string::npos) << output;
     EXPECT_FALSE(output.find("Histogram:") != string::npos) << output;
 }
 
