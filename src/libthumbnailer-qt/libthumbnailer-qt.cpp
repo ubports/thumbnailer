@@ -26,6 +26,7 @@
 #include <QSharedPointer>
 
 #include <memory>
+#include <thread>
 
 namespace unity
 {
@@ -322,7 +323,7 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
 
     // We need to retrive config parameters from the server because, when an app runs confined,
     // it cannot read gsettings. We do this synchronously because we can't do anything else until
-    // after we get the settings.
+    // after we get the settings anyway.
 
     QDBusPendingCallWatcher trace_client_watcher(iface_->TraceClient());
     QDBusPendingCallWatcher max_backlog_watcher(iface_->MaxBacklog());
@@ -347,19 +348,33 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     }
 
     {
+        int constexpr headroom = 2;
+        int constexpr dflt_backlog = 1 + headroom;
         max_backlog_watcher.waitForFinished();
         QDBusPendingReply<int> reply = max_backlog_watcher;
         if (reply.isValid())
         {
-            limiter_.reset(new RateLimiter(reply.value()));
+            int backlog = reply.value();
+            if (backlog == 0)
+            {
+                backlog = std::thread::hardware_concurrency() + headroom;
+                if (backlog == 0)
+                {
+                    // LCOV_EXCL_START
+                    // If the platform can't tell us how many
+                    // cores we have, use the default.
+                    backlog = dflt_backlog;  // LCOV_EXCL_LINE
+                    // LCOV_EXCL_STOP
+                }
+            }
+            limiter_.reset(new RateLimiter(backlog));
         }
         // LCOV_EXCL_START
         else
         {
-            int const dflt = 20;
-            limiter_.reset(new RateLimiter(dflt));
+            limiter_.reset(new RateLimiter(dflt_backlog));
             qCritical().nospace() << "could not retrieve max-backlog setting: " << reply.error().message()
-                                  << " (using default value of " << dflt << ")";
+                                  << " (using default value of " << dflt_backlog << ")";
         }
         // LCOV_EXCL_STOP
     }
