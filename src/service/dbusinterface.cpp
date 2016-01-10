@@ -129,7 +129,7 @@ QByteArray DBusInterface::GetAlbumArt(QString const& artist,
     // LCOV_EXCL_START
     catch (exception const& e)
     {
-        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        QString msg = "DBusInterface::GetAlbumArt(): " + artist + "/" + album + ": " + e.what();
         qWarning() << msg;
         sendErrorReply(ART_ERROR, e.what());
     }
