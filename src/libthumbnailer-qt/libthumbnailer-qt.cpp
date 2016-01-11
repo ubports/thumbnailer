@@ -19,6 +19,7 @@
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
+#include <settings-defaults.h>
 #include <ratelimiter.h>
 #include <thumbnailerinterface.h>
 #include <service/dbus_names.h>
@@ -26,7 +27,6 @@
 #include <QSharedPointer>
 
 #include <memory>
-#include <thread>
 
 namespace unity
 {
@@ -319,7 +319,7 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
 
-    // We need to retrive config parameters from the server because, when an app runs confined,
+    // We need to retrieve config parameters from the server because, when an app runs confined,
     // it cannot read gsettings. We do this synchronously because we can't do anything else until
     // after we get the settings anyway.
 
@@ -328,7 +328,7 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
 
     {
         trace_client_call.waitForFinished();
-        QDBusReply<bool> reply = trace_client_call.reply();
+        QDBusPendingReply<bool> reply = trace_client_call.reply();
         if (reply.isValid())
         {
             trace_client_ = reply.value();
@@ -336,7 +336,7 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
         // LCOV_EXCL_START
         else
         {
-            bool const dflt = true;
+            bool const dflt = TRACE_CLIENT_DEFAULT;
             trace_client_ = dflt;
             qCritical().nospace() << "could not retrieve trace-client setting: " << reply.error().message()
                                   << " (using default value of " << dflt << ")";
@@ -346,22 +346,12 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     }
 
     {
-        int constexpr headroom = 2;
-        int constexpr dflt_backlog = 1 + headroom;
+        int constexpr dflt_backlog = MAX_BACKLOG_DEFAULT;
         max_backlog_call.waitForFinished();
-        QDBusReply<int> reply = max_backlog_call.reply();
+        QDBusPendingReply<int> reply = max_backlog_call.reply();
         if (reply.isValid())
         {
             int backlog = reply.value();
-            if (backlog == 0)
-            {
-                backlog = std::thread::hardware_concurrency() + headroom;
-                if (backlog == 0)
-                {
-                    // If the platform can't tell us how many cores we have, use the default.
-                    backlog = dflt_backlog;  // LCOV_EXCL_LINE
-                }
-            }
             limiter_.reset(new RateLimiter(backlog));
         }
         // LCOV_EXCL_START

@@ -126,7 +126,7 @@ int Settings::extraction_timeout() const
 
 int Settings::max_backlog() const
 {
-    return get_positive_or_zero_int("max-backlog", MAX_BACKLOG_DEFAULT);
+    return get_positive_int("max-backlog", MAX_BACKLOG_DEFAULT);
 }
 
 bool Settings::trace_client() const

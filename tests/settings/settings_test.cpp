@@ -47,7 +47,7 @@ TEST(Settings, defaults_from_schema)
     EXPECT_EQ(8, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
     EXPECT_EQ(10, settings.extraction_timeout());
-    EXPECT_EQ(0, settings.max_backlog());
+    EXPECT_EQ(10, settings.max_backlog());
     EXPECT_FALSE(settings.trace_client());
     EXPECT_EQ(1, settings.log_level());
 }
@@ -70,7 +70,7 @@ TEST(Settings, missing_schema)
     EXPECT_EQ(8, settings.max_downloads());
     EXPECT_EQ(0, settings.max_extractions());
     EXPECT_EQ(10, settings.extraction_timeout());
-    EXPECT_EQ(0, settings.max_backlog());
+    EXPECT_EQ(10, settings.max_backlog());
     EXPECT_FALSE(settings.trace_client());
     EXPECT_EQ(1, settings.log_level());
 }
