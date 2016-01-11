@@ -1,14 +1,18 @@
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/src/settings-defaults.h
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
     COMMAND ${CMAKE_SOURCE_DIR}/tools/parse-settings.py
         -i ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml
-        -o ${CMAKE_BINARY_DIR}/src/settings-defaults.h
+        -o ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
     DEPENDS ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml)
 
-set_source_files_properties(${CMAKE_BINARY_DIR}/src/settings-defaults.h
-    PROPERTIES HEADER_FILE_ONLY TRUE)
+add_custom_target(generate-settings-defaults
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
+
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
+    PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE)
 
 set_source_files_properties(settings.cpp PROPERTIES
-    OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/src/settings-defaults.h)
+    OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
 
 add_library(thumbnailer-static STATIC
     artdownloader.cpp
