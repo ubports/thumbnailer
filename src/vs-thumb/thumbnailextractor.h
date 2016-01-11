@@ -18,6 +18,27 @@
 
 #pragma once
 
+#include <internal/gobj_memory.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
+
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <gst/gst.h>
+#include <gst/tag/tag.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+#pragma GCC diagnostic pop
+
+#include <cassert>
 #include <memory>
 #include <string>
 
@@ -30,10 +51,54 @@ namespace thumbnailer
 namespace internal
 {
 
+class BufferMap final
+{
+public:
+    BufferMap()
+        : buffer(nullptr, gst_buffer_unref)
+    {
+    }
+    ~BufferMap()
+    {
+        unmap();
+    }
+
+    void map(GstBuffer* b)
+    {
+        unmap();
+        buffer.reset(gst_buffer_ref(b));
+        gst_buffer_map(buffer.get(), &info, GST_MAP_READ);
+    }
+
+    void unmap()
+    {
+        if (!buffer)
+        {
+            return;
+        }
+        gst_buffer_unmap(buffer.get(), &info);
+        buffer.reset();
+    }
+
+    guint8* data() const
+    {
+        assert(buffer);
+        return info.data;
+    }
+
+    gsize size() const
+    {
+        assert(buffer);
+        return info.size;
+    }
+
+private:
+    std::unique_ptr<GstBuffer, decltype(&gst_buffer_unref)> buffer;
+    GstMapInfo info;
+};
+
 class ThumbnailExtractor final
 {
-    struct Private;
-
 public:
     ThumbnailExtractor();
     ~ThumbnailExtractor();
@@ -42,11 +107,23 @@ public:
     void set_uri(const std::string& uri);
     bool has_video();
     bool extract_video_frame();
-    bool extract_audio_cover_art();
-    void save_screenshot(const std::string& filename);
+    bool extract_cover_art();
+    void write_image(const std::string& filename);
+
+    typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
+    typedef unity::thumbnailer::internal::gobj_ptr<GdkPixbuf> PixbufUPtr;
 
 private:
-    std::unique_ptr<Private> p;
+    void change_state(GstElement* element, GstState state);
+    void throw_error(const char* msg, GError* error = nullptr);
+
+    gobj_ptr<GstElement> playbin_;
+    gint64 duration_ = -1;
+
+    std::string uri_;
+    SampleUPtr sample_{nullptr, gst_sample_unref};  // Contains raw data for cover or still frame.
+    PixbufUPtr still_frame_;                        // Non-null if we extracted still frame.
+    BufferMap buffermap_;
 };
 
 }  // namespace internal

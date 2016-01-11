@@ -16,17 +16,19 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <internal/settings.h>
-#include "settings-defaults.h"
+#include <settings.h>
 
-#include <internal/trace.h>
+#include <internal/env_vars.h>
+#include "settings-defaults.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #include <gio/gio.h>
 #pragma GCC diagnostic pop
+#include <QDebug>
 
+#include <chrono>
 #include <memory>
 
 using namespace std;
@@ -35,9 +37,6 @@ namespace unity
 {
 
 namespace thumbnailer
-{
-
-namespace internal
 {
 
 Settings::Settings()
@@ -93,9 +92,18 @@ int Settings::retry_not_found_hours() const
     return get_positive_int("retry-not-found-hours", RETRY_NOT_FOUND_HOURS_DEFAULT);
 }
 
-int Settings::retry_error_hours() const
+int Settings::retry_error_max_seconds() const
 {
-    return get_positive_int("retry-error-hours", RETRY_ERROR_HOURS_DEFAULT);
+    auto retry_error_hours = get_positive_int("retry-error-hours", RETRY_ERROR_HOURS_DEFAULT);
+    chrono::seconds retry_max = chrono::duration_cast<chrono::seconds>(chrono::hours(retry_error_hours));
+    chrono::seconds retry_min = chrono::seconds(2 * extraction_timeout());
+    if (retry_max < retry_min)
+    {
+        retry_max = retry_min;
+        qWarning() << "retry-error-hours setting is < 2 * extraction-timeout. Adjusted max retry backoff to"
+                   << retry_max.count() << "seconds.";
+    }
+    return retry_max.count();
 }
 
 int Settings::max_downloads() const
@@ -111,6 +119,46 @@ int Settings::max_extractions() const
 int Settings::extraction_timeout() const
 {
     return get_positive_int("extraction-timeout", EXTRACTION_TIMEOUT_DEFAULT);
+}
+
+int Settings::max_backlog() const
+{
+    return get_positive_int("max-backlog", MAX_BACKLOG_DEFAULT);
+}
+
+bool Settings::trace_client() const
+{
+    return get_bool("trace-client", TRACE_CLIENT_DEFAULT);
+}
+
+int Settings::log_level() const
+{
+    using namespace unity::thumbnailer::internal;
+
+    int log_level = get_positive_or_zero_int("log-level", LOG_LEVEL_DEFAULT);
+    char const* level = getenv(LOG_LEVEL);
+    if (level && *level)
+    {
+        int l;
+        try
+        {
+            l = std::stoi(level);
+        }
+        catch (std::exception const& e)
+        {
+            qCritical() << "Environment variable" << LOG_LEVEL << "has invalid setting:" << level
+                        << "(expected value in range 0..2) - variable ignored";
+            return log_level;
+        }
+        if (l < 0 || l > 2)
+        {
+            qCritical() << "Environment variable" << LOG_LEVEL << "has invalid setting:" << level
+                        << "(expected value in range 0..2) - variable ignored";
+            return log_level;
+        }
+        log_level = l;
+    }
+    return log_level;
 }
 
 string Settings::get_string(char const* key, string const& default_value) const
@@ -162,8 +210,15 @@ int Settings::get_int(char const* key, int default_value) const
     return g_settings_get_int(settings_.get(), key);
 }
 
+bool Settings::get_bool(char const* key, bool default_value) const
+{
+    if (!settings_ || !g_settings_schema_has_key(schema_.get(), key))
+    {
+        return default_value;
+    }
 
-}  // namespace internal
+    return g_settings_get_boolean(settings_.get(), key);
+}
 
 }  // namespace thumbnailer
 

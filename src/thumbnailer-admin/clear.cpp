@@ -35,20 +35,20 @@ Clear::Clear(QCommandLineParser& parser)
     : Action(parser)
     , cache_id_(0)
 {
-    assert(command_ == "clear" || command_ == "clear-stats" || command_ == "compact");
-    if (command_ == "clear")
+    assert(command_ == "clear" || command_ == "zero-stats" || command_ == "compact");
+    if (command_ == QLatin1String("clear"))
     {
-        parser.addPositionalArgument("clear", "Clear caches", "clear");
+        parser.addPositionalArgument(QStringLiteral("clear"), QStringLiteral("Clear caches"), QStringLiteral("clear"));
     }
-    else if (command_ == "clear-stats")
+    else if (command_ == QLatin1String("zero-stats"))
     {
-        parser.addPositionalArgument("clear-stats", "Clear statistics", "clear-stats");
+        parser.addPositionalArgument(QStringLiteral("zero-stats"), QStringLiteral("Zero statistics counters"), QStringLiteral("zero-stats"));
     }
     else
     {
-        parser.addPositionalArgument("compact", "Compact caches", "compact");
+        parser.addPositionalArgument(QStringLiteral("compact"), QStringLiteral("Compact caches"), QStringLiteral("compact"));
     }
-    parser.addPositionalArgument("cache_id", "Select cache (i=image, t=thumbnail, f=failure)", "[cache_id]");
+    parser.addPositionalArgument(QStringLiteral("cache_id"), QStringLiteral("Select cache (i=image, t=thumbnail, f=failure)"), QStringLiteral("[cache_id]"));
 
     if (!parser.parse(QCoreApplication::arguments()))
     {
@@ -62,7 +62,7 @@ Clear::Clear(QCommandLineParser& parser)
     auto args = parser.positionalArguments();
     if (args.size() > 2)
     {
-        throw QString("too many arguments for ") + command_ + " command" + parser.errorText() + "\n\n" + parser.helpText();
+        throw QStringLiteral("too many arguments for ") + command_ + " command" + parser.errorText() + "\n\n" + parser.helpText();
     }
 
     if (args.size() == 2)
@@ -77,7 +77,7 @@ Clear::Clear(QCommandLineParser& parser)
                 return;
             }
         }
-        throw QString("invalid cache_id: ") + arg + "\n" + parser.helpText();
+        throw QStringLiteral("invalid cache_id: ") + arg + "\n" + parser.helpText();
     }
 }
 
@@ -88,11 +88,11 @@ Clear::~Clear()
 void Clear::run(DBusConnection& conn)
 {
     decltype(&AdminInterface::Clear) method;
-    if (command_ == "clear")
+    if (command_ == QLatin1String("clear"))
     {
         method = &AdminInterface::Clear;
     }
-    else if (command_ == "clear-stats")
+    else if (command_ == QLatin1String("zero-stats"))
     {
         method = &AdminInterface::ClearStats;
     }

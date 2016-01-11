@@ -1,3 +1,15 @@
+# Leaks in valgrind itself with version 1:3.10.1-1ubuntu3
+# TODO: Check periodically whether these go away with a later version.
+{
+    valgrind
+    Memcheck:Leak
+    match-leak-kinds: definite
+    ...
+    obj:/usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so
+}
+
+# Assorted suppressions for other libraries below
+
 {
     g_settings_new
     Memcheck:Leak
@@ -52,6 +64,17 @@
     fun:_ZN35QNetworkConfigurationManagerPrivate10initializeEv
     fun:_Z35qNetworkConfigurationManagerPrivatev
     fun:_ZN28QNetworkConfigurationManagerC1EP7QObject
+}
+
+{
+    QNetworkConfigurationManager2
+    Memcheck:Leak
+    match-leak-kinds: definite
+    fun:malloc
+    ...
+    fun:_ZN35QNetworkConfigurationManagerPrivate20updateConfigurationsEv
+    fun:_ZN35QNetworkConfigurationManagerPrivate10initializeEv
+    fun:_Z35qNetworkConfigurationManagerPrivatev
 }
 
 {
@@ -117,6 +140,41 @@
 }
 
 {
+    QHash
+    Memcheck:Cond
+    ...
+    fun:_Z5qHashRK10QByteArrayj
+}
+
+{
+    QHash_2
+    Memcheck:Cond
+    ...
+    fun:_Z5qHashRK7QStringj
+}
+
+{
+   QImageReader
+   Memcheck:Cond
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/qt5/plugins/imageformats/libqjpeg.so
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.4.2
+   fun:_ZNK12QImageReader4sizeEv
+}
+
+{
+    QImage_uninitialized_jump
+    Memcheck:Cond
+    ...
+    fun:_ZN12QImageReader4readEP6QImage
+    fun:_ZN12QImageReader4readEv
+    fun:_ZN6QImage8fromDataEPKhiPKc
+    fun:_ZN6QImage8fromDataERK10QByteArrayPKc
+    fun:_ZN5unity11thumbnailer2qt8internal11RequestImpl16dbusCallFinishedEv
+}
+
+{
     gst_plugin_load_file
     Memcheck:Leak
     match-leak-kinds: definite
@@ -130,4 +188,94 @@
     ...
     fun:g_module_open
     fun:gst_plugin_load_file
+}
+
+{
+    gstreamer_uninitialized_jump
+    Memcheck:Cond
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvideoconvert.so
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvideoconvert.so
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvideoconvert.so
+    obj:/usr/lib/x86_64-linux-gnu/libgstvideo-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstbase-1.0.so.0.405.0
+    obj:/usr/lib/x86_64-linux-gnu/libgstreamer-1.0.so.0.405.0
+    obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.4400.1
+    obj:/lib/x86_64-linux-gnu/libglib-2.0.so.0.4400.1
+    fun:start_thread
+    fun:clone
+}
+
+{
+    gdk_pixbuf_save_to_buffer
+    Memcheck:Value8
+    ...
+    fun:jpeg_write_scanlines
+    ...
+    fun:gdk_pixbuf_save_to_callbackv
+    fun:gdk_pixbuf_save_to_bufferv
+    fun:gdk_pixbuf_save_to_buffer
+}
+
+{
+    gdk_pixbuf_save_to_buffer2
+    Memcheck:Cond
+    ...
+    fun:jpeg_write_scanlines
+    ...
+    fun:gdk_pixbuf_save_to_callbackv
+    fun:gdk_pixbuf_save_to_bufferv
+    fun:gdk_pixbuf_save_to_buffer
+}
+
+{
+    gdk_pixbuf_loader_write
+    Memcheck:Value8
+    fun:_ZN7leveldb6crc32c6ExtendEjPKcm
+    fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
+    fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
+    fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
+}
+
+{
+    gdk_pixbuf_save
+    Memcheck:Param
+    write(buf)
+    obj:/lib/x86_64-linux-gnu/libc-2.21.so
+    fun:_IO_file_write@@GLIBC_2.2.5
+    fun:new_do_write
+    fun:_IO_file_xsputn@@GLIBC_2.2.5
+    fun:fwrite
+    obj:/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-tiff.so
+    obj:/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-tiff.so
+    fun:gdk_pixbuf_savev
+    fun:gdk_pixbuf_save
+}
+
+{
+    gdk_pixbuf_loader_write2
+    Memcheck:Param
+    write(buf)
+    ...
+    fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
+    fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
+    fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
+}
+
+{
+    leveldb_write
+    Memcheck:Param
+    write(buf)
+    obj:/lib/x86_64-linux-gnu/libc-2.21.so
+    fun:_IO_file_write@@GLIBC_2.2.5
+    fun:new_do_write
+    fun:_IO_do_write@@GLIBC_2.2.5
+    fun:_IO_file_sync@@GLIBC_2.2.5
+    fun:fflush_unlocked
+    obj:/usr/lib/x86_64-linux-gnu/libleveldb.so.1.17
+    fun:_ZN7leveldb3log6Writer18EmitPhysicalRecordENS0_10RecordTypeEPKcm
+    fun:_ZN7leveldb3log6Writer9AddRecordERKNS_5SliceE
+    fun:_ZN7leveldb6DBImpl5WriteERKNS_12WriteOptionsEPNS_10WriteBatchE
 }

@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include "dbusinterface.h"
-
 #include <QObject>
 #include <QTimer>
+
+#include <functional>
 
 namespace unity
 {
@@ -36,9 +36,18 @@ class InactivityHandler : public QObject
 {
     Q_OBJECT
 public:
-    InactivityHandler(DBusInterface& iface);
+    InactivityHandler(std::function<void()> const& timer_func);
+    ~InactivityHandler();
+
+    void request_started();
+    void request_completed();
+
+public Q_SLOTS:
+    void timer_expired();
 
 private:
+    std::function<void()> timer_func_;
+    int num_active_requests_;
     QTimer timer_;
 };
 

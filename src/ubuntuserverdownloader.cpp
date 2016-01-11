@@ -15,12 +15,14 @@
  *
  * Authored by: Pawel Stolowski <pawel.stolowski@canonical.com>
  *              Xavi Garcia <xavi.garcia.mena@canonical.com>
+ *              Michi Henning <michi.henning@canonical.com>
  */
 
 #include <internal/ubuntuserverdownloader.h>
 
 #include <internal/artreply.h>
-#include <internal/settings.h>
+#include <internal/env_vars.h>
+#include <settings.h>
 
 #include <QNetworkReply>
 #include <QTimer>
@@ -32,17 +34,6 @@
 #include <unistd.h>
 
 using namespace std;
-
-// const strings
-namespace
-{
-
-#define SERVER_DOMAIN_NAME "dash.ubuntu.com"
-
-constexpr const char UBUNTU_SERVER_BASE_URL[] = "https://" SERVER_DOMAIN_NAME;
-constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
-constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
-}
 
 namespace unity
 {
@@ -56,9 +47,13 @@ namespace internal
 namespace
 {
 
+constexpr const char DFLT_SERVER_URL[] = "https://dash.ubuntu.com";
+constexpr const char ARTIST_ART_BASE_URL[] = "musicproxy/v1/artist-art";
+constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
+
 // TODO: Hack to work around QNetworkAccessManager problems when the device is in flight mode.
 
-bool network_is_connected()
+bool network_is_connected(QString const& domain_name)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -66,7 +61,7 @@ bool network_is_connected()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
     struct addrinfo *result;
-    if (getaddrinfo(SERVER_DOMAIN_NAME, "80", &hints, &result) != 0)
+    if (getaddrinfo(domain_name.toUtf8().constData(), "80", &hints, &result) != 0)
     {
         return false;  // LCOV_EXCL_LINE
     }
@@ -74,46 +69,74 @@ bool network_is_connected()
     return true;
 }
 
+// helper methods to retrieve image urls
+QUrl make_art_url(QString const& server_url,
+                  QString const& base_url,
+                  QString const& artist,
+                  QString const& album,
+                  QString const& api_key)
+{
+    QUrlQuery q;
+    q.addQueryItem(QStringLiteral("artist"), artist);
+    q.addQueryItem(QStringLiteral("album"), album);
+    q.addQueryItem(QStringLiteral("key"), api_key);
+
+    QUrl url(server_url + "/" + base_url);
+    url.setQuery(q);
+    return url;
 }
 
-bool network_down_error(QNetworkReply::NetworkError error)
+QString api_key()
 {
-    switch (error)
+    // the API key is not expected to change, so don't monitor it
+    Settings settings;
+
+    auto key = QString::fromStdString(settings.art_api_key());
+    if (key.isEmpty())
     {
-        // add here all the cases that you consider as network errors
-        case QNetworkReply::HostNotFoundError:
-        case QNetworkReply::OperationCanceledError:
-        case QNetworkReply::TemporaryNetworkFailureError:
-        case QNetworkReply::NetworkSessionFailedError:
-        case QNetworkReply::ProxyConnectionRefusedError:
-        case QNetworkReply::ProxyConnectionClosedError:
-        case QNetworkReply::ProxyNotFoundError:
-        case QNetworkReply::ProxyTimeoutError:
-        case QNetworkReply::UnknownNetworkError:
-            return true;
-        default:
-            return false;
+        qCritical() << "Failed to get API key";  // LCOV_EXCL_LINE
     }
+    return key;
 }
+
+char const* server_url()
+{
+    char const* server_url = DFLT_SERVER_URL;
+    char const* override_url = getenv(thumbnailer::internal::UBUNTU_SERVER_URL);
+    if (override_url && *override_url)
+    {
+        server_url = override_url;
+    }
+    return server_url;
+}
+
+}  // namespace
 
 class UbuntuServerArtReply : public ArtReply
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 public:
     Q_DISABLE_COPY(UbuntuServerArtReply)
 
     // LCOV_EXCL_START
+    // TODO: Hack for QNetworkAccessManager. Creates a failed network reply
+    //       used when we conclude that the device is in flight mode.
     UbuntuServerArtReply(QString const& url)
         : ArtReply(nullptr)
-        , is_running_(false)
-        , error_string_("network down")
-        , error_(QNetworkReply::TemporaryNetworkFailureError)
         , url_string_(url)
-        , succeeded_(false)
-        , network_down_error_(true)
+        , error_string_(QStringLiteral("network down"))
+        , status_(ArtReply::network_down)
         , reply_(nullptr)
     {
+        assert(!url.isEmpty());
     }
     // LCOV_EXCL_STOP
 
@@ -121,49 +144,32 @@ public:
                          QNetworkReply* reply,
                          chrono::milliseconds timeout)
         : ArtReply(nullptr)
-        , is_running_(false)
-        , error_(QNetworkReply::NoError)
         , url_string_(url)
-        , succeeded_(false)
-        , network_down_error_(false)
+        , status_(ArtReply::not_finished)
         , reply_(reply)
     {
+        assert(!url.isEmpty());
         assert(reply_);
+
         connect(&timer_, &QTimer::timeout, this, &UbuntuServerArtReply::timeout);
         timer_.setSingleShot(true);
         timer_.start(timeout.count());
     }
 
-    bool succeeded() const override
+    Status status() const override
     {
-        return succeeded_;
-    };
-
-    bool is_running() const override
-    {
-        return is_running_;
-    };
+        return status_;
+    }
 
     QString error_string() const override
     {
+        assert(status_ != ArtReply::Status::not_finished);
         return error_string_;
-    }
-
-    bool not_found_error() const override
-    {
-        switch (error_)
-        {
-            // add here all the cases that you consider as source not found
-            case QNetworkReply::ContentNotFoundError:
-            case QNetworkReply::ContentGoneError:
-                return true;
-            default:
-                return false;
-        }
     }
 
     QByteArray const& data() const override
     {
+        assert(status_ != ArtReply::Status::not_finished);
         return data_;
     }
 
@@ -172,123 +178,117 @@ public:
         return url_string_;
     }
 
-    bool network_down() const override
+    void set_status()
     {
-        return network_down_error_;
+        // Set the defaults, in case none of the tests below match.
+        status_ = ArtReply::Status::temporary_error;
+        error_string_ = reply_->errorString();
+
+        // Deal with expected conditions first.
+        auto error_code = reply_->error();
+        switch (error_code)
+        {
+            case QNetworkReply::NoError:
+                status_ = ArtReply::Status::success;
+                return;
+            case QNetworkReply::ContentNotFoundError:
+            case QNetworkReply::ContentGoneError:
+                // Authoritive "no artwork available" response (404 or 410).
+                status_ = ArtReply::Status::not_found;
+                return;
+            case QNetworkReply::OperationCanceledError:
+                // Happens if we call reply_->abort() after a timeout.
+                // We need to overwrite the "operation cancelled" message that
+                // is set by this, otherwise the log doesn't tell the real story.
+                status_ = ArtReply::Status::timeout;
+                error_string_ = QStringLiteral("Request timed out");
+                qDebug() << error_string_ << "for" << url_string_;
+                return;
+            default:
+                break;
+        }
+
+        qDebug() << "unexpected QNetworkReply::NetworkError" << int(error_code) << "for" << url_string_;
+
+        // Pull out the HTTP response code if there is one.
+        QVariant att = reply_->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+        if (att.type() == QVariant::Type::Int)
+        {
+            int http_code = att.toInt();
+            // Classify the HTTP error as permanent or potentially recoverable.
+            switch (http_code)
+            {
+                // No chance of recovery with a retry.
+                case 400:  // Bad Request
+                case 403:  // Forbidden
+                    status_ = ArtReply::Status::hard_error;
+                    break;
+                default:
+                    break;
+            }
+            qDebug() << "HTTP error code" << http_code << "for" << url_string_;
+        }
     }
 
 public Q_SLOTS:
     void download_finished()
     {
-        // TODO: Hack two work around QNetworkAccessManager problems when device is in flight mode.
+        // TODO: Hack to work around QNetworkAccessManager problems when device is in flight mode.
         //       reply_ is nullptr only if the network is down.
         if (!reply_)
         {
-            Q_EMIT finished();  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            Q_EMIT finished();
             return;
+            // LCOV_EXCL_STOP
         }
 
         timer_.stop();
 
-        QNetworkReply* reply = static_cast<QNetworkReply*>(sender());
-        assert(reply);
-
-        is_running_ = false;
-        error_ = reply->error();
-        if (error_)
+        set_status();
+        if (status_ == ArtReply::Status::success)
         {
-            error_string_ = reply->errorString();
-            network_down_error_ = network_down_error(error_);
-        }
-        else
-        {
-            data_ = reply->readAll();
-            succeeded_ = true;
+            data_ = reply_->readAll();
         }
         Q_EMIT finished();
-        reply->deleteLater();
     }
 
     void timeout()
     {
+        status_ = ArtReply::Status::timeout;
         reply_->abort();
     }
 
 private:
-    bool is_running_;
+    QString const url_string_;
     QString error_string_;
-    QNetworkReply::NetworkError error_;
     QByteArray data_;
-    QString url_string_;
-    bool succeeded_;
-    bool network_down_error_;
+    ArtReply::Status status_;
     QNetworkReply* reply_;
     QTimer timer_;
 };
 
-// helper methods to retrieve image urls
-QUrl get_art_url(
-    QString const& base_url, QString const& artist, QString const& album, QString const& api_key)
-{
-    QString prefix_api_root = UBUNTU_SERVER_BASE_URL;
-    char const* apiroot_c = getenv("THUMBNAILER_UBUNTU_APIROOT");
-    if (apiroot_c)
-    {
-        prefix_api_root = apiroot_c;
-    }
-
-    QUrlQuery q;
-    q.addQueryItem("artist", artist);
-    q.addQueryItem("album", album);
-    q.addQueryItem("key", api_key);
-
-    QUrl url(prefix_api_root + "/" + base_url);
-    url.setQuery(q);
-    return url;
-}
-
-QUrl get_album_art_url(QString const& artist, QString const& album, QString const& api_key)
-{
-    return get_art_url(ALBUM_ART_BASE_URL, artist, album, api_key);
-}
-
-QUrl get_artist_art_url(QString const& artist, QString const& album, QString const& api_key)
-{
-    return get_art_url(ARTIST_ART_BASE_URL, artist, album, api_key);
-}
-
 UbuntuServerDownloader::UbuntuServerDownloader(QObject* parent)
     : ArtDownloader(parent)
+    , api_key_(api_key())
     , network_manager_(make_shared<QNetworkAccessManager>(this))
 {
-    set_api_key();
-}
-
-void UbuntuServerDownloader::set_api_key()
-{
-    // the API key is not expected to change, so don't monitor it
-    Settings settings;
-
-    api_key_ = QString::fromStdString(settings.art_api_key());
-    if (api_key_.isEmpty())
-    {
-        // TODO do something with the error
-        qCritical() << "Failed to get API key";  // LCOV_EXCL_LINE
-    }
 }
 
 shared_ptr<ArtReply> UbuntuServerDownloader::download_album(QString const& artist,
                                                             QString const& album,
                                                             chrono::milliseconds timeout)
 {
-    return download_url(get_album_art_url(artist, album, api_key_), timeout);
+    auto url = make_art_url(server_url(), ALBUM_ART_BASE_URL, artist, album, api_key_);
+    return download_url(url, timeout);
 }
 
 shared_ptr<ArtReply> UbuntuServerDownloader::download_artist(QString const& artist,
                                                              QString const& album,
                                                              chrono::milliseconds timeout)
 {
-    return download_url(get_artist_art_url(artist, album, api_key_), timeout);
+    auto url = make_art_url(server_url(), ARTIST_ART_BASE_URL, artist, album, api_key_);
+    return download_url(url, timeout);
 }
 
 shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chrono::milliseconds timeout)
@@ -297,7 +297,8 @@ shared_ptr<ArtReply> UbuntuServerDownloader::download_url(QUrl const& url, chron
 
     // TODO: Hack to work around QNetworkAccessManager problems when in flight mode.
     shared_ptr<UbuntuServerArtReply> art_reply;
-    if (network_is_connected())
+    auto domain_name = url.host();
+    if (network_is_connected(domain_name))
     {
         QNetworkReply* reply = network_manager_->get(QNetworkRequest(url));
         art_reply = make_shared<UbuntuServerArtReply>(url.toString(), reply, timeout);

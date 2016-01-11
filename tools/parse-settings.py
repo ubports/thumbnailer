@@ -27,11 +27,16 @@ def integer_parameter(name, default_value, output):
     line = "    int const %s_DEFAULT = %s;" % (name.replace("-", "_").upper(), default_value)
     print(line, file=output)
 
+def bool_parameter(name, default_value, output):
+    line = "    bool const %s_DEFAULT = %s;" % (name.replace("-", "_").upper(), default_value)
+    print(line, file=output)
+
 def process_default(name):
     print("WARNING: unsupported type found for parameter %s\n" % name)
 
 options = {'i' : integer_parameter,
            's' : string_parameter,
+           'b' : bool_parameter,
 }
 
 def usage():

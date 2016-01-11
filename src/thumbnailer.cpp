@@ -21,17 +21,17 @@
 #include <internal/thumbnailer.h>
 
 #include <internal/artreply.h>
+#include <internal/cachehelper.h>
 #include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
 #include <internal/make_directories.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
-#include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
+#include <settings.h>
 
 #include <boost/filesystem.hpp>
-#include <core/persistent_string_cache.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
@@ -68,23 +68,34 @@ enum class Location
 
 class RequestBase : public ThumbnailRequest
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     virtual ~RequestBase() = default;
-    string thumbnail() override;
+    QByteArray thumbnail() override;
     FetchStatus status() const override;
+
     string const& key() const override
     {
         return key_;
     }
+
     void check_client_credentials(uid_t, std::string const&) override
     {
     }
+
     enum class CachePolicy
     {
         cache_fullsize,
         dont_cache_fullsize
     };
+
     struct ImageData
     {
         FetchStatus status;
@@ -99,26 +110,41 @@ public:
             , location(location)
         {
         }
-        ImageData(FetchStatus status, Location location)
+
+        ImageData(FetchStatus status, CachePolicy policy, Location location)
             : status(status)
-            , cache_policy(CachePolicy::dont_cache_fullsize)
+            , cache_policy(policy)
             , location(location)
         {
         }
+
+        ImageData(ImageData&&) = default;
+        ImageData& operator=(ImageData&&) = default;
     };
+
+    void set_error_message(string const& msg)
+    {
+        error_message_ = msg;
+    }
+
+    string error_message() const
+    {
+        return error_message_;
+    }
 
 protected:
     RequestBase(Thumbnailer* thumbnailer,
                 string const& key,
                 QSize const& requested_size,
                 chrono::milliseconds timeout);
-    virtual ImageData fetch(QSize const& size_hint) = 0;
+    virtual ImageData fetch(QSize const& size_hint) noexcept = 0;
 
     ArtDownloader* downloader() const
     {
         return thumbnailer_->downloader_.get();
     }
 
+    // LCOV_EXCL_START
     string printable_key() const
     {
         // Substitute "\\0" for all occurrences of '\0' in key_.
@@ -137,10 +163,12 @@ protected:
         }
         return new_key;
     }
+    // LCOV_EXCL_STOP
 
-    Thumbnailer const* thumbnailer_;
+    Thumbnailer* thumbnailer_;
     string key_;
     QSize const requested_size_;
+    string error_message_;
     chrono::milliseconds timeout_;
 
 private:
@@ -152,7 +180,14 @@ namespace
 
 class LocalThumbnailRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     LocalThumbnailRequest(Thumbnailer* thumbnailer,
                           string const& filename,
@@ -161,18 +196,27 @@ public:
     void check_client_credentials(uid_t user, std::string const& label) override;
 
 protected:
-    ImageData fetch(QSize const& size_hint) override;
+    ImageData fetch(QSize const& size_hint) noexcept override;
     void download(std::chrono::milliseconds timeout) override;
 
 private:
+    void verify_image_is_acceptable(string const& content_type);
+
     string filename_;
-    FdPtr fd_;
+    off_t filesize_;
     unique_ptr<ImageExtractor> image_extractor_;
 };
 
 class AlbumRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     AlbumRequest(Thumbnailer* thumbnailer,
                  string const& artist,
@@ -181,7 +225,7 @@ public:
                  chrono::milliseconds timeout);
 
 protected:
-    ImageData fetch(QSize const& size_hint) override;
+    ImageData fetch(QSize const& size_hint) noexcept override;
     void download(std::chrono::milliseconds timeout) override;
 
 private:
@@ -192,7 +236,14 @@ private:
 
 class ArtistRequest : public RequestBase
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     ArtistRequest(Thumbnailer* thumbnailer,
                   string const& artist,
@@ -201,7 +252,7 @@ public:
                   chrono::milliseconds timeout);
 
 protected:
-    ImageData fetch(QSize const& size_hint) override;
+    ImageData fetch(QSize const& size_hint) noexcept override;
     void download(std::chrono::milliseconds timeout) override;
 
 private:
@@ -247,15 +298,34 @@ RequestBase::RequestBase(Thumbnailer* thumbnailer,
 // size, store the scaled version to the thumbnail cache and return
 // it.
 
-string RequestBase::thumbnail()
+QByteArray RequestBase::thumbnail()
 {
     try
     {
-        QSize target_size = requested_size_.isValid()
-                                ? requested_size_
-                                : QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
+        // This is logged here as well as on the Qt/QML side because,
+        // at least in theory, someone could talk to the DBus interface
+        // directly without going through the official client-side API.
+        if (!requested_size_.isValid())
+        {
+            QString msg;
+            QTextStream s(&msg, QIODevice::WriteOnly);
+            s << "invalid size: " << "(" << requested_size_.width() << "," << requested_size_.height()
+              << ")";
+            qWarning().nospace().noquote() << msg << ", key = " << QString::fromStdString(printable_key());
+            throw invalid_argument(msg.toStdString());
+        }
 
-        // desired_size is (0,0) if the caller wants original size.
+        // Enforce size limitation.
+        auto target_size = QSize(thumbnailer_->max_size_, thumbnailer_->max_size_);
+        if (requested_size_.width() != 0)
+        {
+            target_size.setWidth(min(requested_size_.width(), thumbnailer_->max_size_));
+        }
+        if (requested_size_.height() != 0)
+        {
+            target_size.setHeight(min(requested_size_.height(), thumbnailer_->max_size_));
+        }
+
         string sized_key = key_;
         sized_key += '\0';
         sized_key += to_string(target_size.width());
@@ -263,11 +333,13 @@ string RequestBase::thumbnail()
         sized_key += to_string(target_size.height());
 
         // Check if we have the thumbnail in the cache already.
+        assert(thumbnailer_);
+        assert(thumbnailer_->thumbnail_cache_);
         auto thumbnail = thumbnailer_->thumbnail_cache_->get(sized_key);
         if (thumbnail)
         {
             status_ = FetchStatus::cache_hit;
-            return *thumbnail;
+            return QByteArray::fromStdString(*thumbnail);
         }
 
         // Don't have the thumbnail yet, see if we have the original image around.
@@ -277,6 +349,7 @@ string RequestBase::thumbnail()
         {
             status_ = ThumbnailRequest::FetchStatus::scaled_from_fullsize;
             scaled_image = Image(*full_size, target_size);
+            full_size = "";  // Release memory
         }
         else
         {
@@ -289,16 +362,30 @@ string RequestBase::thumbnail()
                 status_ = ThumbnailRequest::FetchStatus::cached_failure;
                 return "";
             }
-            auto image_data = fetch(target_size);
+
+            ImageData image_data = fetch(target_size);
             status_ = image_data.status;
             switch (status_)
             {
                 case FetchStatus::downloaded:      // Success, we'll return the thumbnail below.
+                    if (image_data.location == Location::remote)
+                    {
+                        thumbnailer_->backoff_.reset();
+                    }
                     break;
                 case FetchStatus::needs_download:  // Caller will call download().
+                    if (image_data.location == Location::remote)
+                    {
+                        // If we had the last failure within the retry limit, don't attempt the download.
+                        if (!thumbnailer_->backoff_.retry_ok())
+                        {
+                            qWarning() << "RequestBase::thumbnail(): server access retry time not reached yet";
+                            status_ = ThumbnailRequest::FetchStatus::temporary_error;
+                        }
+                    }
                     return "";
-                case FetchStatus::no_network:      // Network down, try again next time.
-                    return "";
+                case FetchStatus::network_down:    // Try again next time.
+                    return "";  // LCOV_EXCL_LINE  // No way to test this without physically disabling network.
                 case FetchStatus::not_found:
                 {
                     // Authoritative answer that artwork does not exist.
@@ -311,24 +398,48 @@ string RequestBase::thumbnail()
                         later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_not_found_hours_);
                     }
                     thumbnailer_->failure_cache_->put(key_, "", later);
-                    return "";
-                }
-                case FetchStatus::error:
-                {
-                    // Some non-authoritative failure, such as the server not responding,
-                    // or an out-of-process codec crashing.
-                    // For local files, we don't set an expiry time because, if the file is
-                    // changed, (say, its permissions change), the file's key will change too.
-                    // For remote files, we try again after two hours.
-                    chrono::time_point<std::chrono::system_clock> later;  // Infinite expiry time
                     if (image_data.location == Location::remote)
                     {
-                        later = chrono::system_clock::now() + chrono::hours(thumbnailer_->retry_error_hours_);
+                        // Even though we didn't get an image, the request itself worked.
+                        thumbnailer_->backoff_.reset();
                     }
-                    thumbnailer_->failure_cache_->put(key_, "", later);
-                    // TODO: That's really poor. Should store the error data so we can produce
-                    //       a proper diagnostic.
-                    throw runtime_error("fetch() failed");
+                    return "";
+                }
+                case FetchStatus::hard_error:
+                {
+                    // No chance of recovery, the problem is with the request data.
+                    thumbnailer_->failure_cache_->put(key_, "");
+                    if (image_data.location == Location::remote)
+                    {
+                        // Even though we didn't get an image, the request itself worked.
+                        thumbnailer_->backoff_.reset();
+                    }
+                    return "";
+                }
+                case FetchStatus::temporary_error:
+                {
+                    // Extraction failure for local media is always a hard error.
+                    assert(image_data.location == Location::remote);
+
+                    // Some non-authoritative failure, such as the server not responding.
+                    if (thumbnailer_->backoff_.adjust_retry_limit())
+                    {
+                        qWarning() << "RequestBase::thumbnail(): unexpected download error, disabling server access for"
+                                   << thumbnailer_->backoff_.backoff_period().count() << "seconds";
+                    }
+                    return "";
+                }
+                case FetchStatus::timeout:
+                {
+                    // Extraction for local media never returns a timeout error.
+                    assert(image_data.location == Location::remote);
+
+                    // We do not treat remote request timeout as a temporary error because the
+                    // remote server can be slow when 7digital is slow, which happens quite often.
+                    qWarning() << "RequestBase::thumbnail(): request timed out";
+                    // No backoff reset here. Timeouts are like requests that don't return an image,
+                    // except that timeout is not authoritative.
+                    return "";
                 }
                 default:
                     abort();  // LCOV_EXCL_LINE  // Impossible
@@ -341,31 +452,40 @@ string RequestBase::thumbnail()
             // artwork a second time.
             if (image_data.cache_policy == CachePolicy::cache_fullsize)
             {
-                Image full_size_image = image_data.image;
-                auto w = full_size_image.width();
-                auto h = full_size_image.height();
+                auto w = image_data.image.width();
+                auto h = image_data.image.height();
                 auto max_size = thumbnailer_->max_size_;
                 if (max(w, h) > max_size)
                 {
                     // Don't put ridiculously large images into the full-size cache.
-                    full_size_image = full_size_image.scale(QSize(max_size, max_size));
+                    // We scale in place here to release memory immediately. This
+                    // might cause a second scaling operation below, but the
+                    // quality loss is negligible when scaling from something larger
+                    // than max_size to max_size, and then scaling a second time.
+                    image_data.image = image_data.image.scale(QSize(max_size, max_size));
                 }
-                thumbnailer_->full_size_cache_->put(key_, full_size_image.to_jpeg(90));  // Keep high-quality image.
+                thumbnailer_->full_size_cache_->put(key_, image_data.image.to_jpeg(90));  // Keep high-quality image.
             }
             // If the image is already within the target dimensions, this
             // will be a no-op.
             scaled_image = image_data.image.scale(target_size);
+            image_data.image = Image();
         }
 
         string jpeg = scaled_image.to_jpeg();
+        scaled_image = Image();
         thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
-        return jpeg;
+        return QByteArray::fromStdString(jpeg);
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
-        status_ = FetchStatus::error;
-        throw unity::ResourceException("RequestBase::thumbnail(): key = " + printable_key());
+        // Something totally unexpected happened.
+        string msg = "RequestBase::thumbnail(): key = " + printable_key() + ": " + e.what();
+        qCritical() << QString::fromStdString(msg);
+        throw unity::ResourceException(msg);
     }
+    // LCOV_EXCL_STOP
 }
 
 ThumbnailRequest::FetchStatus RequestBase::status() const
@@ -379,7 +499,6 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
                                              chrono::milliseconds timeout)
     : RequestBase(thumbnailer, "", requested_size, timeout)
     , filename_(filename)
-    , fd_(-1, do_close)
 {
     // We canonicalise the path name both to avoid caching the file
     // multiple times, and to ensure our access checks are against the
@@ -393,6 +512,13 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
         throw runtime_error("LocalThumbnailRequest(): Could not stat " + filename_ + ": " + safe_strerror(errno));
         // LCOV_EXCL_STOP
     }
+
+    if (!S_ISREG(st.st_mode))
+    {
+        throw runtime_error("LocalThumbnailRequest(): '" + filename_ + "' is not a regular file");
+    }
+
+    filesize_ = st.st_size;
 
     // The full cache key for the file is the concatenation of path
     // name, inode, modification time, and inode modification time
@@ -428,56 +554,105 @@ void LocalThumbnailRequest::check_client_credentials(uid_t user,
 
 }
 
+// Animated GIFs can do terrible things to memory consumption (see lp:1527315).
+// Trying deal with animated GIFs cheaply is far more effort than it is worth
+// because we would have to use async APIs for image extraction to avoid the
+// memory problems. So, we just enforce an arbitrary limit of 2 MB. This allows
+// smallish animated GIFs, and it normal GIFs of reasonable size.
 
-RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint)
+void LocalThumbnailRequest::verify_image_is_acceptable(string const& content_type)
 {
-    if (image_extractor_)
+    auto constexpr max_gif_size = 2 * 1024 * 1024;
+    if (content_type == "image/gif" && filesize_ > max_gif_size)
     {
-        // The image data has been extracted via vs-thumb
-        return ImageData(Image(image_extractor_->data()), CachePolicy::cache_fullsize, Location::local);
+        string msg = "LocalThumbnailRequest::fetch(): GIF image " + filename_ +
+                     " exceeds maximum file size of " + to_string(max_gif_size) + " bytes";
+        qDebug() << msg.c_str();
+        throw runtime_error(msg);
     }
+}
 
-    // Work out content type.
-    gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
-    assert(file);  // Cannot fail according to doc.
-
-    gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                                               G_FILE_QUERY_INFO_NONE,
-                                               /* cancellable */ NULL,
-                                               /* error */ NULL));  // TODO: need decent error reporting
-    if (!info)
+RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noexcept
+{
+    // Default in case something below throws.
+    ImageData image_data(FetchStatus::hard_error, CachePolicy::dont_cache_fullsize, Location::local);
+    try
     {
-        return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
-    }
+        if (image_extractor_)
+        {
+            // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
+            image_data.cache_policy = CachePolicy::cache_fullsize;
+            return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
+        }
 
-    string content_type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-    if (content_type.empty())
-    {
-        return ImageData(FetchStatus::error, Location::local);  // LCOV_EXCL_LINE
-    }
+        // Work out content type.
+        gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
+        assert(file);  // Cannot fail according to doc.
 
-    fd_.reset(open(filename_.c_str(), O_RDONLY | O_CLOEXEC));
-    if (fd_.get() < 0)
-    {
-        // LCOV_EXCL_START
-        throw runtime_error("LocalThumbnailRequest(): Could not open " + filename_ + ": " + safe_strerror(errno));
-        // LCOV_EXCL_STOP
-    }
+        gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
+                                                   G_FILE_QUERY_INFO_NONE,
+                                                   /* cancellable */ NULL,
+                                                   /* error */ NULL));
+        string content_type = "application/octet-stream";
+        if (info)
+        {
+            string content_type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
+            if (content_type.empty())
+            {
+                return image_data;  // LCOV_EXCL_LINE
+            }
+        }
 
-    // Call the appropriate image extractor and return the image data as JPEG (not scaled).
-    // We indicate that full-size images are to be cached only for audio and video files,
-    // for which extraction is expensive. For local images, we don't cache full size.
+        if (content_type == "application/octet-stream")
+        {
+            // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
+            // for all files without an extension (as it only uses the extension to
+            // determine file type). In these cases, we fall back to the full content
+            // type detector.
+            gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
+                                                            G_FILE_QUERY_INFO_NONE,
+                                                            /* cancellable */ NULL,
+                                                            /* error */ NULL));  // TODO: need decent error reporting
+            if (!full_info)
+            {
+                return image_data;  // LCOV_EXCL_LINE
+            }
 
-    if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
-    {
-        return ImageData(FetchStatus::needs_download, Location::local);
+            content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
+            if (content_type.empty())
+            {
+                return image_data;  // LCOV_EXCL_LINE
+            }
+        }
+
+        // Call the appropriate image extractor and return the image data as JPEG (not scaled).
+        // We indicate that full-size images are to be cached only for audio and video files,
+        // for which extraction is expensive. For local images, we don't cache full size.
+
+        if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
+        {
+            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
+        }
+        if (content_type.find("image/") == 0)
+        {
+            verify_image_is_acceptable(content_type);  // Throws if no good.
+            FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
+            if (fd.get() < 0)
+            {
+                // LCOV_EXCL_START
+                throw runtime_error("LocalThumbnailRequest::fetch(): Could not open " + filename_ + ": " + safe_strerror(errno));
+                // LCOV_EXCL_STOP
+            }
+            Image scaled(fd.get(), size_hint);
+            return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+        }
     }
-    if (content_type.find("image/") == 0)
+    catch (std::exception const& e)
     {
-        Image scaled(fd_.get(), size_hint);
-        return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+        set_error_message(e.what());
+        return image_data;
     }
-    return ImageData(FetchStatus::not_found, Location::local);
+    return ImageData(FetchStatus::not_found, image_data.cache_policy, Location::local);
 }
 
 void LocalThumbnailRequest::download(chrono::milliseconds timeout)
@@ -486,7 +661,7 @@ void LocalThumbnailRequest::download(chrono::milliseconds timeout)
     {
         timeout = timeout_;
     }
-    image_extractor_.reset(new ImageExtractor(fd_.get(), timeout));
+    image_extractor_.reset(new ImageExtractor(filename_, timeout));
     connect(image_extractor_.get(), &ImageExtractor::finished, this, &LocalThumbnailRequest::downloadFinished,
             Qt::DirectConnection);
     image_extractor_->extract();
@@ -509,34 +684,62 @@ namespace
 // Logic for AlbumRequest::fetch() and ArtistRequest::fetch() is the same,
 // so we use this helper function for both.
 
-RequestBase::ImageData common_fetch(shared_ptr<ArtReply> const& artreply)
+RequestBase::ImageData common_fetch(RequestBase* request, shared_ptr<ArtReply> const& artreply) noexcept
 {
+    assert(request);
+
+    RequestBase::ImageData image_data(RequestBase::FetchStatus::needs_download,
+                                      RequestBase::CachePolicy::cache_fullsize,
+                                      Location::remote);
     if (!artreply)
     {
-        return RequestBase::ImageData(RequestBase::FetchStatus::needs_download, Location::remote);
+        return image_data;
     }
-    if (artreply->succeeded())
+    request->set_error_message(artreply->error_string().toStdString());  // Default for below.
+    switch (artreply->status())
     {
-        auto raw_data = artreply->data();
-        Image full_size(string(raw_data.data(), raw_data.size()));
-        return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
+        case ArtReply::Status::success:
+        {
+            try
+            {
+                auto raw_data = artreply->data();
+                Image full_size(string(raw_data.constData(), raw_data.size()));
+                return RequestBase::ImageData(full_size, RequestBase::CachePolicy::cache_fullsize, Location::remote);
+            }
+            catch (std::exception const& e)
+            {
+                request->set_error_message(e.what());
+                image_data.status = RequestBase::FetchStatus::hard_error;
+                return image_data;
+            }
+        }
+        case ArtReply::Status::not_found:
+            image_data.status = RequestBase::FetchStatus::not_found;
+            return image_data;
+        case ArtReply::Status::temporary_error:
+            image_data.status = RequestBase::FetchStatus::temporary_error;
+            return image_data;
+        case ArtReply::Status::hard_error:
+            image_data.status = RequestBase::FetchStatus::hard_error;
+            return image_data;
+        case ArtReply::Status::timeout:
+            image_data.status = RequestBase::FetchStatus::timeout;
+            return image_data;
+        case ArtReply::Status::network_down:
+            // LCOV_EXCL_START
+            image_data.status = RequestBase::FetchStatus::network_down;
+            return image_data;
+            // LCOV_EXCL_STOP
+        default:
+            abort();  // LCOV_EXCL_LINE  // Impossible
     }
-    if (artreply->not_found_error())
-    {
-        return RequestBase::ImageData(RequestBase::FetchStatus::not_found, Location::remote);
-    }
-    if (artreply->network_down())
-    {
-        return RequestBase::ImageData(RequestBase::FetchStatus::no_network, Location::remote);
-    }
-    return RequestBase::ImageData(RequestBase::FetchStatus::error, Location::remote);
 }
 
 }  // namespace
 
-RequestBase::ImageData AlbumRequest::fetch(QSize const& /*size_hint*/)
+RequestBase::ImageData AlbumRequest::fetch(QSize const& /*size_hint*/) noexcept
 {
-    return common_fetch(artreply_);
+    return common_fetch(this, artreply_);
 }
 
 void AlbumRequest::download(chrono::milliseconds timeout)
@@ -560,9 +763,9 @@ ArtistRequest::ArtistRequest(Thumbnailer* thumbnailer,
 {
 }
 
-RequestBase::ImageData ArtistRequest::fetch(QSize const& /*size_hint*/)
+RequestBase::ImageData ArtistRequest::fetch(QSize const& /*size_hint*/) noexcept
 {
-    return common_fetch(artreply_);
+    return common_fetch(this, artreply_);
 }
 
 void ArtistRequest::download(chrono::milliseconds timeout)
@@ -572,62 +775,61 @@ void ArtistRequest::download(chrono::milliseconds timeout)
         timeout = timeout_;
     }
     artreply_ = downloader()->download_artist(QString::fromStdString(artist_), QString::fromStdString(album_), timeout);
-    connect(artreply_.get(), &ArtReply::finished, this, &ThumbnailRequest::downloadFinished, Qt::DirectConnection);
+    connect(artreply_.get(), &ArtReply::finished, this, &ArtistRequest::downloadFinished, Qt::DirectConnection);
 }
 
 namespace
 {
 
-core::PersistentStringCache::UPtr init_cache(string const& path,
-                                             int64_t size,
-                                             core::CacheDiscardPolicy policy)
-{
-    try
-    {
-        return core::PersistentStringCache::open(path, size, policy);
-    }
-    catch (logic_error const&)
-    {
-        // Cache size has changed.
-        auto cache = core::PersistentStringCache::open(path);
-        cache->resize(size);
-        return cache;
-    }
-}
+// Keys under which we store the last time we had a network failure
+// and the current backoff period (in seconds).
+// No entry in the failure cache ever has these keys because keys for
+// local files include inode number and modification times.
+string const LAST_NETWORK_FAIL_TIME_KEY = "/*** LAST_NETWORK_FAIL_TIME ***/";
+string const BACKOFF_PERIOD_KEY = "/*** BACKOFF_PERIOD ***/";
 
 }
 
 Thumbnailer::Thumbnailer()
     : downloader_(new UbuntuServerDownloader())
 {
-    string xdg_base = g_get_user_cache_dir();
-    if (xdg_base == "")
-    {
-        // LCOV_EXCL_START
-        string s("Thumbnailer(): Could not determine cache dir.");
-        throw runtime_error(s);
-        // LCOV_EXCL_STOP
-    }
-
+    string xdg_base = g_get_user_cache_dir();  // Always returns something, even HOME and XDG_CACHE_HOME are not set.
     string cache_dir = xdg_base + "/unity-thumbnailer";
     make_directories(cache_dir, 0700);
 
     try
     {
         Settings settings;
-        full_size_cache_ = init_cache(cache_dir + "/images",
-                                      settings.full_size_cache_size() * 1024 * 1024,
-                                      core::CacheDiscardPolicy::lru_only);
-        thumbnail_cache_ = init_cache(cache_dir + "/thumbnails",
-                                      settings.thumbnail_cache_size() * 1024 * 1024,
-                                      core::CacheDiscardPolicy::lru_only);
-        failure_cache_ = init_cache(cache_dir + "/failures",
-                                    settings.failure_cache_size() * 1024 * 1024,
-                                    core::CacheDiscardPolicy::lru_ttl);
+        full_size_cache_ = move(PersistentCacheHelper::open(cache_dir + "/images",
+                                                            settings.full_size_cache_size() * 1024 * 1024,
+                                                            core::CacheDiscardPolicy::lru_only));
+        thumbnail_cache_ = move(PersistentCacheHelper::open(cache_dir + "/thumbnails",
+                                                            settings.thumbnail_cache_size() * 1024 * 1024,
+                                                            core::CacheDiscardPolicy::lru_only));
+        failure_cache_ = move(PersistentCacheHelper::open(cache_dir + "/failures",
+                                                          settings.failure_cache_size() * 1024 * 1024,
+                                                          core::CacheDiscardPolicy::lru_ttl));
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
-        retry_error_hours_ = settings.retry_error_hours();
         extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout() * 1000);
+        backoff_.set_min_backoff(chrono::seconds(settings.extraction_timeout() * 2));
+        backoff_.set_max_backoff(chrono::seconds(settings.retry_error_max_seconds()));
+
+        // For transient remote errors, we read the time at which the last failure
+        // happened and the backoff period. The destructor writes these values back out,
+        // so we remember the values across re-starts. We call contains_key() to avoid generating
+        // a bogus cache miss in the stats.
+        if (failure_cache_->contains_key(LAST_NETWORK_FAIL_TIME_KEY))
+        {
+            auto last_fail_time = failure_cache_->get(LAST_NETWORK_FAIL_TIME_KEY);
+            auto fail_time_point = chrono::system_clock::time_point(chrono::seconds(stoll(*last_fail_time)));
+            backoff_.set_last_fail_time(fail_time_point);
+        }
+        if (failure_cache_->contains_key(BACKOFF_PERIOD_KEY))
+        {
+            auto backoff = failure_cache_->get(BACKOFF_PERIOD_KEY);
+            backoff_.set_backoff_period(chrono::seconds(stoll(*backoff)));
+        }
     }
     catch (std::exception const& e)
     {
@@ -635,7 +837,26 @@ Thumbnailer::Thumbnailer()
     }
 }
 
-Thumbnailer::~Thumbnailer() = default;
+Thumbnailer::~Thumbnailer()
+{
+    try
+    {
+        auto seconds = chrono::duration_cast<chrono::seconds>(backoff_.last_fail_time().time_since_epoch()).count();
+        failure_cache_->put(LAST_NETWORK_FAIL_TIME_KEY, to_string(seconds));
+        seconds = backoff_.backoff_period().count();
+        failure_cache_->put(BACKOFF_PERIOD_KEY, to_string(seconds));
+    }
+    // LCOV_EXCL_START
+    catch (std::exception const& e)
+    {
+        qDebug() << "~Thumbnailer(): cannot update network failure time:" << e.what();
+    }
+    catch (...)
+    {
+        qDebug() << "~Thumbnailer(): cannot update network failure time: unknown exception";
+    }
+    // LCOV_EXCL_STOP
+}
 
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
                                                         QSize const& requested_size)
@@ -657,9 +878,9 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_album_art(string const& artist,
                                                         string const& album,
                                                         QSize const& requested_size)
 {
-    if (artist.empty() && album.empty())
+    if (album.empty())
     {
-        throw unity::InvalidArgumentException("Thumbnailer::get_album_art(): both artist and album are empty");
+        throw unity::InvalidArgumentException("Thumbnailer::get_album_art(): album is empty");
     }
 
     try
@@ -678,9 +899,9 @@ unique_ptr<ThumbnailRequest> Thumbnailer::get_artist_art(string const& artist,
                                                          string const& album,
                                                          QSize const& requested_size)
 {
-    if (artist.empty() && album.empty())
+    if (artist.empty())
     {
-        throw unity::InvalidArgumentException("Thumbnailer::get_artist_art(): both artist and album are empty");
+        throw unity::InvalidArgumentException("Thumbnailer::get_artist_art(): artist is empty");
     }
 
     try
@@ -723,12 +944,33 @@ Thumbnailer::CacheVec Thumbnailer::select_caches(CacheSelector selector) const
     return v;
 }
 
+namespace
+{
+
+char const* cache_name(Thumbnailer::CacheSelector selector)
+{
+    switch (selector)
+    {
+        case Thumbnailer::CacheSelector::full_size_cache:
+            return "image cache";
+        case Thumbnailer::CacheSelector::thumbnail_cache:
+            return "thumbnail cache";
+        case Thumbnailer::CacheSelector::failure_cache:
+            return "failure cache";
+        default:
+            return "all caches";
+    }
+}
+
+}
+
 void Thumbnailer::clear_stats(CacheSelector selector)
 {
     for (auto c : select_caches(selector))
     {
         c->clear_stats();
     }
+    qDebug() << "reset statistics for" << cache_name(selector);
 }
 
 void Thumbnailer::clear(CacheSelector selector)
@@ -737,14 +979,25 @@ void Thumbnailer::clear(CacheSelector selector)
     {
         c->invalidate();
     }
+    if (selector == Thumbnailer::CacheSelector::failure_cache ||
+        selector == Thumbnailer::CacheSelector::all)
+    {
+        // Force retry on next remote retrieval even if we
+        // are still within the timeout period.
+        backoff_.set_last_fail_time(chrono::system_clock::time_point())
+                .set_backoff_period(chrono::seconds(0));
+    }
+    qDebug() << "cleared" << cache_name(selector);
 }
 
 void Thumbnailer::compact(CacheSelector selector)
 {
+    qDebug() << "compacting" << cache_name(selector);
     for (auto c : select_caches(selector))
     {
         c->compact();
     }
+    qDebug() << "completed compacting" << cache_name(selector);
 }
 
 }  // namespace internal

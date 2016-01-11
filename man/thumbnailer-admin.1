@@ -1,0 +1,296 @@
+.TH thumbnailer\-admin 1 "05 August 2015" "Ubuntu" "Linux User's Manual"
+
+.SH NAME
+thumbnailer\-admin \- Thumbnailer administrative tool
+
+.SH SYNOPSIS
+.B thumbnailer\-admin
+.I command
+.RI [ options ]
+.br
+
+.SH DESCRIPTION
+The \fBthumbnailer\-admin\fP program provides a simple administrative tool to access
+the \fBthumbnailer\-service\fP(1), for example, to retrieve a thumbnail, display
+statistics, or selectively clear one ore more of the service's internal caches.
+.SS "Internal caches"
+The thumbnailer service maintains three internal caches:
+.TP
+Image cache
+The image cache stores images that are expensive to retrieve (namely
+images downloaded from the image server (dash.ubuntu.com) or extracted from audio
+or video files). Images in the this cache are kept at high resolution,
+up to a limit of \fBmax\-thumbnail\-size\fP (usually 1920) pixels in the larger dimension (see
+\fBthumbnailer\-settings\fR(5)). The image cache
+is used to create thumbnails at smaller sizes that are then inserted
+into the thumbnail cache (to avoid repeated download or extraction
+of the original images).
+.TP
+Thumbnail cache
+The thumbnail cache stores images that are scaled to a size that was previously requested
+by a client. If a client asks for a thumbnail that was previously generated at the same size,
+it is returned from this cache.
+.TP
+Failure cache
+The failure cache contains the keys for media (local or remote) for which no thumbnail
+could be generated, either because a local file does not contain artwork, or because
+the image server has returned an authoritative answer that no image is available.
+If a client asks for an image that is in the failure cache, the service does not
+try to create a thumbnail for some period of time, to avoid expensive repeated
+attempts to retrieve artwork that does not exist.
+.P
+Commands that can selectively be applied to these caches use the following \fIcache\-id\fP:
+.TP
+.B i
+Image cache
+.TP
+.B t
+Thumbnail cache
+.TP
+.B f
+Failure cache
+.SS "Sizes and scaling"
+Thumbnails are never larger than \fBmax\-thumbnail\-size\fP in the larger dimension (usually 1920,
+see \fBthumbnailer\-settings\fR(5)), even if a larger size is requested.
+
+Commands that create thumbnails expect a size in pixels to be specified as follows:
+.TP
+\fIwidth\fP\fBx\fP\fIheight\fP
+Create a thumbnail scaled to fit a bounding box of \fIwidth\fP and \fIheight\fP, for example,
+\fB\-\-size 640x480\fP. If only a single dimension is provided, the thumbnail is scaled to fit into
+a square bounding box of the specified size, for example, \fB\-s 256\fP.
+.IP
+Specifying a size with one dimension explicitly set to zero leaves that dimension unconstrained. For
+example, \fB\-\-size 0x480\fP produces a thumbnail no taller than 480 pixels of any width,
+(subject to the \fBmax\-thumbnail\-size\fP limit).
+.IP
+Specifying a size of zero (or not specifying any size) is equivalent to specifying \fBmax\-thumbnail\-size\fP
+in both dimensions.
+.IP
+Scaling always maintains the aspect ratio of the original image, and ensures that a thumbnail
+has a size of at least one pixel in the smaller dimension.
+.IP
+Requests for thumbnails that are larger than the original image are automatically reduced to the original
+image size, that is, original artwork is never scaled up.
+.SS "Media formats and output files"
+Most common image formats, such as PNG, JPEG, BMP, and so on, are recognized. For streaming media, the
+recognized formats depend on the installed gstreamer codecs.
+.P
+Thumbnails are always returned in JPEG format, regardless of the encoding of the original image. The generated
+thumbnail file is tagged with the requested (not actual) image size. For example,
+.IP
+.RS
+.B thumbnailer\-admin get \-\-size=320x240 screen.png
+.RE
+.P
+creates a file named \fBscreen_320x480.jpg\fP.
+
+.SH COMMAND OVERVIEW
+.TP
+.B thumbnailer\-admin clear \fR[\fIcache\-id\fR]
+Clear all internal caches.
+.TP
+.B thumbnailer\-admin stats \fR[\fIcache\-id\fR]
+Display cache statistics.
+.TP
+.B thumbnailer\-admin zero\-stats \fR[\fIcache\-id\fR]
+Zero statistics counters.
+.TP
+.B thumbnailer\-admin get file \fR[\fIdir\fR]
+Get a thumbnail from a file.
+.TP
+.B thumbnailer\-admin get\-artist artist album \fR[\fIdir\fR]
+Get an artist thumbnail from the image server.
+.TP
+.B thumbnailer\-admin get\-album artist album \fR[\fIdir\fR]
+Get an album thumbnail from the image server.
+.TP
+.B thumbnailer\-admin compact
+Compact internal caches.
+.TP
+.B thumbnailer\-admin shutdown
+Shut down the thumbnailer service.
+
+.SH COMMAND REFERENCE
+.B thumbnailer\-admin \-\-help
+.br
+.B thumbnailer\-admin \-h
+.RS
+Display a general help message for all commands.
+.RE
+
+.P
+.B thumbnailer\-admin clear \fR[\fIcache\-id\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.P
+Clear all three internal caches. If \fIcache\-id\fP is provided, clear only the selected cache.
+.RE
+
+.P
+.B thumbnailer\-admin stats \fR[\fIcache\-id\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.RS
+.B \-\-verbose
+.br
+.B \-v
+.RS
+Show histogram of entry sizes.
+.RE
+.RE
+.P
+Display detailed cache statistics. If \fIcache\-id\fP is provided, limit the display to the selected cache.
+.RE
+
+.P
+.B thumbnailer\-admin zero\-stats \fR[\fIcache\-id\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.P
+Reset the statistics counters and timestamps to zero. If \fIcache\-id\fP is provided, reset the
+statistics only for the selected cache.
+.RE
+
+.P
+.B thumbnailer\-admin get file \fR[\fIdir\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.RS
+.B \-\-size \fIpixels\fP
+.br
+.B \-\-s \fIpixels\fP
+.RS
+Set the thumbnail size.
+.RE
+.RE
+.P
+Extract a thumbnail from the specified media \fBfile\fP.
+.P
+If \fIdir\fP is specified, place the thumbnail into the specified directory (default: current directory).
+.RE
+
+.P
+.B thumbnailer\-admin get\-artist artist album \fR[\fIdir\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.RS
+.B \-\-size \fIpixels\fP
+.br
+.B \-\-s \fIpixels\fP
+.RS
+Set the thumbnail size.
+.RE
+.RE
+.P
+Retrieve artist artwork for the specified \fBartist\fP and \fBalbum\fP. It is necessary to specify an album
+title because artist names alone can be ambiguous.
+.P
+If \fIdir\fP is specified, place the thumbnail into the specified directory (default: current directory).
+.RE
+
+.P
+.B thumbnailer\-admin get\-album artist album \fR[\fIdir\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.RS
+.B \-\-size \fIpixels\fP
+.br
+.B \-\-s \fIpixels\fP
+.RS
+Set the thumbnail size.
+.RE
+.RE
+.P
+Retrieve album cover artwork for the specified \fBartist\fP and \fBalbum\fP.
+.P
+If \fIdir\fP is specified, place the thumbnail into the specified directory (default: current directory).
+.RE
+
+.P
+.B thumbnailer\-admin compact \fR[\fIcache\-id\fR]
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.P
+Compact all three internal caches so the take up the smallest possible amount of disk space. If \fIcache\-id\fP is provided, clear only the selected cache.
+.P
+After some time of use, the on\-disk size of a cache can be 25\(en30% larger than its nominal size. Compaction reclaims
+the wasted space, but is slow and, while in progress, other thumbnail requests are delayed until compaction completes.
+(It can take tens of seconds to compact a cache with a nominal size of 100 MB, depending on the speed of the hardware.)
+.RE
+
+.P
+.B thumbnailer\-admin shutdown
+.RS
+Options:
+.RS
+.B \-\-help
+.br
+.B \-h
+.RS
+Show help message.
+.RE
+.RE
+.P
+Shut down the thumbnailer service. This is useful mainly after changing settings (which are read only once when the
+service starts).
+.RE
+
+.SH "SEE ALSO"
+.B thumbnailer\-service\fR(1)\fP, thumbnailer\-settings\fR(5)\fP

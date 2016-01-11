@@ -16,32 +16,50 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <cstdio>
-#include <cstdlib>
-#include <memory>
-#include <stdexcept>
-#include <string>
+#include <testsetup.h>
+#include <internal/gobj_memory.h>
+#include <utils/supports_decoder.h>
+#include "../src/vs-thumb/thumbnailextractor.h"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wcast-align"
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gio/gio.h>
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif
 #include <gst/gst.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #pragma GCC diagnostic pop
 #include <gtest/gtest.h>
 
-#include <testsetup.h>
-#include <internal/gobj_memory.h>
-#include "../src/vs-thumb/thumbnailextractor.h"
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 using namespace unity::thumbnailer::internal;
 
 const char THEORA_TEST_FILE[] = TESTDATADIR "/testvideo.ogg";
-const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/gegl-landscape.mp4";
-const char MP4_PORTRAIT_TEST_FILE[] = TESTDATADIR "/gegl-portrait.mp4";
+const char MP4_LANDSCAPE_TEST_FILE[] = TESTDATADIR "/testvideo.mp4";
+const char MP4_ROTATE_90_TEST_FILE[] = TESTDATADIR "/testvideo-90.mp4";
+const char MP4_ROTATE_180_TEST_FILE[] = TESTDATADIR "/testvideo-180.mp4";
+const char MP4_ROTATE_270_TEST_FILE[] = TESTDATADIR "/testvideo-270.mp4";
+const char M4V_TEST_FILE[] = TESTDATADIR "/Forbidden Planet.m4v";
 const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
+const char AAC_TEST_FILE[] = TESTDATADIR "/testsong.m4a";
+const char MP3_TEST_FILE[] = TESTDATADIR "/testsong.mp3";
+const char MP3_NO_ARTWORK[] = TESTDATADIR "/no-artwork.mp3";
 
 class ExtractorTest : public ::testing::Test
 {
@@ -99,42 +117,6 @@ gobj_ptr<GdkPixbuf> load_image(const std::string& filename)
     return std::move(image);
 }
 
-bool supports_decoder(const std::string& format)
-{
-    static std::set<std::string> formats;
-
-    if (formats.empty())
-    {
-        std::unique_ptr<GList, decltype(&gst_plugin_feature_list_free)> decoders(
-            gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DECODER, GST_RANK_NONE),
-            gst_plugin_feature_list_free);
-        for (const GList* l = decoders.get(); l != nullptr; l = l->next)
-        {
-            const auto factory = static_cast<GstElementFactory*>(l->data);
-
-            const GList* templates = gst_element_factory_get_static_pad_templates(factory);
-            for (const GList* l = templates; l != nullptr; l = l->next)
-            {
-                const auto t = static_cast<GstStaticPadTemplate*>(l->data);
-                if (t->direction != GST_PAD_SINK)
-                {
-                    continue;
-                }
-
-                std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> caps(gst_static_caps_get(&t->static_caps),
-                                                                         gst_caps_unref);
-                for (unsigned int i = 0; i < gst_caps_get_size(caps.get()); i++)
-                {
-                    const auto structure = gst_caps_get_structure(caps.get(), i);
-                    formats.emplace(gst_structure_get_name(structure));
-                }
-            }
-        }
-    }
-
-    return formats.find(format) != formats.end();
-}
-
 TEST_F(ExtractorTest, extract_theora)
 {
     if (!supports_decoder("video/x-theora"))
@@ -144,15 +126,15 @@ TEST_F(ExtractorTest, extract_theora)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
+    EXPECT_EQ(1920, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(1080, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, extract_mp4)
@@ -164,18 +146,18 @@ TEST_F(ExtractorTest, extract_mp4)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(MP4_LANDSCAPE_TEST_FILE));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 1920);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1080);
+    EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
 }
 
-TEST_F(ExtractorTest, extract_mp4_rotation)
+TEST_F(ExtractorTest, extract_mp4_rotate_90)
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -184,30 +166,176 @@ TEST_F(ExtractorTest, extract_mp4_rotation)
     }
 
     ThumbnailExtractor extractor;
-    std::string outfile = tempdir + "/out.jpg";
-    extractor.set_uri(filename_to_uri(MP4_PORTRAIT_TEST_FILE));
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP4_ROTATE_90_TEST_FILE));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.save_screenshot(outfile);
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 720);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 1280);
+    EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_mp4_rotate_180)
+{
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP4_ROTATE_180_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_video_frame());
+    extractor.write_image(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(720, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_mp4_rotate_270)
+{
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP4_ROTATE_270_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_video_frame());
+    extractor.write_image(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
 }
 
 TEST_F(ExtractorTest, extract_vorbis_cover_art)
 {
     ThumbnailExtractor extractor;
 
-    std::string outfile = tempdir + "/out.jpg";
+    std::string outfile = tempdir + "/out.tiff";
     extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
     ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_audio_cover_art());
-    extractor.save_screenshot(outfile);
+    ASSERT_TRUE(extractor.extract_cover_art());
+    extractor.write_image(outfile);
 
     auto image = load_image(outfile);
-    EXPECT_EQ(gdk_pixbuf_get_width(image.get()), 200);
-    EXPECT_EQ(gdk_pixbuf_get_height(image.get()), 200);
+    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
 }
+
+TEST_F(ExtractorTest, extract_aac_cover_art)
+{
+    if (!supports_decoder("audio/x-aac"))
+    {
+        fprintf(stderr, "No support for AAC decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
+    ASSERT_FALSE(extractor.has_video());
+    ASSERT_TRUE(extractor.extract_cover_art());
+    extractor.write_image(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_mp3_cover_art)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
+    ASSERT_FALSE(extractor.has_video());
+    ASSERT_TRUE(extractor.extract_cover_art());
+    extractor.write_image(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, extract_m4v_cover_art)
+{
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_cover_art());
+    extractor.write_image(outfile);
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(1947, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(3000, gdk_pixbuf_get_height(image.get()));
+}
+
+TEST_F(ExtractorTest, no_artwork)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    std::string outfile = tempdir + "/out.tiff";
+    extractor.set_uri(filename_to_uri(MP3_NO_ARTWORK));
+    ASSERT_FALSE(extractor.has_video());
+    ASSERT_FALSE(extractor.extract_cover_art());
+}
+
+TEST_F(ExtractorTest, cant_write_to_stdout)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    ThumbnailExtractor extractor;
+
+    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_cover_art());
+
+    int new_stdout = dup(STDOUT_FILENO);
+    ASSERT_EQ(0, close(STDOUT_FILENO));
+
+    try
+    {
+        extractor.write_image("");
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_STREQ("write_image(): cannot write to stdout: Bad file descriptor", e.what());
+    }
+
+    ASSERT_EQ(STDOUT_FILENO, dup2(new_stdout, STDOUT_FILENO));
+    ASSERT_EQ(0, close(new_stdout));
+}
+
 
 TEST_F(ExtractorTest, file_not_found)
 {
@@ -215,8 +343,76 @@ TEST_F(ExtractorTest, file_not_found)
     EXPECT_THROW(extractor.set_uri(filename_to_uri(TESTDATADIR "/no-such-file.ogv")), std::runtime_error);
 }
 
+std::string vs_thumb_err_output(std::string const& args)
+{
+    namespace io = boost::iostreams;
+
+    static std::string const cmd = PROJECT_BINARY_DIR "/src/vs-thumb/vs-thumb";
+
+    FILE* p = popen((cmd + " " + args + " 2>&1 >/dev/null").c_str(), "r");
+    io::file_descriptor_source s(fileno(p), io::never_close_handle);
+    std::stringstream err_output;
+    io::copy(s, err_output);
+    pclose(p);
+    return err_output.str();
+}
+
+TEST(ExeTest, usage_1)
+{
+    auto err = vs_thumb_err_output("");
+    EXPECT_EQ("usage: vs-thumb source-file [output-file.tiff]\n", err) << err;
+}
+
+TEST(ExeTest, usage_2)
+{
+    auto err = vs_thumb_err_output("arg1 arg2.tiff arg3");
+    EXPECT_EQ("usage: vs-thumb source-file [output-file.tiff]\n", err) << err;
+}
+
+TEST(ExeTest, usage_3)
+{
+    auto err = vs_thumb_err_output("arg1 arg2");
+    EXPECT_EQ("vs-thumb: invalid output file name: arg2 (missing .tiff extension)\n", err) << err;
+}
+
+TEST(ExeTest, bad_uri)
+{
+    auto err = vs_thumb_err_output("file:///no_such_file");
+    EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
+}
+
+TEST(ExeTest, no_such_output_path)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    auto err = vs_thumb_err_output(std::string(MP3_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
+    EXPECT_NE(std::string::npos, err.find("write_image(): cannot open /no_such_dir/no_such_file.tiff: "
+              "No such file or directory")) << err;
+}
+
+TEST(ExeTest, no_artwork)
+{
+    if (!supports_decoder("audio/mpeg"))
+    {
+        fprintf(stderr, "No support for MP3 decoder\n");
+        return;
+    }
+
+    auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
+    auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
+    EXPECT_TRUE(boost::ends_with(err, msg)) << err;
+    boost::system::error_code ec;
+    EXPECT_FALSE(boost::filesystem::exists("xyz.tiff", ec));
+}
+
 int main(int argc, char** argv)
 {
+    setenv("LC_ALL", "C", true);
+
     ::testing::InitGoogleTest(&argc, argv);
     gst_init(&argc, &argv);
     return RUN_ALL_TESTS();

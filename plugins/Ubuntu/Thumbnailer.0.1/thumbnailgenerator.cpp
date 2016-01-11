@@ -18,8 +18,10 @@
 
 #include "thumbnailgenerator.h"
 
-#include "artgeneratorcommon.h"
-#include <service/dbus_names.h>
+#include <QDebug>
+#include <QUrl>
+
+#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace unity
@@ -31,23 +33,14 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailGenerator::ThumbnailGenerator()
+ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer)
     : QQuickAsyncImageProvider()
+    , thumbnailer(thumbnailer)
 {
 }
 
 QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
-    QSize size = requestedSize;
-    // TODO: Turn this into an error soonish.
-    if (!requestedSize.isValid())
-    {
-        qWarning().nospace() << "ThumbnailGenerator::requestImageResponse(): deprecated invalid QSize: "
-                             << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
-    }
-
     /* Allow appending a query string (e.g. ?something=timestamp)
      * to the id and then ignore it.
      * This is workaround to force reloading a thumbnail when it has
@@ -59,18 +52,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
 
-    if (!connection)
-    {
-        // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "thumbnail_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
-    }
-
-    auto reply = iface->GetThumbnail(src_path, size);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(
-        new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(size, std::move(watcher));
+    auto request = thumbnailer->getThumbnail(src_path, requestedSize);
+    return new ThumbnailerImageResponse(request);
 }
 
 }  // namespace qml

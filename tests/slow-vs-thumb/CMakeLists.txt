@@ -3,7 +3,7 @@ add_executable(slow-vs-thumb_test
 )
 qt5_use_modules(slow-vs-thumb_test Network Test)
 target_link_libraries(slow-vs-thumb_test
-    thumbnailer
+    thumbnailer-static
     testutils
     Qt5::Network
     Qt5::Test

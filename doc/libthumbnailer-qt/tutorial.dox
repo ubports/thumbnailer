@@ -1,0 +1,57 @@
+/*!
+\mainpage notitle
+
+\section overview Overview
+
+\subsection intro Introduction
+
+`libthumbnailer-qt.so` provides access to Unity's thumbnailer service (see the <b>thumbnailer-service</b>(1)
+man page). The implementation accesses the thumbnailer service via its DBus interface.
+
+Methods to retrieve thumbnails are asynchronous; you can also use them synchronously by calling
+\link unity::thumbnailer::qt::Request::waitForFinished() waitForFinished()\endlink on the
+\link unity::thumbnailer::qt::Request Request\endlink that is returned from the asynchronous methods.
+
+\subsection async Asynchronous API
+
+We'll use the following class definition to illustrate how to retrieve thumbnails asynchronously.
+(Note that this is a naive implementation; a more realistic implementation would allow
+multiple requests to be in progress.)
+
+\snippet examples/qt_example_test.cpp AsyncThumbnailProvider_definition
+
+To retrieve a thumbnail asynchronously, you call the
+\link unity::thumbnailer::qt::Thumbnailer::getThumbnail() getThumbnail()\endlink method.
+(If you are intersted in album covers and artist images, you will also need to create
+methods to retrieve those. The implementation is almost identical, so we do not show
+it here.)
+
+\link unity::thumbnailer::qt::Thumbnailer::getThumbnail() getThumbnail()\endlink does
+not block and returns a `QSharedPointer` to a
+\link unity::thumbnailer::qt::Request Request\endlink object, which emits
+emits a 
+\link unity::thumbnailer::qt::Request::finished() finished()\endlink signal
+once the request is complete. Therefore, our `getThumbnail()` implementation
+connects the request's
+\link unity::thumbnailer::qt::Request::finished() finished()\endlink signal
+to the `requestFinished()` slot of our class. The implementation of
+`requestFinished()` checks if the request succeeded; the caller
+can retrieve the actual image by calling the `image()` method.
+
+\snippet examples/qt_example_test.cpp AsyncThumbnailProvider_async_implementation
+
+\subsection sync Synchronous API
+
+For synchronous requests, we can use the following class:
+
+\snippet examples/qt_example_test.cpp SyncThumbnailProvider_definition
+
+The implementation is trivial: we simple start the request and wait for it
+to complete before returning the image:
+
+\snippet examples/qt_example_test.cpp SyncThumbnailProvider_implementation
+
+Note that \link unity::thumbnailer::qt::Request::waitForFinished() waitForFinished()\endlink
+can block the calling thread for several seconds, so
+do not call this from the UI thread.
+*/

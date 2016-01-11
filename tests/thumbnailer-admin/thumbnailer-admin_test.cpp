@@ -19,6 +19,7 @@
 #include "utils/artserver.h"
 #include "utils/dbusserver.h"
 
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <testsetup.h>
@@ -47,8 +48,7 @@ protected:
         ASSERT_NE(-1, chdir(temp_dir().c_str()));
         setenv("XDG_CACHE_HOME", qPrintable(tempdir->path() + "/cache"), true);
 
-        // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "3000", true);
+        setenv(MAX_IDLE, "3000", true);
 
         dbus_.reset(new DBusServer());
     }
@@ -62,7 +62,7 @@ protected:
     {
         dbus_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -123,6 +123,7 @@ TEST_F(AdminTest, image_stats)
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     auto output = ar.stdout();
     EXPECT_TRUE(output.find("Image cache:") != string::npos) << output;
+    EXPECT_TRUE(output.find("lru_only") != string::npos) << output;
     EXPECT_FALSE(output.find("Thumbnail cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Failure cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Histogram:") != string::npos) << output;
@@ -135,6 +136,7 @@ TEST_F(AdminTest, thumbnail_stats)
     auto output = ar.stdout();
     EXPECT_FALSE(output.find("Image cache:") != string::npos) << output;
     EXPECT_TRUE(output.find("Thumbnail cache:") != string::npos) << output;
+    EXPECT_TRUE(output.find("lru_only") != string::npos) << output;
     EXPECT_FALSE(output.find("Failure cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Histogram:") != string::npos) << output;
 }
@@ -147,6 +149,7 @@ TEST_F(AdminTest, failure_stats)
     EXPECT_FALSE(output.find("Image cache:") != string::npos) << output;
     EXPECT_FALSE(output.find("Thumbnail cache:") != string::npos) << output;
     EXPECT_TRUE(output.find("Failure cache:") != string::npos) << output;
+    EXPECT_TRUE(output.find("lru_ttl") != string::npos) << output;
     EXPECT_FALSE(output.find("Histogram:") != string::npos) << output;
 }
 
@@ -219,19 +222,19 @@ TEST_F(AdminTest, clear_stats_parsing)
     AdminRunner ar;
 
     // Too many args
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "i", "t"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "i", "t"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: too many arguments")) << ar.stderr();
 
     // Second arg wrong
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "foo"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "foo"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: invalid cache_id: foo")) << ar.stderr();
 
     // Bad option
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "foo", "-x"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "foo", "-x"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'x'.")) << ar.stderr();
 
     // Help option
-    EXPECT_EQ(1, ar.run(QStringList{"clear-stats", "-h"}));
+    EXPECT_EQ(1, ar.run(QStringList{"zero-stats", "-h"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 }
 
@@ -339,7 +342,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     // Clear thumbnail stats only and check that only thumbnail stats were cleared.
 
-    EXPECT_EQ(0, ar.run(QStringList{"clear-stats", "t"}));
+    EXPECT_EQ(0, ar.run(QStringList{"zero-stats", "t"}));
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
@@ -355,7 +358,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     // Clear all stats and check that all stats were cleared.
 
-    EXPECT_EQ(0, ar.run(QStringList{"clear-stats"}));
+    EXPECT_EQ(0, ar.run(QStringList{"zero-stats"}));
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
@@ -471,6 +474,58 @@ TEST_F(AdminTest, get_small_thumbnail_square)
     EXPECT_EQ(0x807FFE, img.pixel(0, 35));
 }
 
+TEST_F(AdminTest, get_unconstrained_width)
+{
+    auto filename = temp_dir() + "/orientation-1_0x240.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x240", TESTDATADIR "/orientation-1.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(320, img.width());
+    EXPECT_EQ(240, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_height)
+{
+    auto filename = temp_dir() + "/Photo-with-exif_240x0.jpg";  // Portrait orientation
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=240x0", TESTDATADIR "/Photo-with-exif.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(240, img.width());
+    EXPECT_EQ(426, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_height_large)
+{
+    auto filename = temp_dir() + "/big_0x2048.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x2048", TESTDATADIR "/big.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+}
+
+TEST_F(AdminTest, get_unconstrained_both_large)
+{
+    auto filename = temp_dir() + "/big_0x0.jpg";
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x0", TESTDATADIR "/big.jpg"}));
+
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+}
+
 TEST_F(AdminTest, get_with_dir)
 {
     auto filename = temp_dir() + "/orientation-2_0x0.jpg";
@@ -510,16 +565,14 @@ TEST_F(AdminTest, bad_files)
 {
     AdminRunner ar;
 
-    EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file", QString::fromStdString(temp_dir())}));
     EXPECT_TRUE(starts_with(ar.stderr(),
                             "thumbnailer-admin: DBusInterface::GetThumbnail(): no_such_file: unity::ResourceException: Thumbnailer::get_thumbnail():\n    boost::filesystem::canonical: No such file or directory:"))
         << ar.stderr();
 
     EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", "no_such_directory"}));
-    EXPECT_EQ(
-        "thumbnailer-admin: GetLocalThumbnail::run(): write_file(): "
-        "cannot open no_such_directory/orientation-2_0x0.jpg: No such file or directory\n",
-        ar.stderr())
+    EXPECT_TRUE(starts_with(ar.stderr(),
+                            "thumbnailer-admin: GetLocalThumbnail::run(): write_file(): mkstemp() failed for "))
         << ar.stderr();
 }
 
@@ -555,19 +608,19 @@ TEST_F(RemoteServer, get_artist_album_parsing)
 {
     AdminRunner ar;
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "artist", "album", "dir", "something else"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "artist", "album", "dir", "something else"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "--invalid"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "--invalid"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Unknown option 'invalid'.")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "--help"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "--help"}));
     EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: Usage: ")) << ar.stderr();
 
-    EXPECT_EQ(1, ar.run(QStringList{"get_artist", "--size=abc", "artist", "album"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-artist", "--size=abc", "artist", "album"}));
     EXPECT_EQ("thumbnailer-admin: GetRemoteThumbnail(): invalid size: abc\n", ar.stderr()) << ar.stderr();
 }
 
@@ -578,7 +631,7 @@ TEST_F(RemoteServer, get_artist)
     auto filename = temp_dir() + "/metallica_load_artist_0x0.jpg";
 
     AdminRunner ar;
-    EXPECT_EQ(0, ar.run(QStringList{"get_artist", "metallica", "load"})) << ar.stderr();
+    EXPECT_EQ(0, ar.run(QStringList{"get-artist", "metallica", "load"})) << ar.stderr();
 
     string cmd = "/usr/bin/test -s " + filename + " || exit 1";
     int rc = system(cmd.c_str());
@@ -590,7 +643,7 @@ TEST_F(RemoteServer, get_album)
     auto filename = temp_dir() + "/metallica_load_album_48x48.jpg";
 
     AdminRunner ar;
-    EXPECT_EQ(0, ar.run(QStringList{"get_album", "metallica", "load", "--size=48"})) << ar.stderr();
+    EXPECT_EQ(0, ar.run(QStringList{"get-album", "metallica", "load", "--size=48"})) << ar.stderr();
 
     string cmd = "/usr/bin/test -s " + filename + " || exit 1";
     int rc = system(cmd.c_str());
@@ -600,7 +653,7 @@ TEST_F(RemoteServer, get_album)
 TEST_F(RemoteServer, get_error)
 {
     AdminRunner ar;
-    EXPECT_EQ(1, ar.run(QStringList{"get_album", "foo", "bar", "--size=48"}));
+    EXPECT_EQ(1, ar.run(QStringList{"get-album", "foo", "bar", "--size=48"}));
     EXPECT_EQ("thumbnailer-admin: Handler::createFinished(): could not get thumbnail for album: foo/bar (48,48): "
               "NO ARTWORK\n", ar.stderr()) << ar.stderr();
 }
@@ -609,7 +662,7 @@ int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
 
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     setenv("LC_ALL", "C", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

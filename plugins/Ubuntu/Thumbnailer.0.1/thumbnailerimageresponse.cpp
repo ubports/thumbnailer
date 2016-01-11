@@ -17,11 +17,10 @@
  */
 
 #include <thumbnailerimageresponse.h>
-#include <artgeneratorcommon.h>
 
-#include <QDBusReply>
-#include <QDBusUnixFileDescriptor>
 #include <QDebug>
+
+namespace thumb_qt = unity::thumbnailer::qt;
 
 namespace unity
 {
@@ -32,12 +31,11 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
-                                                   std::unique_ptr<QDBusPendingCallWatcher>&& watcher)
-    : requested_size_(requested_size)
-    , watcher_(std::move(watcher))
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSharedPointer<thumb_qt::Request> const& request)
+    : request_(request)
 {
-    connect(watcher_.get(), &QDBusPendingCallWatcher::finished, this, &ThumbnailerImageResponse::dbusCallFinished);
+    Q_ASSERT(request);
+    connect(request_.data(), &thumb_qt::Request::finished, this, &ThumbnailerImageResponse::requestFinished);
 }
 
 ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& error_message)
@@ -47,11 +45,25 @@ ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& error_message)
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
 }
 
-ThumbnailerImageResponse::~ThumbnailerImageResponse() = default;
+ThumbnailerImageResponse::~ThumbnailerImageResponse()
+{
+    cancel();
+}
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
-    return texture_;
+    // TODO: Once we remove fallback image support, this test for request_ != nullptr
+    //       (here and elsewhere) needs to be removed because request_ is nullptr
+    //       only if the default image constructor above was called.
+    if (request_ && request_->isValid())
+    {
+        return QQuickTextureFactory::textureFactoryForImage(request_->image());
+    }
+    else
+    {
+        qWarning() << "ThumbnailerImageResponse::textureFactory(): method called despite request being in error state.";
+        return nullptr;
+    }
 }
 
 QString ThumbnailerImageResponse::errorString() const
@@ -61,46 +73,23 @@ QString ThumbnailerImageResponse::errorString() const
 
 void ThumbnailerImageResponse::cancel()
 {
-    // Deleting the pending call watcher (which should hold the only
-    // reference to the pending call at this point) tells Qt that we
-    // are no longer interested in the reply.  The destruction will
-    // also clear up the signal connections.
-    watcher_.reset();
+    if (request_ && !request_->isFinished() && !request_->isCancelled())
+    {
+        request_->cancel();
+    }
 }
 
-void ThumbnailerImageResponse::dbusCallFinished()
+void ThumbnailerImageResponse::requestFinished()
 {
-    QDBusPendingReply<QDBusUnixFileDescriptor> reply = *watcher_.get();
-    if (!reply.isValid())
+    if (!request_->isValid())
     {
-        error_message_ = reply.error().message();
-        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << error_message_;
-        Q_EMIT finished();
-        return;
+        error_message_ = request_->errorMessage();
+        if (!request_->isCancelled())
+        {
+            qWarning() << "ThumbnailerImageResponse::requestFinished(): D-Bus error: " << error_message_;
+        }
     }
-
-    try
-    {
-        QSize realSize;
-        QImage image = imageFromFd(reply.value().fileDescriptor(), &realSize, requested_size_);
-        texture_ = QQuickTextureFactory::textureFactoryForImage(image);
-        Q_EMIT finished();
-        return;
-    }
-    // LCOV_EXCL_START
-    catch (std::exception const& e)
-    {
-        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): Album art loader failed: " << e.what();
-        error_message_ = e.what();
-    }
-    catch (...)
-    {
-        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): unknown exception";
-        error_message_ = "unknown error";
-    }
-
     Q_EMIT finished();
-    // LCOV_EXCL_STOP
 }
 
 }  // namespace qml

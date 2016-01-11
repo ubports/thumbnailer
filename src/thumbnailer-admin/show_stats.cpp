@@ -41,9 +41,9 @@ namespace tools
 ShowStats::ShowStats(QCommandLineParser& parser)
     : Action(parser)
 {
-    parser.addPositionalArgument("stats", "Show statistics", "stats");
-    parser.addPositionalArgument("cache_id", "Select cache (i=image, t=thumbnail, f=failure)", "[cache_id]");
-    QCommandLineOption histogram_option({"v", "verbose"}, "Show histogram");
+    parser.addPositionalArgument(QStringLiteral("stats"), QStringLiteral("Show statistics"), QStringLiteral("stats"));
+    parser.addPositionalArgument(QStringLiteral("cache_id"), QStringLiteral("Select cache (i=image, t=thumbnail, f=failure)"), QStringLiteral("[cache_id]"));
+    QCommandLineOption histogram_option({"v", "verbose"}, QStringLiteral("Show histogram"));
     parser.addOption(histogram_option);
 
     if (!parser.parse(QCoreApplication::arguments()))
@@ -59,7 +59,7 @@ ShowStats::ShowStats(QCommandLineParser& parser)
     assert(args.first() == QString("stats"));
     if (args.size() > 2)
     {
-        throw QString("too many arguments for stats command") + parser.errorText() + "\n\n" + parser.helpText();
+        throw QStringLiteral("too many arguments for stats command") + parser.errorText() + "\n\n" + parser.helpText();
     }
     if (parser.isSet(histogram_option))
     {
@@ -69,19 +69,19 @@ ShowStats::ShowStats(QCommandLineParser& parser)
     if (args.size() == 2)
     {
         QString arg = args[1];
-        if (arg == "i")
+        if (arg == QLatin1String("i"))
         {
             show_image_stats_ = true;
             show_thumbnail_stats_ = false;
             show_failure_stats_ = false;
         }
-        else if (arg == "t")
+        else if (arg == QLatin1String("t"))
         {
             show_image_stats_ = false;
             show_thumbnail_stats_ = true;
             show_failure_stats_ = false;
         }
-        else if (arg == "f")
+        else if (arg == QLatin1String("f"))
         {
             show_image_stats_ = false;
             show_thumbnail_stats_ = false;
@@ -89,7 +89,7 @@ ShowStats::ShowStats(QCommandLineParser& parser)
         }
         else
         {
-            throw QString("invalid cache_id: ") + arg + "\n" + parser.helpText();
+            throw QStringLiteral("invalid cache_id: ") + arg + "\n" + parser.helpText();
         }
     }
 }
@@ -164,7 +164,7 @@ void show_histogram(QList<quint32> const& h)
 void ShowStats::show_stats(service::CacheStats const& st)
 {
     printf("    Path:                  %s\n", qPrintable(st.cache_path));
-    char const* policy = st.policy ? "lru_ttl" : "lru_only";
+    char const* policy = st.policy == quint32(core::CacheDiscardPolicy::lru_ttl) ? "lru_ttl" : "lru_only";
     printf("    Policy:                %s\n", policy);
     printf("    Size:                  %" PRId64 "\n", int64_t(st.size));
     printf("    Size in bytes:         %" PRId64 "\n", int64_t(st.size_in_bytes));
@@ -175,6 +175,8 @@ void ShowStats::show_stats(service::CacheStats const& st)
     printf("    Misses_since_last_hit: %" PRId64 "\n", int64_t(st.misses_since_last_hit));
     printf("    Longest hit run:       %" PRId64 "\n", int64_t(st.longest_hit_run));
     printf("    Longest miss run:      %" PRId64 "\n", int64_t(st.longest_miss_run));
+    printf("    Avg hit run length:    %.02f\n", st.avg_hit_run_length);
+    printf("    Avg miss run length:   %.02f\n", st.avg_miss_run_length);
     printf("    TTL evictions:         %" PRId64 "\n", int64_t(st.ttl_evictions));
     printf("    LRU evictions:         %" PRId64 "\n", int64_t(st.lru_evictions));
     printf("    Most-recent hit time:  %s", to_time_string(st.most_recent_hit_time));

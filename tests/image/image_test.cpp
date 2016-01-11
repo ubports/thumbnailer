@@ -31,6 +31,8 @@
 #define JPEGIMAGE TESTBINDIR "/saved_image.jpg"
 #define BADIMAGE TESTDATADIR "/bad_image.jpg"
 #define BIGIMAGE TESTDATADIR "/big.jpg"
+#define HORIZONTAL_STRIP TESTDATADIR "/horizontal-strip.jpg"
+#define VERTICAL_STRIP TESTDATADIR "/vertical-strip.jpg"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -134,6 +136,35 @@ TEST(Image, scale)
     scaled = img.scale(QSize(0, 300));
     EXPECT_EQ(400, scaled.width());
     EXPECT_EQ(300, scaled.height());
+}
+
+TEST(Image, adjust_scale)
+{
+    // For coverage: Check that scaling in one dimension
+    // such that the other dimension becomes zero
+    // sets the other dimension to 1.
+
+    {
+        string data = read_file(HORIZONTAL_STRIP);
+        Image img(data);
+        EXPECT_EQ(200, img.width());
+        EXPECT_EQ(10, img.height());
+
+        Image scaled = img.scale(QSize(8, 0));
+        EXPECT_EQ(8, scaled.width());
+        EXPECT_EQ(1, scaled.height());
+    }
+
+    {
+        string data = read_file(VERTICAL_STRIP);
+        Image img(data);
+        EXPECT_EQ(10, img.width());
+        EXPECT_EQ(200, img.height());
+
+        Image scaled = img.scale(QSize(0, 8));
+        EXPECT_EQ(1, scaled.width());
+        EXPECT_EQ(8, scaled.height());
+    }
 }
 
 TEST(Image, save_jpeg)

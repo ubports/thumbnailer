@@ -19,9 +19,8 @@
 #pragma once
 
 #include <QQuickImageProvider>
-#include <QDBusPendingCallWatcher>
 
-#include <memory>
+#include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 namespace unity
 {
@@ -34,12 +33,18 @@ namespace qml
 
 class ThumbnailerImageResponse : public QQuickImageResponse  // LCOV_EXCL_LINE  // False negative from gcovr
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     Q_DISABLE_COPY(ThumbnailerImageResponse)
 
-    ThumbnailerImageResponse(QSize const& requested_size,
-                             std::unique_ptr<QDBusPendingCallWatcher>&& watcher);
+    ThumbnailerImageResponse(QSharedPointer<unity::thumbnailer::qt::Request> const& request);
     ThumbnailerImageResponse(QString const& error_message);
     ~ThumbnailerImageResponse();
 
@@ -48,12 +53,10 @@ public:
     void cancel() override;
 
 private Q_SLOTS:
-    void dbusCallFinished();
+    void requestFinished();
 
 private:
-    QSize requested_size_;
-    std::unique_ptr<QDBusPendingCallWatcher> watcher_;
-    QQuickTextureFactory * texture_ = nullptr;
+    QSharedPointer<unity::thumbnailer::qt::Request> request_;
     QString error_message_;
 };
 

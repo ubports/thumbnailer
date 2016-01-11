@@ -19,7 +19,7 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
-#include <internal/trace.h>
+#include <settings.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -46,94 +46,34 @@ namespace service
 namespace
 {
 
-// Return a string identifying hardware for which we need to
-// set max-extractions to some special value.
-// Be careful when making modifications here. We need
-// to find a string in cpuinfo that is unique to the specific
-// hardwares we care about. For example, the output from
-// /proc/cpuinfo is *not* guaranteed to contain a "Hardware :" entry.
-
-#ifdef __arm__
-
-string hardware()
-{
-    string hw;
-
-    string const pattern = R"del([Hh]ardware[ \t]*:(.*))del";
-    boost::regex r(pattern);
-
-    string cpuinfo;
-    try
-    {
-        cpuinfo = read_file("/proc/cpuinfo");
-    }
-    // LCOV_EXCL_START
-    catch (runtime_error const& e)
-    {
-        qDebug() << "DBusInterface(): cannot read /proc/cpuinfo:" << e.what();
-        return "";
-    }
-    // LCOV_EXCL_STOP
-
-    vector<string> lines;
-    boost::split(lines, cpuinfo, boost::is_any_of("\n"));
-    for (auto const& line : lines)
-    {
-        boost::smatch hw_match;
-        if (boost::regex_match(line, hw_match, r))
-        {
-            hw = hw_match[1];
-            boost::trim(hw);
-            break;
-        }
-    }
-    return hw;
-}
-
 // TODO: Hack to work around gstreamer problems.
 //       See https://bugs.launchpad.net/thumbnailer/+bug/1466273
 
 int adjusted_limit(int limit)
 {
-    int new_limit = limit;
-
+#if defined(__arm__)
     // Only adjust if max-extractions is at its default of 0.
     // That allows us to still set it to something else for testing.
     if (limit == 0)
     {
-        string hw = hardware();
-#if 0
-        // TODO: Disabled for now until we can figure out in more
-        //       detail how to deal with the gstreamer problems.
-        // On BQ (MT6582), we can handle only one vs-thumb at a time.
-        new_limit = hw == "MT6582" ? 1 : 2;
-#else
-        new_limit = 1;
-#endif
-        qDebug() << "DBusInterface(): adjusted max-extractions to" << new_limit << "for" << QString::fromStdString(hw);
+        limit = 1;
+        qDebug() << "DBusInterface(): adjusted max-extractions to" << limit << "for Arm";
     }
-    return new_limit;
-}
-
-#else
-
-// Not on Arm, leave as is.
-
-int adjusted_limit(int limit)
-{
+#endif
     return limit;
 }
 
-#endif
-
 }
 
-DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject* parent)
+DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
+                             shared_ptr<InactivityHandler> const& inactivity_handler,
+                             QObject* parent)
     : QObject(parent)
     , thumbnailer_(thumbnailer)
+    , inactivity_handler_(inactivity_handler)
     , check_thread_pool_(make_shared<QThreadPool>())
     , create_thread_pool_(make_shared<QThreadPool>())
-    , download_limiter_(settings_.max_downloads())
+    , download_limiter_(make_shared<RateLimiter>(settings_.max_downloads()))
 {
     auto limit = settings_.max_extractions();
 
@@ -152,7 +92,10 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer, QObject
         }
     }
 
-    extraction_limiter_.reset(new RateLimiter(limit));
+    extraction_limiter_ = make_shared<RateLimiter>(limit);
+
+    Settings s;
+    log_level_ = s.log_level();
 }
 
 DBusInterface::~DBusInterface()
@@ -168,9 +111,9 @@ CredentialsCache& DBusInterface::credentials()
     return *credentials_.get();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
-                                                   QString const& album,
-                                                   QSize const& requestedSize)
+QByteArray DBusInterface::GetAlbumArt(QString const& artist,
+                                      QString const& album,
+                                      QSize const& requestedSize)
 {
     try
     {
@@ -180,7 +123,7 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         auto request = thumbnailer_->get_album_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(),
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -191,12 +134,12 @@ QDBusUnixFileDescriptor DBusInterface::GetAlbumArt(QString const& artist,
         sendErrorReply(ART_ERROR, e.what());
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
-                                                    QString const& album,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetArtistArt(QString const& artist,
+                                       QString const& album,
+                                       QSize const& requestedSize)
 {
     try
     {
@@ -206,7 +149,7 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         auto request = thumbnailer_->get_artist_art(artist.toStdString(), album.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 download_limiter_, credentials(),
+                                 download_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     // LCOV_EXCL_START
@@ -217,11 +160,10 @@ QDBusUnixFileDescriptor DBusInterface::GetArtistArt(QString const& artist,
         sendErrorReply(ART_ERROR, msg);
     }
     // LCOV_EXCL_STOP
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
-QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
-                                                    QSize const& requestedSize)
+QByteArray DBusInterface::GetThumbnail(QString const& filename, QSize const& requestedSize)
 {
     std::unique_ptr<ThumbnailRequest> request;
 
@@ -230,10 +172,11 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         QString details;
         QTextStream s(&details);
         s << "thumbnail: " << filename << " (" << requestedSize.width() << "," << requestedSize.height() << ")";
+
         auto request = thumbnailer_->get_thumbnail(filename.toStdString(), requestedSize);
         queueRequest(new Handler(connection(), message(),
                                  check_thread_pool_, create_thread_pool_,
-                                 *extraction_limiter_, credentials(),
+                                 extraction_limiter_, credentials(), *inactivity_handler_,
                                  std::move(request), details));
     }
     catch (exception const& e)
@@ -242,13 +185,12 @@ QDBusUnixFileDescriptor DBusInterface::GetThumbnail(QString const& filename,
         qWarning() << msg;
         sendErrorReply(ART_ERROR, msg);
     }
-    return QDBusUnixFileDescriptor();
+    return QByteArray();
 }
 
 void DBusInterface::queueRequest(Handler* handler)
 {
     requests_.emplace(handler, std::unique_ptr<Handler>(handler));
-    Q_EMIT endInactivity();
     connect(handler, &Handler::finished, this, &DBusInterface::requestFinished);
     setDelayedReply(true);
 
@@ -264,46 +206,18 @@ void DBusInterface::queueRequest(Handler* handler)
         /* There are other requests for this item, so chain this
          * request to wait for them to complete first.  This way we
          * can take advantage of any cached downloads or failures. */
-        // TODO: should record tiem spent in queue
+        // TODO: should record time spent in queue
         connect(requests_for_key.back(), &Handler::finished,
                 handler, &Handler::begin);
     }
     requests_for_key.push_back(handler);
 }
 
-void DBusInterface::requestFinished()
+namespace
 {
-    Handler* handler = static_cast<Handler*>(sender());
-    try
-    {
-        auto& h = requests_.at(handler);
-        h.release();
-        requests_.erase(handler);
-    }
-    // LCOV_EXCL_START
-    catch (std::out_of_range const& e)
-    {
-        qWarning() << "finished() called on unknown handler" << handler;
-    }
-    // LCOV_EXCL_STOP
 
-    // Remove ourselves from the chain of requests
-    std::vector<Handler*> &requests_for_key = request_keys_[handler->key()];
-    requests_for_key.erase(
-        std::remove(requests_for_key.begin(), requests_for_key.end(), handler),
-        requests_for_key.end());
-    if (requests_for_key.size() == 0)
-    {
-        request_keys_.erase(handler->key());
-    }
-
-    if (requests_.empty())
-    {
-        Q_EMIT startInactivity();
-    }
-    // Queue deletion of handler when we re-enter the event loop.
-    handler->deleteLater();
-
+void write_log_message(Handler const* handler)
+{
     QString msg;
     QTextStream s(&msg);
     s.setRealNumberNotation(QTextStream::FixedNotation);
@@ -333,8 +247,62 @@ void DBusInterface::requestFinished()
         s << "]";
     }
 
-    s << " sec (" << handler->status() << ")";
+    s << " sec (" << handler->status_as_string() << ")";
     qDebug() << msg;
+}
+
+}  // namespace
+
+void DBusInterface::requestFinished()
+{
+    Handler* handler = static_cast<Handler*>(sender());
+    try
+    {
+        auto& h = requests_.at(handler);
+        h.release();
+        requests_.erase(handler);
+    }
+    // LCOV_EXCL_START
+    catch (std::out_of_range const& e)
+    {
+        qWarning() << "finished() called on unknown handler" << handler;
+    }
+    // LCOV_EXCL_STOP
+
+    // Remove ourselves from the chain of requests
+    std::vector<Handler*> &requests_for_key = request_keys_[handler->key()];
+    requests_for_key.erase(
+        std::remove(requests_for_key.begin(), requests_for_key.end(), handler),
+        requests_for_key.end());
+    if (requests_for_key.size() == 0)
+    {
+        request_keys_.erase(handler->key());
+    }
+
+    // Queue deletion of handler when we re-enter the event loop.
+    handler->deleteLater();
+
+    // Emit log message, depending on log_level_.
+    auto status = handler->status();
+    if (log_level_ == 2 || status == ThumbnailRequest::FetchStatus::hard_error)
+    {
+        write_log_message(handler);
+    }
+    else if (log_level_ == 1)
+    {
+        switch (status)
+        {
+            case ThumbnailRequest::FetchStatus::cached_failure:
+            case ThumbnailRequest::FetchStatus::downloaded:
+            case ThumbnailRequest::FetchStatus::not_found:
+            case ThumbnailRequest::FetchStatus::network_down:
+            case ThumbnailRequest::FetchStatus::temporary_error:
+                write_log_message(handler);
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 }  // namespace service

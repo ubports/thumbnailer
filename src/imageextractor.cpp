@@ -21,47 +21,23 @@
 #include <internal/imageextractor.h>
 
 #include <internal/config.h>
-#include <internal/file_io.h>
-#include <internal/raii.h>
+#include <internal/env_vars.h>
 #include <internal/safe_strerror.h>
-#include <internal/trace.h>
 
-#include <sys/stat.h>
-#include <unistd.h>
+#include <QDebug>
+
+#include <cassert>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
-ImageExtractor::ImageExtractor(int fd, chrono::milliseconds timeout)
-    : fd_(dup(fd), do_close)
+ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds timeout)
+    : filename_(filename)
     , timeout_ms_(timeout.count())
+    , read_called_(false)
 {
-    if (fd_.get() < 0)
-    {
-        throw runtime_error("ImageExtractor(): could not duplicate fd: " + safe_strerror(errno));  // LCOV_EXCL_LINE
-    }
-
-    // We don't allow thumbnailing from anything but a regular file,
-    // so the caller can't sneak us a pipe or socket.
-    struct stat st;
-    if (fstat(fd_.get(), &st) == -1)
-    {
-        throw runtime_error("ImageExtractor(): fstat(): " + safe_strerror(errno));  // LCOV_EXCL_LINE
-    }
-    if (!(st.st_mode & S_IFREG))
-    {
-        throw runtime_error("ImageExtractor(): fd does not refer to regular file");
-    }
-    // TODO: Work-around for bug in gstreamer:
-    //       http://cgit.freedesktop.org/gstreamer/gstreamer/commit/?id=91f537edf2946cbb5085782693b6c5111333db5f
-    //       Pipeline hangs for empty input file. Remove this once the gstreamer fix makes into the archives.
-    if (st.st_size == 0)
-    {
-        throw runtime_error("ImageExtractor(): fd refers to empty file");
-    }
-
     process_.setStandardInputFile(QProcess::nullDevice());
-    process_.setProcessChannelMode(QProcess::ForwardedChannels);
+    process_.setProcessChannelMode(QProcess::ForwardedErrorChannel);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this,
             &ImageExtractor::processFinished);
     connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error), this,
@@ -88,28 +64,25 @@ void ImageExtractor::extract()
 {
     // Gstreamer video pipelines are unstable so we need to run an
     // external helper library.
-    char* utildir = getenv("TN_UTILDIR");
+    char* utildir = getenv(UTIL_DIR);
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
-    exe_path_ += "/vs-thumb";
+    exe_path_ += QLatin1String("/vs-thumb");
+    process_.start(exe_path_, {QString::fromStdString(filename_)});
 
-    if (!tmpfile_.open())
-    {
-        throw runtime_error("ImageExtractor::extract(): cannot open " + tmpfile_.fileTemplate().toStdString());  // LCOV_EXCL_LINE
-    }
-    /* Our duplicated file descriptor does not have the FD_CLOEXEC flag set */
-    process_.start(exe_path_, {QString("fd://%1").arg(fd_.get()), tmpfile_.fileName()});
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
     timer_.setSingleShot(true);
     timer_.start(timeout_ms_);
 }
 
-string ImageExtractor::data()
+QByteArray ImageExtractor::read()
 {
     if (!error_.empty())
     {
-        throw runtime_error(string("ImageExtractor::data(): ") + error_);
+        throw runtime_error(string("ImageExtractor::read(): ") + error_);
     }
-    return read_file(tmpfile_.fileName().toStdString());
+    assert(!read_called_);
+    read_called_ = true;
+    return process_.readAllStandardOutput();
 }
 
 void ImageExtractor::processFinished()
@@ -124,21 +97,21 @@ void ImageExtractor::processFinished()
                     error_ = "";
                     break;
                 case 1:
-                    error_ = "could not extract screenshot";
+                    error_ = string("no artwork for ") + filename_;
                     break;
                 case 2:
-                    error_ = "extractor pipeline failed";
+                    error_ = string("extractor pipeline failed for ") + filename_;
                     break;
                 default:
                     error_ = string("unknown exit status ") + to_string(process_.exitCode()) +
-                             " from " + exe_path_.toStdString();
+                             " from " + exe_path_.toStdString() + " for " + filename_;
                     break;
             }
             break;
         case QProcess::CrashExit:
             if (error_.empty())
             {
-                // Conditional because, if get a timeout and send a kill,
+                // Conditional because, if we get a timeout and send a kill,
                 // we don't want to overwrite the message set by timeout().
                 error_ = exe_path_.toStdString() + " crashed";
             }

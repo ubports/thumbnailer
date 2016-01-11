@@ -8,4 +8,4 @@ target_link_libraries(qml_test
     Qt5::Test
 )
 add_dependencies(qml_test thumbnailer-service thumbnailer-qml)
-add_test(qml xvfb-run -a -s "-screen 0 800x600x24" ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)
+add_test(qml ${CMAKE_SOURCE_DIR}/tools/run-xvfb.sh ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)

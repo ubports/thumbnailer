@@ -37,7 +37,14 @@ namespace internal
 
 class UbuntuServerDownloader final : public ArtDownloader  // LCOV_EXCL_LINE  // False negative from gcovr
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
     Q_OBJECT
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 public:
     Q_DISABLE_COPY(UbuntuServerDownloader)
 
@@ -58,7 +65,6 @@ public:
     std::shared_ptr<QNetworkAccessManager> network_manager() const;
 
 private:
-    void set_api_key();
     std::shared_ptr<ArtReply> download_url(QUrl const& url, std::chrono::milliseconds timeout);
 
     QString api_key_;

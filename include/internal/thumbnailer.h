@@ -19,9 +19,9 @@
 #pragma once
 
 #include <internal/artdownloader.h>
+#include <internal/backoff_adjuster.h>
+#include <internal/cachehelper.h>
 
-#include <core/persistent_cache_stats.h>
-#include <core/persistent_string_cache.h>
 #include <QObject>
 #include <QSize>
 
@@ -37,8 +37,6 @@ namespace thumbnailer
 
 namespace internal
 {
-
-class RequestBase;
 
 class ThumbnailRequest : public QObject
 {
@@ -57,15 +55,17 @@ public:
         needs_download,
         downloaded,
         not_found,
-        no_network,
-        error
+        network_down,
+        temporary_error,
+        hard_error,
+        timeout
     };
 
     // Returns the empty string with status needs_download
     // if the thumbnail data needs to be downloaded to complete
     // the request. If this happens, call download() and wait for
     // downloadFinished signal to fire, then call thumbnail() again
-    virtual std::string thumbnail() = 0;
+    virtual QByteArray thumbnail() = 0;
     virtual void download(std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) = 0;
 
     // Returns status of thumbnail() set by thumbnail();
@@ -81,16 +81,7 @@ Q_SIGNALS:
     void downloadFinished();
 };
 
-/**
- * This class provides a way to generate and access
- * thumbnails of video, audio and image files.
- *
- * All methods are blocking.
- *
- * All methods are thread safe.
- *
- * Errors are reported as exceptions.
- */
+class RequestBase;
 
 class Thumbnailer
 {
@@ -101,25 +92,13 @@ public:
     Thumbnailer(Thumbnailer const&) = delete;
     Thumbnailer& operator=(Thumbnailer const&) = delete;
 
-    /**
-     * Gets a thumbnail of the given input file in the requested size.
-     *
-     * Return value is the thumbnail image as a string.
-     * If the thumbnail could not be generated, an empty string is returned.
-     */
     std::unique_ptr<ThumbnailRequest> get_thumbnail(std::string const& filename,
                                                     QSize const& requested_size);
 
-    /**
-     * Gets album art for the given artist an album.
-     */
     std::unique_ptr<ThumbnailRequest> get_album_art(std::string const& artist,
                                                     std::string const& album,
                                                     QSize const& requested_size);
 
-    /**
-     * Gets artist art for the given artist and album.
-     */
     std::unique_ptr<ThumbnailRequest> get_artist_art(std::string const& artist,
                                                      std::string const& album,
                                                      QSize const& requested_size);
@@ -145,17 +124,17 @@ private:
         return downloader_.get();
     }
 
-    typedef std::vector<core::PersistentStringCache*> CacheVec;
+    typedef std::vector<PersistentCacheHelper*> CacheVec;
     CacheVec select_caches(CacheSelector selector) const;
 
-    core::PersistentStringCache::UPtr full_size_cache_;  // Small cache of full (original) size images.
-    core::PersistentStringCache::UPtr thumbnail_cache_;  // Large cache of scaled images.
-    core::PersistentStringCache::UPtr failure_cache_;    // Cache for failed attempts (value is always empty).
-    int max_size_;                                       // Max thumbnail size in pixels.
-    int retry_not_found_hours_;                          // Retry wait time for authoritative "no artwork" answer.
-    int retry_error_hours_;                              // Retry wait time for unexpected server errors.
-    std::chrono::milliseconds extraction_timeout_;       // How long to wait before giving up during extraction.
+    PersistentCacheHelper::UPtr full_size_cache_;         // Small cache of full (original) size images.
+    PersistentCacheHelper::UPtr thumbnail_cache_;         // Large cache of scaled images.
+    PersistentCacheHelper::UPtr failure_cache_;           // Cache for failed attempts (value is always empty).
+    int max_size_;                                        // Max thumbnail size in pixels.
+    int retry_not_found_hours_;                           // Retry wait time for authoritative "no artwork" answer.
+    std::chrono::milliseconds extraction_timeout_;        // How long to wait before giving up during extraction.
     std::unique_ptr<ArtDownloader> downloader_;
+    BackoffAdjuster backoff_;
 
     friend class RequestBase;
 };

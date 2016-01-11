@@ -20,8 +20,9 @@
 
 #include "artistartgenerator.h"
 
-#include "artgeneratorcommon.h"
-#include <service/dbus_names.h>
+#include <QDebug>
+#include <QUrlQuery>
+
 #include "thumbnailerimageresponse.h"
 
 namespace unity
@@ -33,46 +34,26 @@ namespace thumbnailer
 namespace qml
 {
 
-ArtistArtGenerator::ArtistArtGenerator()
+ArtistArtGenerator::ArtistArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thumbnailer> const& thumbnailer)
     : QQuickAsyncImageProvider()
+    , thumbnailer(thumbnailer)
 {
 }
 
 QQuickImageResponse* ArtistArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
-    QSize size = requestedSize;
-    // TODO: Turn this into an error soonish.
-    if (!requestedSize.isValid())
-    {
-        qWarning().nospace() << "ArtistArtGenerator::requestImageResponse(): deprecated invalid QSize: "
-                             << requestedSize << ". This feature will be removed soon. Pass the desired size instead.";
-        size.setWidth(128);
-        size.setHeight(128);
-    }
-
     QUrlQuery query(id);
-    if (!query.hasQueryItem("artist") || !query.hasQueryItem("album"))
+    if (!query.hasQueryItem(QStringLiteral("artist")) || !query.hasQueryItem(QStringLiteral("album")))
     {
         qWarning() << "ArtistArtGenerator::requestImageResponse(): Invalid artistart uri:" << id;
         return new ThumbnailerImageResponse("Invalid artistart ID: " + id);
     }
 
-    if (!connection)
-    {
-        // Create connection here and not on the constructor, so it belongs to the proper thread.
-        connection.reset(new QDBusConnection(
-            QDBusConnection::connectToBus(QDBusConnection::SessionBus, "album_art_generator_dbus_connection")));
-        iface.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, *connection));
-    }
+    const QString artist = query.queryItemValue(QStringLiteral("artist"), QUrl::FullyDecoded);
+    const QString album = query.queryItemValue(QStringLiteral("album"), QUrl::FullyDecoded);
 
-    const QString artist = query.queryItemValue("artist", QUrl::FullyDecoded);
-    const QString album = query.queryItemValue("album", QUrl::FullyDecoded);
-
-    // perform dbus call
-    auto reply = iface->GetArtistArt(artist, album, size);
-    std::unique_ptr<QDBusPendingCallWatcher> watcher(
-        new QDBusPendingCallWatcher(reply));
-    return new ThumbnailerImageResponse(size, std::move(watcher));
+    auto request = thumbnailer->getArtistArt(artist, album, requestedSize);
+    return new ThumbnailerImageResponse(request);
 }
 
 }  // namespace qml

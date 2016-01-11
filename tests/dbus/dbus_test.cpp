@@ -17,10 +17,12 @@
  *              Michi Henning <michi.henning@canonical.com>
  */
 
+#include <internal/env_vars.h>
 #include <internal/image.h>
 #include <internal/raii.h>
 #include "utils/artserver.h"
 #include "utils/dbusserver.h"
+#include "utils/env_var_guard.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <gtest/gtest.h>
@@ -72,8 +74,8 @@ protected:
         tempdir.reset(new QTemporaryDir(TESTBINDIR "/dbus-test.XXXXXX"));
         setenv("XDG_CACHE_HOME", (tempdir->path() + "/cache").toUtf8().data(), true);
 
-        // set 3 seconds as max idle time
-        setenv("THUMBNAILER_MAX_IDLE", "1000", true);
+        setenv(MAX_IDLE, "1000", true);
+        setenv(LOG_LEVEL, "2", true);  // For coverage
 
         dbus_.reset(new DBusServer());
     }
@@ -88,7 +90,7 @@ protected:
         dbus_.reset();
         art_server_.reset();
 
-        unsetenv("THUMBNAILER_MAX_IDLE");
+        unsetenv(MAX_IDLE);
         unsetenv("XDG_CACHE_HOME");
         tempdir.reset();
     }
@@ -100,10 +102,10 @@ protected:
 
 TEST_F(DBusTest, get_album_art)
 {
-    QDBusReply<QDBusUnixFileDescriptor> reply =
+    QDBusReply<QByteArray> reply =
         dbus_->thumbnailer_->GetAlbumArt("metallica", "load", QSize(24, 24));
     assert_no_error(reply);
-    Image image(reply.value().fileDescriptor());
+    Image image(reply.value());
     EXPECT_EQ(24, image.width());
     EXPECT_EQ(24, image.width());
 }
@@ -113,10 +115,10 @@ TEST_F(DBusTest, get_artist_art)
     // We do this twice, so we get a cache hit on the second try.
     for (int i = 0; i < 2; ++i)
     {
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetArtistArt("metallica", "load", QSize(24, 24));
         assert_no_error(reply);
-        Image image(reply.value().fileDescriptor());
+        Image image(reply.value());
         EXPECT_EQ(24, image.width());
         EXPECT_EQ(24, image.width());
     }
@@ -125,11 +127,11 @@ TEST_F(DBusTest, get_artist_art)
 TEST_F(DBusTest, thumbnail_image)
 {
     const char* filename = TESTDATADIR "/testimage.jpg";
-    QDBusReply<QDBusUnixFileDescriptor> reply =
+    QDBusReply<QByteArray> reply =
         dbus_->thumbnailer_->GetThumbnail(filename, QSize(256, 256));
     assert_no_error(reply);
 
-    Image image(reply.value().fileDescriptor());
+    Image image(reply.value());
     EXPECT_EQ(256, image.width());
     EXPECT_EQ(160, image.height());
 }
@@ -140,11 +142,11 @@ TEST_F(DBusTest, song_image)
     for (int i = 0; i < 2; ++i)
     {
         const char* filename = TESTDATADIR "/testsong.ogg";
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetThumbnail(filename, QSize(256, 256));
         assert_no_error(reply);
 
-        Image image(reply.value().fileDescriptor());
+        Image image(reply.value());
         EXPECT_EQ(200, image.width());
         EXPECT_EQ(200, image.height());
     }
@@ -156,11 +158,11 @@ TEST_F(DBusTest, video_image)
     for (int i = 0; i < 2; ++i)
     {
         const char* filename = TESTDATADIR "/testvideo.ogg";
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetThumbnail(filename, QSize(256, 256));
         assert_no_error(reply);
 
-        Image image(reply.value().fileDescriptor());
+        Image image(reply.value());
         EXPECT_EQ(256, image.width());
         EXPECT_EQ(144, image.height());
     }
@@ -169,7 +171,7 @@ TEST_F(DBusTest, video_image)
 TEST_F(DBusTest, thumbnail_no_such_file)
 {
     const char* no_such_file = TESTDATADIR "/no-such-file.jpg";
-    QDBusReply<QDBusUnixFileDescriptor> reply =
+    QDBusReply<QByteArray> reply =
         dbus_->thumbnailer_->GetThumbnail(no_such_file, QSize(256, 256));
     EXPECT_FALSE(reply.isValid());
     auto message = reply.error().message().toStdString();
@@ -178,12 +180,24 @@ TEST_F(DBusTest, thumbnail_no_such_file)
 
 TEST_F(DBusTest, server_error)
 {
-    QDBusReply<QDBusUnixFileDescriptor> reply =
-        dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
-    EXPECT_FALSE(reply.isValid());
-    auto message = reply.error().message().toStdString();
-    // TODO: That's a seriously poor error message.
-    EXPECT_TRUE(boost::contains(message, "fetch() failed")) << message;
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+        EXPECT_FALSE(reply.isValid());
+        auto message = reply.error().message().toStdString();
+        EXPECT_EQ("Handler::createFinished(): could not get thumbnail for artist: error/500 (256,256): TEMPORARY ERROR",
+                  message) << message;
+    }
+
+    // Again, so we cover the network retry limit case.
+    {
+        QDBusReply<QDBusUnixFileDescriptor> reply =
+            dbus_->thumbnailer_->GetArtistArt("error", "500", QSize(256, 256));
+        EXPECT_FALSE(reply.isValid());
+        auto message = reply.error().message().toStdString();
+        EXPECT_EQ("Handler::checkFinished(): no artwork for artist: error/500 (256,256): TEMPORARY ERROR",
+                  message) << message;
+    }
 }
 
 TEST_F(DBusTest, duplicate_requests)
@@ -218,7 +232,7 @@ TEST_F(DBusTest, rate_limit_requests)
     // rate limited, but it does exercise the code paths as shown by
     // the coverage report.
     int const N_REQUESTS = 10;
-    QDBusPendingReply<QDBusUnixFileDescriptor> replies[N_REQUESTS];
+    QDBusPendingReply<QByteArray> replies[N_REQUESTS];
 
     for (int i = 0; i < N_REQUESTS; i++)
     {
@@ -245,7 +259,7 @@ TEST_F(DBusTest, test_inactivity_exit)
                         static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished));
 
     // start a query
-    QDBusReply<QDBusUnixFileDescriptor> reply =
+    QDBusReply<QByteArray> reply =
         dbus_->thumbnailer_->GetThumbnail(filename, QSize(256, 256));
     assert_no_error(reply);
 
@@ -260,6 +274,11 @@ TEST_F(DBusTest, test_inactivity_exit)
 
 TEST_F(DBusTest, service_exits_if_run_twice)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
     // Try to start a second copy of the thumbnailer service
     QProcess process;
     process.setStandardInputFile(QProcess::nullDevice());
@@ -291,20 +310,57 @@ TEST_F(DBusTest, service_exits_if_name_taken)
 
 TEST(DBusTestBadIdle, env_variable_bad_value)
 {
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
     QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
     setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
 
-    setenv("THUMBNAILER_MAX_IDLE", "bad_value", true);
-    unique_ptr<DBusServer> dbus(new DBusServer());
-
-    auto process = const_cast<QProcess*>(&dbus->service_process());
-    if (process->state() != QProcess::NotRunning)
+    EnvVarGuard ev_guard(MAX_IDLE, "bad_value");
+    try
     {
-        EXPECT_EQ(process->waitForFinished(), true);
+        unique_ptr<DBusServer> dbus(new DBusServer());
+        FAIL();
     }
-    EXPECT_EQ(process->exitCode(), 1);
+    catch (std::logic_error const& e)
+    {
+        string err = e.what();
+        EXPECT_TRUE(err.find("failed to appear on bus"));
+    }
+}
 
-    unsetenv("THUMBNAILER_MAX_IDLE");
+TEST(DBusTestBadIdle, env_variable_out_of_range)
+{
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
+    QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
+    setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
+
+    EnvVarGuard ev_guard(MAX_IDLE, "999");
+    try
+    {
+        unique_ptr<DBusServer> dbus(new DBusServer());
+        FAIL();
+    }
+    catch (std::logic_error const& e)
+    {
+        string err = e.what();
+        EXPECT_TRUE(err.find("failed to appear on bus"));
+    }
+}
+
+TEST(DBusTestBadIdle, default_timeout)
+{
+    QTemporaryDir tempdir(TESTBINDIR "/dbus-test.XXXXXX");
+    setenv("XDG_CACHE_HOME", (tempdir.path() + "/cache").toUtf8().data(), true);
+
+    EnvVarGuard ev_guard(MAX_IDLE, nullptr);
+    unique_ptr<DBusServer> dbus(new DBusServer());  // For coverage with default timeout.
 }
 
 bool near_current_time(chrono::system_clock::time_point& t)
@@ -377,6 +433,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(0, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(0.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -406,10 +464,10 @@ TEST_F(DBusTest, stats)
 
     // Get a remote image from the cache, so the stats change.
     {
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetAlbumArt("metallica", "load", QSize(24, 24));
         assert_no_error(reply);
-        Image image(reply.value().fileDescriptor());
+        Image image(reply.value());
         EXPECT_EQ(24, image.width());
         EXPECT_EQ(24, image.width());
     }
@@ -427,6 +485,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(2, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -456,6 +516,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(2, s.misses_since_last_hit);
         EXPECT_EQ(0, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(0.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_EQ(0, duration_cast<milliseconds>(s.most_recent_hit_time.time_since_epoch()).count());
@@ -466,10 +528,10 @@ TEST_F(DBusTest, stats)
 
     // Get the same image again, so we get a hit.
     {
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetAlbumArt("metallica", "load", QSize(24, 24));
         assert_no_error(reply);
-        Image image(reply.value().fileDescriptor());
+        Image image(reply.value());
         EXPECT_EQ(24, image.width());
         EXPECT_EQ(24, image.width());
     }
@@ -487,6 +549,8 @@ TEST_F(DBusTest, stats)
         EXPECT_EQ(0, s.misses_since_last_hit);
         EXPECT_EQ(1, s.longest_hit_run);
         EXPECT_EQ(2, s.longest_miss_run);
+        EXPECT_EQ(1.0, s.avg_hit_run_length);
+        EXPECT_EQ(2.0, s.avg_miss_run_length);
         EXPECT_EQ(0, s.ttl_evictions);
         EXPECT_EQ(0, s.lru_evictions);
         EXPECT_TRUE(near_current_time(s.most_recent_hit_time));
@@ -497,7 +561,7 @@ TEST_F(DBusTest, stats)
 
     // Get a non-existent remote image from the cache, so the failure stats change.
     {
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetAlbumArt(
                 "no_such_artist", "no_such_album", QSize(24, 24));
     }
@@ -514,7 +578,7 @@ TEST_F(DBusTest, stats)
 
     // Get the same non-existent remote image again, so we get a hit.
     {
-        QDBusReply<QDBusUnixFileDescriptor> reply =
+        QDBusReply<QByteArray> reply =
             dbus_->thumbnailer_->GetAlbumArt(
                 "no_such_artist", "no_such_album", QSize(24, 24));
     }
@@ -552,7 +616,7 @@ int main(int argc, char** argv)
 
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

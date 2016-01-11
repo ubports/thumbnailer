@@ -1,3 +1,11 @@
+# We add -g so we get debug info for the gtest stack frames with gdb.
+# The warnings are suppressed so we get a noise-free build for gtest and gmock.
+
+set(old_cxx_flags ${CMAKE_CXX_FLAGS})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-old-style-cast -Wno-missing-field-initializers")
+find_package(GMock)
+set(CMAKE_CXX_FLAGS ${old_cxx_flags})
+
 set(TESTDATADIR ${CMAKE_CURRENT_SOURCE_DIR}/media)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -12,9 +20,13 @@ set(unit_test_dirs
     dbus
     download
     file_io
+    file_lock
     gobj_ptr
     image
+    image-provider
     qml
+    libthumbnailer-qt
+    recovery
     safe_strerror
     settings
     thumbnailer
@@ -22,43 +34,28 @@ set(unit_test_dirs
     vs-thumb
 )
 
-set(UNIT_TEST_TARGETS "")
+set(slow_test_dirs
+    backoff_adjuster
+    slow-vs-thumb
+    stress
+)
 
-if (${slowtests})
-    add_subdirectory(slow-vs-thumb)
-    list(APPEND UNIT_TEST_TARGETS slow-vs-thumb_test)
-    add_subdirectory(headers)
-endif()
+set(UNIT_TEST_TARGETS "")
 
 foreach(dir ${unit_test_dirs})
     add_subdirectory(${dir})
     list(APPEND UNIT_TEST_TARGETS "${dir}_test")
 endforeach()
 
-set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
-
 add_subdirectory(copyright)
 add_subdirectory(whitespace)
 
-add_subdirectory(core)
-
-if (NOT DEFINED GTEST_ROOT)
-    set(GTEST_ROOT /usr/src/gtest)
+if (${slowtests})
+    foreach(dir ${slow_test_dirs})
+        add_subdirectory(${dir})
+        list(APPEND UNIT_TEST_TARGETS "${dir}_test")
+    endforeach()
+    add_subdirectory(headers)
 endif()
 
-set(GTEST_SRC_DIR "${GTEST_ROOT}/src")
-set(GTEST_INCLUDE_DIR ${GTEST_ROOT})
-
-add_library(gtest STATIC
-    ${GTEST_SRC_DIR}/gtest-all.cc
-    ${GTEST_SRC_DIR}/gtest_main.cc
-)
-set_target_properties(gtest PROPERTIES INCLUDE_DIRECTORIES ${GTEST_INCLUDE_DIR})
-target_link_libraries(gtest ${CMAKE_THREAD_LIBS_INIT})
-
-# Make sure we always build gtest with debug info, otherwise we don't
-# get line numbers for the code that is dragged in by the test macros.
-set_property(TARGET gtest APPEND_STRING PROPERTY COMPILE_FLAGS " -g")
-
-# gtest won't compile cleanly without this.
-set_property(TARGET gtest APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-missing-field-initializers -Wno-old-style-cast")
+set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)

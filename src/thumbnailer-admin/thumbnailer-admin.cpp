@@ -55,10 +55,10 @@ typedef map<char const*, pair<Action::UPtr(*)(QCommandLineParser&), char const*>
 ActionMap const valid_actions =
 {
     { "stats",       { &create_action<ShowStats>,          "Show statistics" } },
-    { "clear-stats", { &create_action<Clear>,              "Clear statistics" } },
+    { "zero-stats",  { &create_action<Clear>,              "Zero statistics counters" } },
     { "get",         { &create_action<GetLocalThumbnail>,  "Get thumbnail from local file" } },
-    { "get_artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
-    { "get_album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },
+    { "get-artist",  { &create_action<GetRemoteThumbnail>, "Get artist thumbnail" } },
+    { "get-album",   { &create_action<GetRemoteThumbnail>, "Get album thumbnail" } },
     { "clear",       { &create_action<Clear>,              "Clear caches" } },
     { "compact",     { &create_action<Clear>,              "Compact caches" } },
     { "shutdown",    { &create_action<Shutdown>,           "Shut down thumbnailer service" } }
@@ -81,8 +81,8 @@ QString command_summary()
 void parse_and_execute()
 {
     QCommandLineParser parser;
-    parser.setApplicationDescription("Thumbnailer admininstrative tool");
-    parser.addPositionalArgument("command", "The command to execute.");
+    parser.setApplicationDescription(QStringLiteral("Thumbnailer administrative tool"));
+    parser.addPositionalArgument(QStringLiteral("command"), QStringLiteral("The command to execute."));
     parser.parse(QCoreApplication::arguments());
 
     auto args = parser.positionalArguments();

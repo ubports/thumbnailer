@@ -18,13 +18,14 @@
 
 #include <internal/thumbnailer.h>
 
+#include <internal/env_vars.h>
 #include <internal/file_io.h>
 #include <internal/image.h>
 #include <internal/raii.h>
 #include <internal/trace.h>
 #include <testsetup.h>
 #include "utils/artserver.h"
-
+#include "utils/env_var_guard.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -46,10 +47,13 @@
 #define BAD_IMAGE TESTDATADIR "/bad_image.jpg"
 #define RGB_IMAGE TESTDATADIR "/RGB.png"
 #define BIG_IMAGE TESTDATADIR "/big.jpg"
+#define SMALL_GIF TESTDATADIR "/small.gif"
+#define LARGE_GIF TESTDATADIR "/large.gif"
 #define EMPTY_IMAGE TESTDATADIR "/empty"
 
 #define TEST_VIDEO TESTDATADIR "/testvideo.ogg"
 #define TEST_SONG TESTDATADIR "/testsong.ogg"
+#define TEST_SONG_NO_EXTENSION TESTDATADIR "/testsong_ogg"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -89,19 +93,25 @@ TEST_F(ThumbnailerTest, basic)
 {
     Thumbnailer tn;
     std::unique_ptr<ThumbnailRequest> request;
-    string thumb;
+    QByteArray thumb;
     Image img;
 
-    request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+    auto old_stats = tn.stats();
+    request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
     thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
     // Again, this time we get the answer from the failure cache.
-    request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+    old_stats = tn.stats();
+    request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
     thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
+    new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.hits() + 1, new_stats.failure_stats.hits());
 
-    request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    request = tn.get_thumbnail(TEST_IMAGE, QSize(640, 640));
     EXPECT_TRUE(boost::starts_with(request->key(), TEST_IMAGE)) << request->key();
     thumb = request->thumbnail();
     img = Image(thumb);
@@ -109,11 +119,14 @@ TEST_F(ThumbnailerTest, basic)
     EXPECT_EQ(480, img.height());
 
     // Again, for coverage. This time the thumbnail comes from the cache.
-    request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    old_stats = tn.stats();
+    request = tn.get_thumbnail(TEST_IMAGE, QSize(640, 640));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
+    new_stats = tn.stats();
+    EXPECT_EQ(old_stats.thumbnail_stats.hits() + 1, new_stats.thumbnail_stats.hits());
 
     request = tn.get_thumbnail(TEST_IMAGE, QSize(160, 160));
     thumb = request->thumbnail();
@@ -133,35 +146,29 @@ TEST_F(ThumbnailerTest, basic)
     EXPECT_EQ(100, img.width());
     EXPECT_EQ(75, img.height());
 
-    try
-    {
-        request = tn.get_thumbnail(BAD_IMAGE, QSize());
-        request->thumbnail();
-        FAIL();
-    }
-    catch (std::exception const& e)
-    {
-        string msg = e.what();
-        EXPECT_TRUE(boost::starts_with(msg, "unity::ResourceException: RequestBase::thumbnail(): key = ")) << msg;
-    }
-
     request = tn.get_thumbnail(RGB_IMAGE, QSize(48, 48));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(48, img.height());
 
-    request = tn.get_thumbnail(BIG_IMAGE, QSize());  // > 1920, so will be trimmed down
+    request = tn.get_thumbnail(BIG_IMAGE, QSize(5000, 5000));  // > 1920, so will be trimmed down
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
 
-    request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // unconstrained, so will not be trimmed down
+    request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // Will be trimmed down
     thumb = request->thumbnail();
     img = Image(thumb);
-    EXPECT_EQ(2731, img.width());
-    EXPECT_EQ(2048, img.height());
+    EXPECT_EQ(1920, img.width());
+    EXPECT_EQ(1439, img.height());
+
+    request = tn.get_thumbnail(SMALL_GIF, QSize(0, 0));
+    thumb = request->thumbnail();
+    img = Image(thumb);
+    EXPECT_EQ(640, img.width());
+    EXPECT_EQ(480, img.height());
 }
 
 TEST_F(ThumbnailerTest, changed_size)
@@ -195,7 +202,7 @@ TEST_F(ThumbnailerTest, clear)
     {
         {
             // Load a song so we have something in the full-size and thumbnail caches.
-            auto request = tn.get_thumbnail(TEST_SONG, QSize());
+            auto request = tn.get_thumbnail(TEST_SONG, QSize(200, 200));
             ASSERT_NE(nullptr, request.get());
             // Audio thumbnails cannot be produced immediately
             ASSERT_EQ("", request->thumbnail());
@@ -203,7 +210,7 @@ TEST_F(ThumbnailerTest, clear)
             QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
             request->download(chrono::milliseconds(15000));
             ASSERT_TRUE(spy.wait(20000));
-            string thumb = request->thumbnail();
+            QByteArray thumb = request->thumbnail();
             ASSERT_NE("", thumb);
             Image img(thumb);
             EXPECT_EQ(200, img.width());
@@ -226,13 +233,13 @@ TEST_F(ThumbnailerTest, clear)
 
         {
             // Load an empty image, so we have something in the failure cache.
-            auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+            auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
             EXPECT_EQ("", request->thumbnail());
         }
 
         {
             // Load empty image again, so we get a hit on failure cache.
-            auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize());
+            auto request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
             EXPECT_EQ("", request->thumbnail());
         }
     };
@@ -319,29 +326,10 @@ TEST_F(ThumbnailerTest, clear)
     EXPECT_EQ(0, stats.failure_stats.hits());
 }
 
-TEST_F(ThumbnailerTest, DISABLED_replace_photo)
-{
-    string testfile = tempdir_path() + "/foo.jpg";
-    ASSERT_EQ(0, link(TEST_IMAGE, testfile.c_str()));
-
-    Thumbnailer tn;
-    auto request = tn.get_thumbnail(testfile, QSize());
-
-    // Replace test image with a different file with different
-    // dimensions so we can tell which one is thumbnailed.
-    ASSERT_EQ(0, unlink(testfile.c_str()));
-    ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
-
-    string data = request->thumbnail();
-    Image img(data);
-    EXPECT_EQ(640, img.width());
-    EXPECT_EQ(480, img.height());
-}
-
 TEST_F(ThumbnailerTest, thumbnail_video)
 {
     Thumbnailer tn;
-    auto request = tn.get_thumbnail(TEST_VIDEO, QSize());
+    auto request = tn.get_thumbnail(TEST_VIDEO, QSize(1920, 1920));
     ASSERT_NE(nullptr, request.get());
     // Video thumbnails cannot be produced immediately
     ASSERT_EQ("", request->thumbnail());
@@ -350,64 +338,49 @@ TEST_F(ThumbnailerTest, thumbnail_video)
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
     {
-        string thumb = request->thumbnail();
+        auto old_stats = tn.stats();
+        QByteArray thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
         EXPECT_EQ(1920, img.width());
         EXPECT_EQ(1080, img.height());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.full_size_stats.size() + 1, new_stats.full_size_stats.size());
     }
 
     {
         // Fetch the thumbnail again with the same size.
         // That causes it to come from the thumbnail cache.
-        auto request = tn.get_thumbnail(TEST_VIDEO, QSize());
-        string thumb = request->thumbnail();
+        auto old_stats = tn.stats();
+        auto request = tn.get_thumbnail(TEST_VIDEO, QSize(1920, 1920));
+        QByteArray thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
         EXPECT_EQ(1920, img.width());
         EXPECT_EQ(1080, img.height());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.thumbnail_stats.hits() + 1, new_stats.thumbnail_stats.hits());
     }
 
     {
         // Fetch the thumbnail again with a different size.
-        // That causes it to be scaled from the thumbnail cache.
+        // That causes it to be scaled from the full-size cache.
+        auto old_stats = tn.stats();
         auto request = tn.get_thumbnail(TEST_VIDEO, QSize(500, 500));
-        string thumb = request->thumbnail();
+        QByteArray thumb = request->thumbnail();
         ASSERT_NE("", thumb);
         Image img(thumb);
         EXPECT_EQ(500, img.width());
         EXPECT_EQ(281, img.height());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.full_size_stats.hits() + 1, new_stats.full_size_stats.hits());
     }
-}
-
-TEST_F(ThumbnailerTest, replace_video)
-{
-    string testfile = tempdir_path() + "/foo.ogv";
-    ASSERT_EQ(0, link(TEST_VIDEO, testfile.c_str())) << strerror(errno);
-
-    Thumbnailer tn;
-    auto request = tn.get_thumbnail(testfile, QSize());
-    ASSERT_EQ("", request->thumbnail());
-
-    // Replace test image with a different file with different
-    // dimensions so we can tell which one is thumbnailed.
-    ASSERT_EQ(0, unlink(testfile.c_str()));
-    ASSERT_EQ(0, link(BIG_IMAGE, testfile.c_str()));
-
-    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-    request->download(chrono::milliseconds(15000));
-    ASSERT_TRUE(spy.wait(20000));
-
-    string data = request->thumbnail();
-    Image img(data);
-    EXPECT_EQ(1920, img.width());
-    EXPECT_EQ(1080, img.height());
 }
 
 TEST_F(ThumbnailerTest, thumbnail_song)
 {
     Thumbnailer tn;
-    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(400, 400));
     ASSERT_NE(nullptr, request.get());
     // Audio thumbnails cannot be produced immediately
     ASSERT_EQ("", request->thumbnail());
@@ -415,7 +388,25 @@ TEST_F(ThumbnailerTest, thumbnail_song)
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download(chrono::milliseconds(15000));
     ASSERT_TRUE(spy.wait(20000));
-    string thumb = request->thumbnail();
+    QByteArray thumb = request->thumbnail();
+    ASSERT_NE("", thumb);
+    Image img(thumb);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST_F(ThumbnailerTest, thumbnail_song_no_extension)
+{
+    Thumbnailer tn;
+    auto request = tn.get_thumbnail(TEST_SONG_NO_EXTENSION, QSize(400, 400));
+    ASSERT_NE(nullptr, request.get());
+    // Audio thumbnails cannot be produced immediately
+    ASSERT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download(chrono::milliseconds(15000));
+    ASSERT_TRUE(spy.wait(20000));
+    QByteArray thumb = request->thumbnail();
     ASSERT_NE("", thumb);
     Image img(thumb);
     EXPECT_EQ(200, img.width());
@@ -443,188 +434,130 @@ TEST_F(ThumbnailerTest, exceptions)
 
 TEST_F(ThumbnailerTest, vs_thumb_exec_failure)
 {
+    // Cause vs-thumb exec failure.
+    EnvVarGuard ev_guard(UTIL_DIR, "no_such_directory");
+
     Thumbnailer tn;
-    {
-        // Cause vs-thumb exec failure.
-        char const* tn_util = getenv("TN_UTILDIR");
-        ASSERT_TRUE(tn_util && *tn_util != '\0');
-        string old_env = tn_util;
 
-        setenv("TN_UTILDIR", "no_such_directory", true);
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
 
-        auto request = tn.get_thumbnail(TEST_SONG, QSize());
-        EXPECT_EQ("", request->thumbnail());
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(15000));
 
-        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-        request->download();
-        ASSERT_TRUE(spy.wait(15000));
-
-        try
-        {
-            request->thumbnail();
-            FAIL();
-        }
-        catch (unity::ResourceException const& e)
-        {
-            string msg = e.to_string();
-            string exp = "ImageExtractor::data(): failed to start no_such_directory/vs-thumb";
-            EXPECT_TRUE(msg.find(exp) != string::npos) << msg;
-        }
-        setenv("TN_UTILDIR", old_env.c_str(), true);
-    }
+    auto old_stats = tn.stats();
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_1)
 {
+    // Run fake vs-thumb that exits with status 1
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-exit-1");
+
     Thumbnailer tn;
 
-    // Run fake vs-thumb that exits with status 1
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
-
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-1", true);
-
-    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download();
     ASSERT_TRUE(spy.wait(5000));
 
-    try
-    {
-        request->thumbnail();
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("could not extract screenshot")) << msg;
-    }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_2)
 {
+    // Run fake vs-thumb that exits with status 2
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-exit-2");
+
     Thumbnailer tn;
 
-    // Run fake vs-thumb that exits with status 2
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
-
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-2", true);
-
-    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download();
     ASSERT_TRUE(spy.wait(5000));
 
-    try
-    {
-        request->thumbnail();
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
-    }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exit_99)
 {
+    // Run fake vs-thumb that exits with status 99
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-exit-99");
+
     Thumbnailer tn;
 
-    // Run fake vs-thumb that exits with status 99
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
-
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-exit-99", true);
-
-    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download();
     ASSERT_TRUE(spy.wait(5000));
 
-    try
-    {
-        request->thumbnail();
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("unknown exit status 99 from ")) << msg;
-    }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_crash)
 {
+    // Run fake vs-thumb that kills itself with SIGTERM
+    EnvVarGuard ev_guard(UTIL_DIR, TESTSRCDIR "/thumbnailer/vs-thumb-crash");
+
     Thumbnailer tn;
 
-    // Run fake vs-thumb that kills itself with SIGTERM
-    char const* tn_util = getenv("TN_UTILDIR");
-    ASSERT_TRUE(tn_util && *tn_util != '\0');
-    string old_env = tn_util;
-
-    setenv("TN_UTILDIR", TESTSRCDIR "/thumbnailer/vs-thumb-crash", true);
-
-    auto request = tn.get_thumbnail(TEST_SONG, QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(TEST_SONG, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download();
     ASSERT_TRUE(spy.wait(5000));
 
-    try
-    {
-        request->thumbnail();
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        string msg = e.what();
-        EXPECT_NE(string::npos, msg.find("vs-thumb crashed")) << msg;
-    }
-
-    setenv("TN_UTILDIR", old_env.c_str(), true);
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(ThumbnailerTest, not_regular_file)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_thumbnail("/dev/null", QSize());
-    EXPECT_EQ("", request->thumbnail());
-
-    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     try
     {
-        request->download();
+        tn.get_thumbnail("/dev/null", QSize(10, 10));
         FAIL();
     }
-    catch (runtime_error const& e)
+    catch (std::exception const& e)
     {
-        EXPECT_STREQ("ImageExtractor(): fd does not refer to regular file", e.what()) << e.what();
+        EXPECT_TRUE(boost::contains(e.what(), "LocalThumbnailRequest(): '/dev/null' is not a regular file")) << e.what();
     }
 }
 
 TEST_F(ThumbnailerTest, check_client_access)
 {
     Thumbnailer tn;
-    auto request = tn.get_thumbnail(TEST_IMAGE, QSize());
+
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(TEST_IMAGE, QSize(10, 10));
     ASSERT_NE(nullptr, request.get());
     // Check succeeds for correct user ID and valid label
     request->check_client_credentials(geteuid(), "unconfined");
@@ -636,25 +569,86 @@ TEST_F(ThumbnailerTest, check_client_access)
     catch (std::exception const& e)
     {
         EXPECT_TRUE(boost::contains(e.what(), "Request comes from a different user ID")) << e.what();
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
+}
+
+TEST_F(ThumbnailerTest, invalid_size)
+{
+    Thumbnailer tn;
+
+    auto request = tn.get_thumbnail(TEST_IMAGE, QSize());
+    try
+    {
+        request->thumbnail();
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        EXPECT_TRUE(boost::ends_with(e.what(), "invalid size: (-1,-1)")) << e.what();
+    }
+}
+
+TEST_F(ThumbnailerTest, bad_image)
+{
+    Thumbnailer tn;
+
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(BAD_IMAGE, QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
+}
+
+TEST_F(ThumbnailerTest, gif_too_large)
+{
+    Thumbnailer tn;
+
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(LARGE_GIF, QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(ThumbnailerTest, empty_file)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_thumbnail(TESTSRCDIR "/thumbnailer/empty.mp3", QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_thumbnail(TESTSRCDIR "/thumbnailer/empty.mp3", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(5000));
+
+    bool thumbnail_failed = false;
+    QByteArray thumbnail;
     try
     {
-        request->download();
-        FAIL();
+        thumbnail = request->thumbnail();
     }
-    catch (runtime_error const& e)
+    catch (unity::ResourceException const& e)
     {
-        EXPECT_STREQ("ImageExtractor(): fd refers to empty file", e.what()) << e.what();
+        string msg = e.what();
+        EXPECT_NE(string::npos, msg.find("extractor pipeline failed")) << msg;
+        EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+        thumbnail_failed = true;
+    }
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
+
+    // Change in glib 2.22: previously, g_file_query_info(..., G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE, ...)
+    // for "empty.mp3" returned "audio/mpeg". As of 2.22, it returns "text/plain". This causes
+    // an exception on Vivid, but returns an empty thumbnail on Wily. Either behavior is acceptable,
+    // seeing that extracting a thumbnail from an empty file is not ever going to produce a thumbnail anyway.
+    if (!thumbnail_failed)
+    {
+        EXPECT_EQ("", thumbnail);
     }
 }
 
@@ -672,6 +666,12 @@ protected:
         art_server_.reset();
     }
 
+    virtual void SetUp() override
+    {
+        ThumbnailerTest::SetUp();
+        art_server_->unblock_access();
+    }
+
     static unique_ptr<ArtServer> art_server_;
 };
 
@@ -682,7 +682,7 @@ TEST_F(RemoteServer, basic)
     Thumbnailer tn;
 
     {
-        auto request = tn.get_album_art("metallica", "load", QSize());
+        auto request = tn.get_album_art("metallica", "load", QSize(0, 0));
         EXPECT_EQ("", request->thumbnail());
 
         QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
@@ -696,7 +696,7 @@ TEST_F(RemoteServer, basic)
     }
 
     {
-        auto request = tn.get_artist_art("metallica", "load", QSize());
+        auto request = tn.get_artist_art("metallica", "load", QSize(0, 0));
         EXPECT_EQ("", request->thumbnail());
 
         QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
@@ -711,7 +711,7 @@ TEST_F(RemoteServer, basic)
 
     {
         // For coverage, big images are down-sized for the full-size cache.
-        auto request = tn.get_artist_art("big", "image", QSize());
+        auto request = tn.get_artist_art("big", "image", QSize(5000, 5000));
         EXPECT_EQ("", request->thumbnail());
 
         QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
@@ -729,46 +729,45 @@ TEST_F(RemoteServer, no_such_album)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_album_art("no_such_artist", "no_such_album", QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_album_art("no_such_artist", "no_such_album", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download();
     ASSERT_TRUE(spy.wait(15000));
     EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::not_found, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(RemoteServer, decode_fails)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_album_art("empty", "empty", QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_album_art("empty", "empty", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
     request->download();
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     ASSERT_TRUE(spy.wait(15000));
 
-    try
-    {
-        EXPECT_EQ("", request->thumbnail());
-        FAIL();
-    }
-    catch (unity::ResourceException const& e)
-    {
-        EXPECT_EQ("unity::ResourceException: RequestBase::thumbnail(): key = empty\\0empty\\0album:\n"
-                  "    load_image(): cannot close pixbuf loader: Unrecognized image file format",
-                  e.to_string());
-    }
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 }
 
 TEST_F(RemoteServer, no_such_local_image)
 {
     Thumbnailer tn;
 
+    auto old_stats = tn.stats();
     try
     {
-        auto request = tn.get_thumbnail("no_such_file", QSize());
+        auto request = tn.get_thumbnail("no_such_file", QSize(10, 10));
         FAIL();
     }
     catch (unity::ResourceException const& e)
@@ -777,7 +776,59 @@ TEST_F(RemoteServer, no_such_local_image)
         EXPECT_TRUE(boost::starts_with(msg,
                                        "unity::ResourceException: Thumbnailer::get_thumbnail():\n"
                                        "    boost::filesystem::canonical: No such file or directory: ")) << msg;
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
+}
+
+TEST_F(RemoteServer, bad_request)
+{
+    Thumbnailer tn;
+
+    // We do this twice because 400 is not a retryable error. This
+    // verifies that a 400 response does add an entry to the failure cache.
+    {
+        auto old_stats = tn.stats();
+        auto request = tn.get_artist_art("error", "400", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+        request->download();
+        ASSERT_TRUE(spy.wait(15000));
+        EXPECT_EQ("", request->thumbnail());
+        EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
+    }
+
+    {
+        auto old_stats = tn.stats();
+        auto request = tn.get_artist_art("error", "400", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        EXPECT_EQ(ThumbnailRequest::FetchStatus::cached_failure, request->status());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.hits() + 1, new_stats.failure_stats.hits());
+    }
+}
+
+TEST_F(RemoteServer, temporary_error)
+{
+    Thumbnailer tn;
+
+    // 402 (Payment Required) is a retryable error. This
+    // verifies that a 402 response does not add an entry to the failure cache.
+    auto old_stats = tn.stats();
+    auto request = tn.get_artist_art("error", "402", QSize(10, 10));
+    EXPECT_EQ("", request->thumbnail());
+
+    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+    request->download();
+    ASSERT_TRUE(spy.wait(15000));
+    EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
 }
 
 TEST_F(RemoteServer, get_artist_empty_strings)
@@ -786,12 +837,12 @@ TEST_F(RemoteServer, get_artist_empty_strings)
 
     try
     {
-        tn.get_artist_art("", "", QSize());
+        tn.get_artist_art("", "some album", QSize(10, 10));
         FAIL();
     }
     catch (unity::InvalidArgumentException const& e)
     {
-        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_artist_art(): both artist and album are empty",
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_artist_art(): artist is empty",
                      e.what()) << e.what();
     }
 }
@@ -802,12 +853,12 @@ TEST_F(RemoteServer, get_album_empty_strings)
 
     try
     {
-        tn.get_album_art("", "", QSize());
+        tn.get_album_art("some artist", "", QSize(10, 10));
         FAIL();
     }
     catch (unity::InvalidArgumentException const& e)
     {
-        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_album_art(): both artist and album are empty",
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_album_art(): album is empty",
                      e.what()) << e.what();
     }
 }
@@ -816,7 +867,8 @@ TEST_F(RemoteServer, timeout)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_album_art("sleep", "3", QSize());
+    auto old_stats = tn.stats();
+    auto request = tn.get_album_art("sleep", "3", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
     request->download(chrono::seconds(1));
 
@@ -824,30 +876,66 @@ TEST_F(RemoteServer, timeout)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::timeout, request->status());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
 }
 
 TEST_F(RemoteServer, server_error)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_album_art("error", "403", QSize());
-    EXPECT_EQ("", request->thumbnail());
-
-    QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-    request->download();
-    ASSERT_TRUE(spy.wait(15000));
-
-    try
+    // We do this twice, so we get coverage on the transient network error handling.
+    for (int i = 0; i < 2; ++i)
     {
-        request->thumbnail();
-        FAIL();
+        auto old_stats = tn.stats();
+        auto request = tn.get_album_art("error", "429", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+        request->download();
+        ASSERT_TRUE(spy.wait(15000));
+
+        EXPECT_EQ("", request->thumbnail());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
-    catch (unity::ResourceException const& e)
+}
+
+TEST_F(RemoteServer, network_error)
+{
+    Thumbnailer tn;
+
+    art_server_->block_access();
     {
-        string msg = e.to_string();
-        EXPECT_TRUE(boost::starts_with(
-                        msg,
-                        "unity::ResourceException: RequestBase::thumbnail(): key = error")) << msg;
+        auto old_stats = tn.stats();
+        auto request = tn.get_album_art("metallica", "load", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+        request->download();
+        ASSERT_TRUE(spy.wait(15000));
+
+        // Still fails
+        EXPECT_EQ("", request->thumbnail());
+        EXPECT_EQ(ThumbnailRequest::FetchStatus::temporary_error, request->status());
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    }
+
+    art_server_->unblock_access();
+    {
+        auto request = tn.get_album_art("metallica", "load", QSize(10, 10));
+        EXPECT_EQ("", request->thumbnail());
+
+        QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+        request->download();
+        ASSERT_TRUE(spy.wait(15000));
+
+        auto thumb = request->thumbnail();
+        Image img(thumb);
+        EXPECT_EQ(10, img.width());
+        EXPECT_EQ(10, img.height());
     }
 }
 
@@ -855,32 +943,19 @@ TEST_F(RemoteServer, album_and_artist_have_distinct_keys)
 {
     Thumbnailer tn;
 
-    auto album_request = tn.get_album_art("metallica", "load", QSize());
-    auto artist_request = tn.get_artist_art("metallica", "load", QSize());
+    auto album_request = tn.get_album_art("metallica", "load", QSize(10, 10));
+    auto artist_request = tn.get_artist_art("metallica", "load", QSize(10, 10));
     EXPECT_NE(album_request->key(), artist_request->key());
 }
 
-class DeadServer : public ::testing::Test
+TEST_F(RemoteServer, dead_server)
 {
-protected:
-    void SetUp() override
-    {
-        auto apiroot = QString("http://deadserver.invalid:80");
-        setenv("THUMBNAILER_UBUNTU_APIROOT", apiroot.toUtf8().constData(), true);
-    }
+    // Dead server won't reply.
+    EnvVarGuard ev_guard(UBUNTU_SERVER_URL, "http://deadserver.invalid");
 
-    void TearDown() override
-    {
-        unsetenv("THUMBNAILER_UBUNTU_APIROOT");
-    }
-};
-
-TEST_F(DeadServer, errors)
-{
     Thumbnailer tn;
 
-    // DeadServer won't reply
-    auto request = tn.get_album_art("some_artist", "some_album", QSize());
+    auto request = tn.get_album_art("some_artist", "some_album", QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
 
     request->download();
@@ -889,6 +964,7 @@ TEST_F(DeadServer, errors)
     ASSERT_TRUE(spy.wait(15000));
 
     EXPECT_EQ("", request->thumbnail());
+    EXPECT_EQ(ThumbnailRequest::FetchStatus::network_down, request->status());
 }
 
 int main(int argc, char** argv)
@@ -896,7 +972,8 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
     setenv("GSETTINGS_BACKEND", "memory", true);
     setenv("GSETTINGS_SCHEMA_DIR", GSETTINGS_SCHEMA_DIR, true);
-    setenv("TN_UTILDIR", TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UTIL_DIR, TESTBINDIR "/../src/vs-thumb", true);
+    setenv(UBUNTU_SERVER_URL, "http://127.0.0.1", true);
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

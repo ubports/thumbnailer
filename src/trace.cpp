@@ -18,10 +18,10 @@
 
 #include <internal/trace.h>
 
-#include <QDebug>
-
 #include <chrono>
 #include <mutex>
+
+using namespace std;
 
 namespace unity
 {
@@ -34,6 +34,8 @@ namespace internal
 
 namespace
 {
+
+string prefix;
 
 void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/, const QString& msg)
 {
@@ -49,9 +51,13 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
     localtime_r(&sys_time, &local_time);
     int msecs = duration_cast<milliseconds>(now.time_since_epoch()).count() % 1000;
 
+    if (!prefix.empty())
+    {
+        fprintf(stderr, "%s: ", prefix.c_str());
+    }
     char buf[100];
     strftime(buf, sizeof(buf), "%T", &local_time);
-    fprintf(stderr, "thumbnailer-service: [%s.%03d]", buf, msecs);
+    fprintf(stderr, "[%s.%03d]", buf, msecs);
     switch (type)
     {
         case QtWarningMsg:
@@ -66,7 +72,7 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
             break;
         // LCOV_EXCL_STOP
         default:
-            ;  // No label for debug messages.
+            break;  // No label for debug messages.
     }
     fprintf(stderr, " %s\n", msg.toLocal8Bit().constData());
     if (type == QtFatalMsg)
@@ -75,25 +81,17 @@ void trace_message_handler(QtMsgType type, const QMessageLogContext& /*context*/
     }
 }
 
-int init_count = 0;
-QtMessageHandler old_message_handler;
-
 }  // namespace
 
-TraceMessageHandlerInitializer::TraceMessageHandlerInitializer()
+TraceMessageHandler::TraceMessageHandler(string const& prog_name)
 {
-    if (init_count++ == 0)
-    {
-        old_message_handler = qInstallMessageHandler(trace_message_handler);
-    }
+    prefix = prog_name;
+    old_message_handler_ = qInstallMessageHandler(trace_message_handler);
 }
 
-TraceMessageHandlerInitializer::~TraceMessageHandlerInitializer()
+TraceMessageHandler::~TraceMessageHandler()
 {
-    if (--init_count == 0)
-    {
-        qInstallMessageHandler(old_message_handler);
-    }
+    qInstallMessageHandler(old_message_handler_);
 }
 
 }  // namespace internal
