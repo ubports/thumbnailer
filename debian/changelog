@@ -3,6 +3,7 @@ thumbnailer (2.3+16.04.20160108.2-0ubuntu1) xenial; urgency=medium
   [ Michi Henning ]
   * Fixed incorrect display of cache policy by "thumbnailer-admin stats".
   * Limit GIF file size to 2 MB (LP: #1527315).
+  * Fix non-working config settings for client-side API (LP: #1528058).
 
   [ CI Train Bot ]
   * No-change rebuild.

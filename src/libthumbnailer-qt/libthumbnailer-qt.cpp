@@ -132,8 +132,6 @@ private:
                                           QSize const& requested_size,
                                           std::function<QDBusPendingReply<QByteArray>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
-    std::unique_ptr<QDBusPendingCallWatcher> trace_client_watcher_;
-    std::unique_ptr<QDBusPendingCallWatcher> max_backlog_watcher_;
     bool trace_client_;
     std::unique_ptr<RateLimiter> limiter_;
 };
@@ -325,12 +323,12 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     // it cannot read gsettings. We do this synchronously because we can't do anything else until
     // after we get the settings anyway.
 
-    QDBusPendingCallWatcher trace_client_watcher(iface_->TraceClient());
-    QDBusPendingCallWatcher max_backlog_watcher(iface_->MaxBacklog());
+    auto trace_client_call = iface_->TraceClient();
+    auto max_backlog_call = iface_->MaxBacklog();
 
     {
-        trace_client_watcher.waitForFinished();
-        QDBusPendingReply<bool> reply = trace_client_watcher;
+        trace_client_call.waitForFinished();
+        QDBusReply<bool> reply = trace_client_call.reply();
         if (reply.isValid())
         {
             trace_client_ = reply.value();
@@ -350,8 +348,8 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     {
         int constexpr headroom = 2;
         int constexpr dflt_backlog = 1 + headroom;
-        max_backlog_watcher.waitForFinished();
-        QDBusPendingReply<int> reply = max_backlog_watcher;
+        max_backlog_call.waitForFinished();
+        QDBusReply<int> reply = max_backlog_call.reply();
         if (reply.isValid())
         {
             int backlog = reply.value();

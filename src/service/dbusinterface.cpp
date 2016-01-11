@@ -93,10 +93,9 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
 
     extraction_limiter_ = make_shared<RateLimiter>(limit);
 
-    Settings s;
-    log_level_ = s.log_level();
-    trace_client_ = s.trace_client();
-    max_backlog_ = s.max_backlog();
+    log_level_ = settings_.log_level();
+    trace_client_ = settings_.trace_client();
+    max_backlog_ = settings_.max_backlog();
 }
 
 DBusInterface::~DBusInterface()
