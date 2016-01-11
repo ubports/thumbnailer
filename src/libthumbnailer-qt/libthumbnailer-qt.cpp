@@ -360,11 +360,8 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
                 backlog = std::thread::hardware_concurrency() + headroom;
                 if (backlog == 0)
                 {
-                    // LCOV_EXCL_START
-                    // If the platform can't tell us how many
-                    // cores we have, use the default.
+                    // If the platform can't tell us how many cores we have, use the default.
                     backlog = dflt_backlog;  // LCOV_EXCL_LINE
-                    // LCOV_EXCL_STOP
                 }
             }
             limiter_.reset(new RateLimiter(backlog));
