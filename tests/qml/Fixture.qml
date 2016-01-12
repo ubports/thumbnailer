@@ -102,7 +102,7 @@ TestCase {
     function expectLoadError(url) {
         image.source = url;
         while (image.status === Image.Loading) {
-            spy.wait();
+            statusSpy.wait();
         }
         compare(image.status, Image.Error);
     }
