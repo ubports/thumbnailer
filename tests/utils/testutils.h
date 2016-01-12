@@ -24,3 +24,7 @@ class QString;
 
 // Helper for gtest to allow us to insert QString into a stream.
 std::ostream& operator<<(std::ostream& stream, const QString& s);
+// Needed because the QString version will take precedence over the std:: one
+std::ostream& operator<<(std::ostream& stream, const char* s);
+
+void PrintTo(const QString& s, std::ostream* stream);

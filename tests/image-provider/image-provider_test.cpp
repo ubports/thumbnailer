@@ -99,6 +99,7 @@ TEST_F(ProviderTest, thumbnail_image)
     ASSERT_EQ("", response->errorString());
 
     unique_ptr<QQuickTextureFactory> factory(response->textureFactory());
+    ASSERT_NE(nullptr, factory.get());
     QImage image = factory->image();
 
     EXPECT_EQ(128, image.width());
@@ -118,6 +119,87 @@ TEST_F(ProviderTest, thumbnail_cancel)
         provider.requestImageResponse(filename, QSize(128, 128)));
     response->cancel();
     wait(response.get());
+    EXPECT_EQ("Request cancelled", response->errorString());
+}
+
+TEST_F(ProviderTest, thumbnail_missing)
+{
+    const char* filename = TESTDATADIR "/no-such-file.jpg";
+
+    ThumbnailGenerator provider(thumbnailer_);
+    unique_ptr<QQuickImageResponse> response(
+        provider.requestImageResponse(filename, QSize(128, 128)));
+    wait(response.get());
+    string error = response->errorString().toStdString();
+    EXPECT_NE(string::npos, error.find("No such file or directory")) << error;
+}
+
+TEST_F(ProviderTest, albumart)
+{
+    const char* id = "artist=metallica&album=load";
+
+    AlbumArtGenerator provider(thumbnailer_);
+    unique_ptr<QQuickImageResponse> response(
+        provider.requestImageResponse(id, QSize(128, 128)));
+    wait(response.get());
+    EXPECT_EQ("", response->errorString());
+
+    unique_ptr<QQuickTextureFactory> factory(response->textureFactory());
+    ASSERT_NE(nullptr, factory.get());
+    QImage image = factory->image();
+
+    EXPECT_EQ(48, image.width());
+    EXPECT_EQ(48, image.height());
+    EXPECT_EQ(QColor("#C80000").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#00D200").rgb(), image.pixel(47, 0));
+    EXPECT_EQ(QColor("#0000DC").rgb(), image.pixel(0, 47));
+    EXPECT_EQ(QColor("#646E78").rgb(), image.pixel(47, 47));
+}
+
+TEST_F(ProviderTest, albumart_missing)
+{
+    const char* id = "artist=no-such-artist&album=no-such-album";
+
+    AlbumArtGenerator provider(thumbnailer_);
+    unique_ptr<QQuickImageResponse> response(
+        provider.requestImageResponse(id, QSize(128, 128)));
+    wait(response.get());
+    string error = response->errorString().toStdString();
+    EXPECT_NE(string::npos, error.find("could not get thumbnail for album")) << error;
+}
+
+TEST_F(ProviderTest, artistart)
+{
+    const char* id = "artist=beck&album=odelay";
+
+    ArtistArtGenerator provider(thumbnailer_);
+    unique_ptr<QQuickImageResponse> response(
+        provider.requestImageResponse(id, QSize(128, 128)));
+    wait(response.get());
+    EXPECT_EQ("", response->errorString());
+
+    unique_ptr<QQuickTextureFactory> factory(response->textureFactory());
+    ASSERT_NE(nullptr, factory.get());
+    QImage image = factory->image();
+
+    EXPECT_EQ(128, image.width());
+    EXPECT_EQ(96, image.height());
+    EXPECT_EQ(QColor("#FE0000").rgb(), image.pixel(0, 0));
+    EXPECT_EQ(QColor("#FFFF00").rgb(), image.pixel(127, 0));
+    EXPECT_EQ(QColor("#0000FE").rgb(), image.pixel(0, 95));
+    EXPECT_EQ(QColor("#00FF01").rgb(), image.pixel(127, 95));
+}
+
+TEST_F(ProviderTest, artistart_missing)
+{
+    const char* id = "artist=no-such-artist&album=no-such-album";
+
+    ArtistArtGenerator provider(thumbnailer_);
+    unique_ptr<QQuickImageResponse> response(
+        provider.requestImageResponse(id, QSize(128, 128)));
+    wait(response.get());
+    string error = response->errorString().toStdString();
+    EXPECT_NE(string::npos, error.find("could not get thumbnail for artist")) << error;
 }
 
 int main(int argc, char **argv)
