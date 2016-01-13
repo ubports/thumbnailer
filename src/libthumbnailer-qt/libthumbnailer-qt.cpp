@@ -328,17 +328,16 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
 
     {
         trace_client_call.waitForFinished();
-        QDBusPendingReply<bool> reply = trace_client_call.reply();
-        if (reply.isValid())
+        if (trace_client_call.isValid())
         {
-            trace_client_ = reply.value();
+            trace_client_ = trace_client_call.value();
         }
         // LCOV_EXCL_START
         else
         {
             bool const dflt = TRACE_CLIENT_DEFAULT;
             trace_client_ = dflt;
-            qCritical().nospace() << "could not retrieve trace-client setting: " << reply.error().message()
+            qCritical().nospace() << "could not retrieve trace-client setting: " << trace_client_call.error().message()
                                   << " (using default value of " << dflt << ")";
 
         }
@@ -348,17 +347,16 @@ ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
     {
         int constexpr dflt_backlog = MAX_BACKLOG_DEFAULT;
         max_backlog_call.waitForFinished();
-        QDBusPendingReply<int> reply = max_backlog_call.reply();
-        if (reply.isValid())
+        if (max_backlog_call.isValid())
         {
-            int backlog = reply.value();
+            int backlog = max_backlog_call.value();
             limiter_.reset(new RateLimiter(backlog));
         }
         // LCOV_EXCL_START
         else
         {
             limiter_.reset(new RateLimiter(dflt_backlog));
-            qCritical().nospace() << "could not retrieve max-backlog setting: " << reply.error().message()
+            qCritical().nospace() << "could not retrieve max-backlog setting: " << max_backlog_call.error().message()
                                   << " (using default value of " << dflt_backlog << ")";
         }
         // LCOV_EXCL_STOP
