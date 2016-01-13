@@ -77,7 +77,7 @@
       <default>10</default>
       <summary>Maximum number of pending DBus requests before the thumbnailer starts queuing them.</summary>
       <description>
-        This parameter limits the number of pending DBus requests to the thumbnailer service. If there are more requests than this currently in progress, additional requests are queued and sent once the backlog drops below the limit.
+        This parameter limits the number of pending DBus requests to the thumbnailer service. If the number of concurrent requests exceeds the backlog, additional requests are queued and sent once the backlog drops below the limit.
      </description>
     </key>
 

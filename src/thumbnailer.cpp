@@ -28,8 +28,8 @@
 #include <internal/make_directories.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
+#include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
-#include <settings.h>
 
 #include <boost/filesystem.hpp>
 

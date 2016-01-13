@@ -22,7 +22,6 @@
 #include <QMimeDatabase>
 #include <QUrl>
 
-#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace

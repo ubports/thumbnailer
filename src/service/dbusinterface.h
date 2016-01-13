@@ -22,7 +22,7 @@
 #include "handler.h"
 
 #include <ratelimiter.h>
-#include <settings.h>
+#include <internal/settings.h>
 
 #include <QDBusContext>
 #include <QThreadPool>
@@ -53,6 +53,11 @@ public Q_SLOTS:
     QByteArray GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QByteArray GetThumbnail(QString const& filename, QSize const& requestedSize);
 
+    // These methods return the value of the corresponding gsettings key. We need to do this on the server
+    // side because the client-side API runs under confinement, which disallows access to gsettings.
+    bool TraceClient();
+    int MaxBacklog();
+
 private:
     void queueRequest(Handler* handler);
 
@@ -72,10 +77,12 @@ private:
     std::shared_ptr<QThreadPool> create_thread_pool_;
     std::map<Handler*, std::unique_ptr<Handler>> requests_;
     std::map<std::string, std::vector<Handler*>> request_keys_;
-    unity::thumbnailer::Settings settings_;
+    unity::thumbnailer::internal::Settings settings_;
     std::shared_ptr<RateLimiter> download_limiter_;
     std::shared_ptr<RateLimiter> extraction_limiter_;
     int log_level_;
+    bool trace_client_;
+    int max_backlog_;
 };
 
 }  // namespace service
