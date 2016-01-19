@@ -416,3 +416,21 @@ TEST(Image, animated_gif)
     ASSERT_EQ(0, fstat(fd.get(), &st));
     EXPECT_LT(pos, st.st_size);
 }
+
+TEST(Image, animated_gif_scaled)
+{
+    FdPtr fd(open(ANIMATEDIMAGE, O_RDONLY), do_close);
+    ASSERT_GT(fd.get(), 0);
+
+    Image img(fd.get(), QSize(400, 0));
+    EXPECT_EQ(400, img.width());
+    EXPECT_EQ(300, img.height());
+    EXPECT_EQ(0xDDDFDC, img.pixel(0, 0));
+    EXPECT_EQ(0xD1D3D0, img.pixel(399, 299));
+
+    // We stopped reading the image before the end of the file:
+    off_t pos = lseek(fd.get(), 0, SEEK_CUR);
+    struct stat st;
+    ASSERT_EQ(0, fstat(fd.get(), &st));
+    EXPECT_LT(pos, st.st_size);
+}
