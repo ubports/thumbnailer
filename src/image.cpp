@@ -158,7 +158,7 @@ gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb
     unsigned char const* data = nullptr;
     size_t length = 0;
     gobj_ptr<GdkPixbufAnimationIter> iter;
-    bool on_first_frame = true;
+    bool first_frame_finished = false;
     GError* err = nullptr;
     while (reader.read(&data, &length))
     {
@@ -178,19 +178,16 @@ gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb
                 iter.reset(gdk_pixbuf_animation_get_iter(animation, nullptr));
             }
         }
-        if (iter)
+        if (iter && !gdk_pixbuf_animation_iter_on_currently_loading_frame(iter.get()))
         {
-            on_first_frame = gdk_pixbuf_animation_iter_on_currently_loading_frame(iter.get());
-        }
-        if (!on_first_frame)
-        {
+            first_frame_finished = true;
             break;
         }
     }
     // Closing the loader is necessary to process the final portion of
     // the image.  However, if we have stopped early while reading an
     // animated image it may complain about having a truncated file.
-    if (on_first_frame)
+    if (!first_frame_finished)
     {
         if (!gdk_pixbuf_loader_close(loader.get(), &err))
         {
