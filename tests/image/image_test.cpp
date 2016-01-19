@@ -33,6 +33,7 @@
 #define BIGIMAGE TESTDATADIR "/big.jpg"
 #define HORIZONTAL_STRIP TESTDATADIR "/horizontal-strip.jpg"
 #define VERTICAL_STRIP TESTDATADIR "/vertical-strip.jpg"
+#define ANIMATEDIMAGE TESTDATADIR "/animated.gif"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -396,4 +397,22 @@ TEST(Image, load_fd_big_image)
     Image img(fd.get());
     EXPECT_EQ(2731, img.width());
     EXPECT_EQ(2048, img.height());
+}
+
+TEST(Image, animated_gif)
+{
+    FdPtr fd(open(ANIMATEDIMAGE, O_RDONLY), do_close);
+    ASSERT_GT(fd.get(), 0);
+
+    Image img(fd.get());
+    EXPECT_EQ(480, img.width());
+    EXPECT_EQ(360, img.height());
+    EXPECT_EQ(0xDDDFDC, img.pixel(0, 0));
+    EXPECT_EQ(0xD1D3D0, img.pixel(479, 359));
+
+    // We stopped reading the image before the end of the file:
+    off_t pos = lseek(fd.get(), 0, SEEK_CUR);
+    struct stat st;
+    ASSERT_EQ(0, fstat(fd.get(), &st));
+    EXPECT_LT(pos, st.st_size);
 }
