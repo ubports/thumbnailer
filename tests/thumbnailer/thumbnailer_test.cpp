@@ -169,6 +169,12 @@ TEST_F(ThumbnailerTest, basic)
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
+
+    request = tn.get_thumbnail(LARGE_GIF, QSize(0, 0));
+    thumb = request->thumbnail();
+    img = Image(thumb);
+    EXPECT_EQ(1536, img.width());
+    EXPECT_EQ(1152, img.height());
 }
 
 TEST_F(ThumbnailerTest, changed_size)
@@ -596,18 +602,6 @@ TEST_F(ThumbnailerTest, bad_image)
 
     auto old_stats = tn.stats();
     auto request = tn.get_thumbnail(BAD_IMAGE, QSize(10, 10));
-    EXPECT_EQ("", request->thumbnail());
-    EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
-    auto new_stats = tn.stats();
-    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
-}
-
-TEST_F(ThumbnailerTest, gif_too_large)
-{
-    Thumbnailer tn;
-
-    auto old_stats = tn.stats();
-    auto request = tn.get_thumbnail(LARGE_GIF, QSize(10, 10));
     EXPECT_EQ("", request->thumbnail());
     EXPECT_EQ(ThumbnailRequest::FetchStatus::hard_error, request->status());
     auto new_stats = tn.stats();
