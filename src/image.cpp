@@ -146,6 +146,30 @@ auto do_exif_data_unref = [](ExifData* data)
 };
 typedef unique_ptr<ExifData, decltype(do_exif_data_unref)> ExifDataPtr;
 
+struct AnimationData {
+    gobj_ptr<GdkPixbufAnimationIter> iter;
+    bool on_first_frame = true;
+};
+
+void area_prepared(GdkPixbufLoader *loader, void *user_data)
+{
+    AnimationData *data = reinterpret_cast<AnimationData*>(user_data);
+    GdkPixbufAnimation *animation = gdk_pixbuf_loader_get_animation(loader);
+    if (animation)
+    {
+        data->iter.reset(gdk_pixbuf_animation_get_iter(animation, nullptr));
+    }
+}
+
+void area_updated(GdkPixbufLoader *loader, int x, int y,
+                  int width, int height, void *user_data)
+{
+    AnimationData *data = reinterpret_cast<AnimationData*>(user_data);
+    if (data->iter) {
+        data->on_first_frame = gdk_pixbuf_animation_iter_on_currently_loading_frame(data->iter.get());
+    }
+}
+
 gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb, void* user_data)
 {
     LoaderPtr loader(gdk_pixbuf_loader_new(), do_loader_close);
@@ -154,6 +178,11 @@ gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb
         throw runtime_error("load_image(): cannot allocate GdkPixbufLoader");  // LCOV_EXCL_LINE
     }
 
+    AnimationData anim;
+    g_signal_connect(
+        loader.get(), "area-prepared", G_CALLBACK(area_prepared), &anim);
+    g_signal_connect(
+        loader.get(), "area-updated", G_CALLBACK(area_updated), &anim);
     g_signal_connect(loader.get(), "size-prepared", size_prepared_cb, user_data);
     unsigned char const* data = nullptr;
     size_t length = 0;
@@ -168,12 +197,22 @@ gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb
             throw runtime_error(msg);
             // LCOV_EXCL_STOP
         }
+        if (!anim.on_first_frame)
+        {
+            break;
+        }
     }
-    if (!gdk_pixbuf_loader_close(loader.get(), &err))
+    // Closing the loader is necessary to process the final portion of
+    // the image.  However, if we have stopped early while reading an
+    // animated image it may complain about having a truncated file.
+    if (anim.on_first_frame)
     {
-        string msg = string("load_image(): cannot close pixbuf loader: ") + err->message;
-        g_error_free(err);
-        throw runtime_error(msg);
+        if (!gdk_pixbuf_loader_close(loader.get(), &err))
+        {
+            string msg = string("load_image(): cannot close pixbuf loader: ") + err->message;
+            g_error_free(err);
+            throw runtime_error(msg);
+        }
     }
 
     // get_pixbuf() may return NULL (e.g. if we stopped loading the image),
