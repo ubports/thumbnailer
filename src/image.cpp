@@ -161,8 +161,8 @@ void area_prepared(GdkPixbufLoader *loader, void *user_data)
     }
 }
 
-void area_updated(GdkPixbufLoader *loader, int x, int y,
-                  int width, int height, void *user_data)
+void area_updated(GdkPixbufLoader */*loader*/, int /*x*/, int /*y*/,
+                  int /*width*/, int /*height*/, void *user_data)
 {
     AnimationData *data = reinterpret_cast<AnimationData*>(user_data);
     if (data->iter) {
