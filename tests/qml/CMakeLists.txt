@@ -8,4 +8,10 @@ target_link_libraries(qml_test
     Qt5::Test
 )
 add_dependencies(qml_test thumbnailer-service thumbnailer-qml)
-add_test(qml ${CMAKE_SOURCE_DIR}/tools/run-xvfb.sh ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)
+
+message("Arch: ${CMAKE_LIBRARY_ARCHITECTURE}")
+if (${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "powerpc" OR ${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "s390x")
+    message("Skipping qml test for ${CMAKE_LIBRARY_ARCHITECTURE}")
+else()
+    add_test(qml ${CMAKE_SOURCE_DIR}/tools/run-xvfb.sh ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)
+endif()
