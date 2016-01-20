@@ -200,10 +200,7 @@ protected:
     void download(std::chrono::milliseconds timeout) override;
 
 private:
-    void verify_image_is_acceptable(string const& content_type);
-
     string filename_;
-    off_t filesize_;
     unique_ptr<ImageExtractor> image_extractor_;
 };
 
@@ -518,8 +515,6 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
         throw runtime_error("LocalThumbnailRequest(): '" + filename_ + "' is not a regular file");
     }
 
-    filesize_ = st.st_size;
-
     // The full cache key for the file is the concatenation of path
     // name, inode, modification time, and inode modification time
     // (because permissions may change).  If the file exists with the
@@ -552,24 +547,6 @@ void LocalThumbnailRequest::check_client_credentials(uid_t user,
         // LCOV_EXCL_STOP
     }
 
-}
-
-// Animated GIFs can do terrible things to memory consumption (see lp:1527315).
-// Trying deal with animated GIFs cheaply is far more effort than it is worth
-// because we would have to use async APIs for image extraction to avoid the
-// memory problems. So, we just enforce an arbitrary limit of 2 MB. This allows
-// smallish animated GIFs, and it normal GIFs of reasonable size.
-
-void LocalThumbnailRequest::verify_image_is_acceptable(string const& content_type)
-{
-    auto constexpr max_gif_size = 2 * 1024 * 1024;
-    if (content_type == "image/gif" && filesize_ > max_gif_size)
-    {
-        string msg = "LocalThumbnailRequest::fetch(): GIF image " + filename_ +
-                     " exceeds maximum file size of " + to_string(max_gif_size) + " bytes";
-        qDebug() << msg.c_str();
-        throw runtime_error(msg);
-    }
 }
 
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noexcept
@@ -635,7 +612,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         }
         if (content_type.find("image/") == 0)
         {
-            verify_image_is_acceptable(content_type);  // Throws if no good.
             FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
             if (fd.get() < 0)
             {
