@@ -1,7 +1,9 @@
 thumbnailer (2.3+16.04.20160108.2-0ubuntu2) UNRELEASED; urgency=medium
 
-  [ Michi Henning]
+  [ Michi Henning ]
   * Fixed incorrect build dependency for settings-defaults.h.
+  * Re-enabled tests on powerpc and s390x, except for qml test.
+  * Disabled vs-thumb test on powerpc64le due to gstreamer codec bug.
 
  -- Michi Henning <michi.henning@canonical.com>  Sat, 09 Jan 2016 13:21:19 +1000
 

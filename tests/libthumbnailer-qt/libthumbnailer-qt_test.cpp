@@ -60,7 +60,7 @@ namespace
 {
     // Time to wait for an expected signal to arrive. The wait()
     // calls on the spy should always report success before this.
-    int const SIGNAL_WAIT_TIME = 5000;
+    int const SIGNAL_WAIT_TIME = 10000;
 }
 
 class LibThumbnailerTest : public ::testing::Test
