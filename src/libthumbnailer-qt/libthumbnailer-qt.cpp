@@ -24,6 +24,7 @@
 #include <thumbnailerinterface.h>
 #include <service/dbus_names.h>
 
+#include <boost/filesystem.hpp>
 #include <QSharedPointer>
 
 #include <memory>
@@ -400,7 +401,17 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
     s << "getThumbnail: (" << requestedSize.width() << "," << requestedSize.height() << ") " << filename;
     auto job = [this, filename, requestedSize]
     {
-        return iface_->GetThumbnail(filename, requestedSize);
+        // Remote end requires an absolute path.
+        QString canonical_name = filename;
+        try
+        {
+            canonical_name = QString::fromStdString(boost::filesystem::canonical(filename.toStdString()).native());
+        }
+        catch (std::exception const&)
+        {
+            // If name can't be canonicalised, errors will be dealt with on the server side.
+        }
+        return iface_->GetThumbnail(canonical_name, requestedSize);
     };
     return createRequest(details, requestedSize, job);
 }
