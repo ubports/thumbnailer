@@ -566,7 +566,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
         assert(file);  // Cannot fail according to doc.
 
-        GError* err = nullptr;
         gobj_ptr<GFileInfo> info(g_file_query_info(file.get(),
                                                    G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
                                                    G_FILE_QUERY_INFO_NONE,
