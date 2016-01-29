@@ -23,6 +23,7 @@ add_library(thumbnailer-static STATIC
     image.cpp
     imageextractor.cpp
     make_directories.cpp
+    mimetype.cpp
     ratelimiter.cpp
     safe_strerror.cpp
     settings.cpp

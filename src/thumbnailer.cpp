@@ -26,19 +26,13 @@
 #include <internal/image.h>
 #include <internal/imageextractor.h>
 #include <internal/make_directories.h>
+#include <internal/mimetype.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
 #include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
 
 #include <boost/filesystem.hpp>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <gio/gio.h>
-#pragma GCC diagnostic pop
-
 #include <unity/UnityExceptions.h>
 
 #include <fcntl.h>
@@ -562,53 +556,10 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
         }
 
-        // Work out content type.
-        gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
-        assert(file);  // Cannot fail according to doc.
-
-        gobj_ptr<GFileInfo> info(g_file_query_info(file.get(),
-                                                   G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                                                   G_FILE_QUERY_INFO_NONE,
-                                                   /* cancellable */ NULL,
-                                                   /* error */ NULL));
-        string content_type = "application/octet-stream";
-        if (info)
+        string content_type = get_mimetype(filename_);
+        if (content_type.empty())
         {
-            string type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-            if (type.empty())
-            {
-                return image_data;  // LCOV_EXCL_LINE  // Couldn't work it out for some reason.
-            }
-            content_type = type;
-        }
-
-        if (content_type == "application/octet-stream")
-        {
-            // The FAST_CONTENT_TYPE detector returns 'application/octet-stream'
-            // for all non-empty files without an extension (as it only uses the extension to
-            // determine file type). In these cases, we fall back to the full content
-            // type detector.
-            GError* err = nullptr;
-            gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(),
-                                                            G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                                            G_FILE_QUERY_INFO_NONE,
-                                                            /* cancellable */ NULL,
-                                                            &err));
-            if (!full_info)
-            {
-                // LCOV_EXCL_START
-                QString msg = QString("g_file_query_info(): ") + err->message;
-                g_error_free(err);
-                qCritical() << msg;
-                return image_data;
-                // LCOV_EXCL_STOP
-            }
-
-            content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-            if (content_type.empty())
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
+            return image_data;  // LCOV_EXCL_LINE
         }
 
         // Call the appropriate image extractor and return the image data as JPEG (not scaled).
