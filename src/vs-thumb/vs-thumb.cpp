@@ -49,11 +49,11 @@ bool extract_thumbnail(string const& uri, string const& ofname)
     extractor.set_uri(uri);
     if (extractor.extract_cover_art())
     {
-        // Found embedded cover art (in either audio or video file).
+        // Found embedded cover art.
         extractor.write_image(ofname);
         return true;
     }
-    // Otherwise, if this is a video, try to extract a still frame.
+    // Otherwise, try to extract a still frame.
     if (extractor.has_video() && extractor.extract_video_frame())
     {
         extractor.write_image(ofname);

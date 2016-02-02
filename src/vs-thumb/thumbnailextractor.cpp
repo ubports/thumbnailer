@@ -289,7 +289,7 @@ bool ThumbnailExtractor::extract_video_frame()
 
 #pragma GCC diagnostic pop
 
-// Try to find an embedded image in an audio or video file.
+// Try to find an embedded image in the file.
 // If an image cover was found, set sample_ to point at the image data and return true.
 
 bool ThumbnailExtractor::extract_cover_art()
@@ -316,7 +316,7 @@ bool ThumbnailExtractor::extract_cover_art()
     auto preview_image = find_cover(tags, GST_TAG_PREVIEW_IMAGE);
     if (preview_image.sample && preview_image.type == cover)
     {
-        // Michi: I have no idea how to create an audio file with this tag :-(
+        // Michi: I have no idea how to create a video file with this tag :-(
         // LCOV_EXCL_START
         sample_ = std::move(preview_image.sample);
         return true;
