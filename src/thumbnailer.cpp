@@ -20,6 +20,7 @@
 
 #include <internal/thumbnailer.h>
 
+#include <internal/local_album_art.h>
 #include <internal/artreply.h>
 #include <internal/cachehelper.h>
 #include <internal/check_access.h>
@@ -568,10 +569,6 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         // We indicate that full-size images are to be cached only for audio and video files,
         // for which extraction is expensive. For local images, we don't cache full size.
 
-        if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
-        {
-            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
-        }
         if (content_type.find("image/") == 0)
         {
             FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
@@ -583,6 +580,15 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             }
             Image scaled(fd.get(), size_hint);
             return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+        }
+        if (content_type.find("audio/") == 0)
+        {
+            Image scaled(get_album_art(filename_));
+            return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+        }
+        if (content_type.find("video/") == 0)
+        {
+            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
         }
     }
     catch (std::exception const& e)

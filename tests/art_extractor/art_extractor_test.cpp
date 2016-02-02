@@ -25,6 +25,7 @@
 
 #define MP3_FILE TESTDATADIR "/testsong.mp3"
 #define OGG_FILE TESTDATADIR "/testsong.ogg"
+#define BAD_MP3_FILE TESTDATADIR "/bad.mp3"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -43,6 +44,24 @@ TEST(art_extractor, ogg)
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, no_such_file)
+{
+    try
+    {
+        get_album_art("no_such_file");
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_STREQ("no_such_file: cannot open for reading: No such file or directory", e.what());
+    }
+}
+
+TEST(art_extractor, bad_mp3)
+{
+    EXPECT_EQ("", get_album_art(BAD_MP3_FILE));
 }
 
 int main(int argc, char** argv)

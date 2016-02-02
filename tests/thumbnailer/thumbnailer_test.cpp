@@ -210,15 +210,7 @@ TEST_F(ThumbnailerTest, clear)
             // Load a song so we have something in the full-size and thumbnail caches.
             auto request = tn.get_thumbnail(TEST_SONG, QSize(200, 200));
             ASSERT_NE(nullptr, request.get());
-            // Audio thumbnails cannot be produced immediately
-            ASSERT_EQ("", request->thumbnail());
-
-            QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-            request->download(chrono::milliseconds(15000));
-            ASSERT_TRUE(spy.wait(20000));
-            QByteArray thumb = request->thumbnail();
-            ASSERT_NE("", thumb);
-            Image img(thumb);
+            Image img(request->thumbnail());
             EXPECT_EQ(200, img.width());
             EXPECT_EQ(200, img.height());
         }
