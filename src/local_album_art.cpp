@@ -16,6 +16,10 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
+// This abomination implements cover art extraction from various audio file formats
+// using taglib. My apologies for the mess. It's the cleanest I could come up with,
+// given the dysfunctional taglib API.
+
 #include <internal/local_album_art.h>
 
 #include <QByteArray>
@@ -602,6 +606,7 @@ string get_album_art(string const& filename)
     TagLib::FileRef fileref(filename.c_str(), true, TagLib::AudioProperties::Fast);
     if (fileref.isNull())
     {
+        // Unfortunately, this happens for all files without a file extension.
         throw runtime_error(filename + ": cannot create TagLib::FileRef");
     }
 

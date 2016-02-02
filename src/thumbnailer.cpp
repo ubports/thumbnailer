@@ -555,6 +555,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
             image_data.cache_policy = CachePolicy::cache_fullsize;
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
+            // TODO: Need to add to full-size cache here. See bug 1540753
         }
 
         string content_type = get_mimetype(filename_);
@@ -593,6 +594,7 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
     }
     catch (std::exception const& e)
     {
+        qCritical().nospace() << "LocalThumbnailRequest::fetch(): " << e.what();
         set_error_message(e.what());
         return image_data;
     }

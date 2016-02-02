@@ -30,7 +30,7 @@
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
-#define TEST_SONG TESTDATADIR "/testsong.ogg"
+#define TEST_VIDEO TESTDATADIR "/testvideo.ogg"
 
 // The thumbnailer uses g_get_user_cache_dir() to get the cache dir, and
 // glib remembers that value, so changing XDG_CACHE_HOME later has no effect.
@@ -67,7 +67,7 @@ TEST_F(ThumbnailerTest, slow_vs_thumb)
 {
     Thumbnailer tn;
 
-    auto request = tn.get_thumbnail(TEST_SONG, QSize(100, 0));
+    auto request = tn.get_thumbnail(TEST_VIDEO, QSize(100, 0));
     EXPECT_EQ("", request->thumbnail());
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
