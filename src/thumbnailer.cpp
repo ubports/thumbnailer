@@ -566,8 +566,8 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         }
 
         // Call the appropriate image extractor and return the image data as JPEG (not scaled).
-        // We indicate that full-size images are to be cached only for audio and video files,
-        // for which extraction is expensive. For local images, we don't cache full size.
+        // We indicate that full-size images are to be cached only for video files,
+        // for which extraction is expensive. For local audio and images, we don't cache full size.
 
         if (content_type.find("image/") == 0)
         {

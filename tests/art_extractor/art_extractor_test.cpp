@@ -25,6 +25,7 @@
 
 #define MP3_FILE TESTDATADIR "/testsong.mp3"
 #define OGG_FILE TESTDATADIR "/testsong.ogg"
+#define M4A_FILE TESTDATADIR "/testsong.m4a"
 #define BAD_MP3_FILE TESTDATADIR "/bad.mp3"
 
 using namespace std;
@@ -41,6 +42,14 @@ TEST(art_extractor, mp3)
 TEST(art_extractor, ogg)
 {
     auto art = get_album_art(OGG_FILE);
+    Image img(art);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, m4a)
+{
+    auto art = get_album_art(M4A_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());

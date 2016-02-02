@@ -205,9 +205,6 @@ public:
     virtual string get_album_art() const override;
 };
 
-namespace
-{
-
 string extract_id3v2_art(TagLib::ID3v2::Tag const* tag)
 {
     using namespace TagLib::ID3v2;
@@ -254,8 +251,6 @@ string extract_id3v2_art(TagLib::ID3v2::Tag const* tag)
     return art;
 }
 
-}  // namespace
-
 string ID3v2Extractor::get_album_art() const
 {
     return extract_id3v2_art(tag_);
@@ -295,9 +290,6 @@ TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
     }
     throw runtime_error(filename_ + ": unknown Ogg file type");
 }
-
-namespace
-{
 
 // Convert base-64 encoded image data from a Xiph comment a picture.
 // We return a unique_ptr because TagLib::Picture has a private
@@ -346,8 +338,6 @@ bool extract_flac_art(TagLib::FLAC::Picture const* pic, string& art)
     }
     return false;
 }
-
-} // namespace
 
 string OggExtractor::get_album_art() const
 {
@@ -424,9 +414,6 @@ string MP4Extractor::get_album_art() const
     return art;
 }
 
-namespace
-{
-
 // Helper function to pull cover (or other) art from a TagLib::ASF::Picture.
 // Returns true if an image was extracted and that image is the front cover.
 // Otherwise, returns false and the art string is either set to some other
@@ -455,8 +442,6 @@ bool extract_asf_art(TagLib::ASF::Picture const& pic, string& art)
     }
     return false;
 }
-
-} // namespace
 
 string ASFExtractor::get_album_art() const
 {
@@ -488,9 +473,6 @@ string ASFExtractor::get_album_art() const
     return art;
 }
 
-namespace
-{
-
 string extract_ape_art(TagLib::APE::Tag const* tag)
 {
     if (!tag)
@@ -513,8 +495,6 @@ string extract_ape_art(TagLib::APE::Tag const* tag)
 
     return art;
 }
-
-}  // namespace
 
 string APEExtractor::get_album_art() const
 {
