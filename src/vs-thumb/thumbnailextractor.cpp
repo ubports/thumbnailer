@@ -439,6 +439,7 @@ void ThumbnailExtractor::write_image(const std::string& filename)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-align"
 
 void ThumbnailExtractor::change_state(GstElement* element, GstState state)
 {
