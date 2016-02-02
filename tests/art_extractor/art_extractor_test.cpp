@@ -20,6 +20,8 @@
 
 #include <internal/image.h>
 
+#include <boost/algorithm/string.hpp>
+
 #include <testsetup.h>
 #include <gtest/gtest.h>
 
@@ -27,6 +29,7 @@
 #define OGG_FILE TESTDATADIR "/testsong.ogg"
 #define M4A_FILE TESTDATADIR "/testsong.m4a"
 #define BAD_MP3_FILE TESTDATADIR "/bad.mp3"
+#define NO_EXTENSION TESTDATADIR "/testsong_ogg"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -53,6 +56,19 @@ TEST(art_extractor, m4a)
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, no_extension)
+{
+    try
+    {
+        get_album_art(NO_EXTENSION);
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_TRUE(boost::ends_with(e.what(), "testsong_ogg: cannot create TagLib::FileRef")) << e.what();
+    }
 }
 
 TEST(art_extractor, no_such_file)

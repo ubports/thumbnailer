@@ -308,8 +308,10 @@ bool ThumbnailExtractor::extract_cover_art()
     auto image = std::move(find_cover(tags, GST_TAG_IMAGE));
     if (image.sample && image.type == cover)
     {
+        // LCOV_EXCL_START
         sample_ = std::move(image.sample);
         return true;
+        // LCOV_EXCL_STOP
     }
 
     // We didn't find a full-size cover image. Try to find a preview image instead.
@@ -326,8 +328,10 @@ bool ThumbnailExtractor::extract_cover_art()
     // See if we found some other normal image.
     if (image.sample)
     {
+        // LCOV_EXCL_START
         sample_ = std::move(image.sample);
         return true;
+        // LCOV_EXCL_STOP
     }
 
     // We might have found a non-cover preview image.

@@ -243,7 +243,7 @@ string extract_id3v2_art(TagLib::ID3v2::Tag const* tag)
             }
             default:
             {
-                break;  // Ignore all the other image types.
+                break;  // LCOV_EXCL_LINE  // Ignore all the other image types.
             }
         }
         if (found_front_cover)
@@ -292,7 +292,7 @@ TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
             return file->tag();
         }
     }
-    throw runtime_error(filename_ + ": unknown Ogg file type");
+    throw runtime_error(filename_ + ": unknown Ogg file type");  // LCOV_EXCL_LINE
 }
 
 // Convert base-64 encoded image data from a Xiph comment a picture.

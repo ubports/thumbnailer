@@ -48,6 +48,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <fcntl.h>
+
 using namespace unity::thumbnailer::internal;
 
 const char THEORA_TEST_FILE[] = TESTDATADIR "/testvideo.ogg";
@@ -56,10 +58,6 @@ const char MP4_ROTATE_90_TEST_FILE[] = TESTDATADIR "/testvideo-90.mp4";
 const char MP4_ROTATE_180_TEST_FILE[] = TESTDATADIR "/testvideo-180.mp4";
 const char MP4_ROTATE_270_TEST_FILE[] = TESTDATADIR "/testvideo-270.mp4";
 const char M4V_TEST_FILE[] = TESTDATADIR "/Forbidden Planet.m4v";
-const char VORBIS_TEST_FILE[] = TESTDATADIR "/testsong.ogg";
-const char AAC_TEST_FILE[] = TESTDATADIR "/testsong.m4a";
-const char MP3_TEST_FILE[] = TESTDATADIR "/testsong.mp3";
-const char MP3_NO_ARTWORK[] = TESTDATADIR "/no-artwork.mp3";
 
 class ExtractorTest : public ::testing::Test
 {
@@ -214,63 +212,6 @@ TEST_F(ExtractorTest, extract_mp4_rotate_270)
     EXPECT_EQ(1280, gdk_pixbuf_get_height(image.get()));
 }
 
-TEST_F(ExtractorTest, extract_vorbis_cover_art)
-{
-    ThumbnailExtractor extractor;
-
-    std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(VORBIS_TEST_FILE));
-    ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.write_image(outfile);
-
-    auto image = load_image(outfile);
-    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
-    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
-}
-
-TEST_F(ExtractorTest, extract_aac_cover_art)
-{
-    if (!supports_decoder("audio/x-aac"))
-    {
-        fprintf(stderr, "No support for AAC decoder\n");
-        return;
-    }
-
-    ThumbnailExtractor extractor;
-
-    std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(AAC_TEST_FILE));
-    ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.write_image(outfile);
-
-    auto image = load_image(outfile);
-    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
-    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
-}
-
-TEST_F(ExtractorTest, extract_mp3_cover_art)
-{
-    if (!supports_decoder("audio/mpeg"))
-    {
-        fprintf(stderr, "No support for MP3 decoder\n");
-        return;
-    }
-
-    ThumbnailExtractor extractor;
-
-    std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
-    ASSERT_FALSE(extractor.has_video());
-    ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.write_image(outfile);
-
-    auto image = load_image(outfile);
-    EXPECT_EQ(200, gdk_pixbuf_get_width(image.get()));
-    EXPECT_EQ(200, gdk_pixbuf_get_height(image.get()));
-}
-
 TEST_F(ExtractorTest, extract_m4v_cover_art)
 {
     if (!supports_decoder("video/x-h264"))
@@ -291,33 +232,50 @@ TEST_F(ExtractorTest, extract_m4v_cover_art)
     EXPECT_EQ(3000, gdk_pixbuf_get_height(image.get()));
 }
 
-TEST_F(ExtractorTest, no_artwork)
+TEST_F(ExtractorTest, can_write_to_stdout)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-h264"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for H.264 decoder\n");
         return;
     }
 
     ThumbnailExtractor extractor;
 
+    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
+    ASSERT_TRUE(extractor.extract_cover_art());
+
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP3_NO_ARTWORK));
-    ASSERT_FALSE(extractor.has_video());
-    ASSERT_FALSE(extractor.extract_cover_art());
+    int saved_stdout = dup(STDOUT_FILENO);
+    ASSERT_NE(-1, saved_stdout);
+    int new_stdout = open(outfile.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
+    ASSERT_NE(-1, new_stdout);
+    ASSERT_NE(-1, dup2(new_stdout, STDOUT_FILENO));
+    ASSERT_EQ(0, close(new_stdout));
+
+    try
+    {
+        extractor.write_image("");
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_STREQ("write_image(): cannot write to stdout: Bad file descriptor", e.what());
+    }
+
+    ASSERT_EQ(STDOUT_FILENO, dup2(saved_stdout, STDOUT_FILENO));
 }
 
 TEST_F(ExtractorTest, cant_write_to_stdout)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-h264"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for H.264 decoder\n");
         return;
     }
 
     ThumbnailExtractor extractor;
 
-    extractor.set_uri(filename_to_uri(MP3_TEST_FILE));
+    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
     ASSERT_TRUE(extractor.extract_cover_art());
 
     int new_stdout = dup(STDOUT_FILENO);
@@ -341,6 +299,26 @@ TEST_F(ExtractorTest, file_not_found)
 {
     ThumbnailExtractor extractor;
     EXPECT_THROW(extractor.set_uri(filename_to_uri(TESTDATADIR "/no-such-file.ogv")), std::runtime_error);
+}
+
+TEST(ExeTest, write_to_stdout)
+{
+    if (!supports_decoder("video/x-h264"))
+    {
+        fprintf(stderr, "No support for H.264 decoder\n");
+        return;
+    }
+
+    namespace io = boost::iostreams;
+
+    static std::string const cmd = PROJECT_BINARY_DIR "/src/vs-thumb/vs-thumb";
+
+    FILE* p = popen((cmd + " \"" + M4V_TEST_FILE + "\"").c_str(), "r");
+    io::file_descriptor_source s(fileno(p), io::never_close_handle);
+    std::stringstream std_output;
+    io::copy(s, std_output);
+    pclose(p);
+    EXPECT_FALSE(std_output.str().empty());
 }
 
 std::string vs_thumb_err_output(std::string const& args)
@@ -383,30 +361,15 @@ TEST(ExeTest, bad_uri)
 
 TEST(ExeTest, no_such_output_path)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-theora"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for theora decoder\n");
         return;
     }
 
-    auto err = vs_thumb_err_output(std::string(MP3_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
+    auto err = vs_thumb_err_output(std::string(THEORA_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
     EXPECT_NE(std::string::npos, err.find("write_image(): cannot open /no_such_dir/no_such_file.tiff: "
               "No such file or directory")) << err;
-}
-
-TEST(ExeTest, no_artwork)
-{
-    if (!supports_decoder("audio/mpeg"))
-    {
-        fprintf(stderr, "No support for MP3 decoder\n");
-        return;
-    }
-
-    auto err = vs_thumb_err_output(std::string(MP3_NO_ARTWORK) + " xyz.tiff");
-    auto msg = std::string("vs-thumb: No artwork in ") + MP3_NO_ARTWORK + "\n";
-    EXPECT_TRUE(boost::ends_with(err, msg)) << err;
-    boost::system::error_code ec;
-    EXPECT_FALSE(boost::filesystem::exists("xyz.tiff", ec));
 }
 
 int main(int argc, char** argv)
