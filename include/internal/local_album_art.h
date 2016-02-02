@@ -29,7 +29,9 @@ namespace thumbnailer
 namespace internal
 {
 
-std::string get_mimetype(std::string const& filename);  // Throws if there is an error.
+// Returns empty string if there is no album art. Throws if there is an error.
+
+std::string get_album_art(std::string const& filename);
 
 }  // namespace internal
 

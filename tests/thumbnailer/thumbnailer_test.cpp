@@ -50,7 +50,6 @@
 #define SMALL_GIF TESTDATADIR "/small.gif"
 #define LARGE_GIF TESTDATADIR "/large.gif"
 #define EMPTY_IMAGE TESTDATADIR "/empty"
-#define JPG_NO_EXTENSION TESTDATADIR "/orientation-1-no-extension"
 
 #define TEST_VIDEO TESTDATADIR "/testvideo.ogg"
 #define TEST_SONG TESTDATADIR "/testsong.ogg"
@@ -331,16 +330,6 @@ TEST_F(ThumbnailerTest, clear)
     EXPECT_EQ(1, stats.full_size_stats.hits());
     EXPECT_EQ(1, stats.thumbnail_stats.hits());
     EXPECT_EQ(0, stats.failure_stats.hits());
-}
-
-TEST_F(ThumbnailerTest, jpg_no_extension)
-{
-    Thumbnailer tn;
-    auto request = tn.get_thumbnail(JPG_NO_EXTENSION, QSize(640, 640));
-    auto thumb = request->thumbnail();
-    auto img = Image(thumb);
-    EXPECT_EQ(640, img.width());
-    EXPECT_EQ(480, img.height());
 }
 
 TEST_F(ThumbnailerTest, thumbnail_video)

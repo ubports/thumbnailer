@@ -559,7 +559,9 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         string content_type = get_mimetype(filename_);
         if (content_type.empty())
         {
-            return image_data;  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            throw runtime_error("LocalThumbnailRequest::fetch(): Could not determine mime type for " + filename_);
+            // LCOV_EXCL_STOP
         }
 
         // Call the appropriate image extractor and return the image data as JPEG (not scaled).

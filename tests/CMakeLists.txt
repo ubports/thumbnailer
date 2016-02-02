@@ -16,6 +16,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(utils)
 
 set(unit_test_dirs
+    art_extractor
     check_access
     dbus
     download

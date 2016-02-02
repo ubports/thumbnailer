@@ -26,8 +26,6 @@
 #include <gio/gio.h>
 #pragma GCC diagnostic pop
 
-#include <QDebug>
-
 #include <cassert>
 
 using namespace std;
@@ -41,56 +39,29 @@ namespace thumbnailer
 namespace internal
 {
 
-string get_mimetype(string const& filename) noexcept
+string get_mimetype(string const& filename)
 {
     string content_type = "application/octet-stream";
 
     gobj_ptr<GFile> file(g_file_new_for_path(filename.c_str()));
     assert(file);  // Cannot fail according to doc.
 
-    gobj_ptr<GFileInfo> info(g_file_query_info(file.get(),
-                                               G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                                               G_FILE_QUERY_INFO_NONE,
-                                               /* cancellable */ NULL,
-                                               /* error */ NULL));
-    if (info)
+    GError* err = nullptr;
+    gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(),
+                                                    G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
+                                                    G_FILE_QUERY_INFO_NONE,
+                                                    /* cancellable */ NULL,
+                                                    &err));
+    if (!full_info)
     {
-        string type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-        if (type.empty())
-        {
-            return "";  // LCOV_EXCL_LINE
-        }
-        content_type = type;
+        throw runtime_error(err->message);  // LCOV_EXCL_LINE
     }
 
-    if (content_type == "application/octet-stream")
+    content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
+    if (content_type.empty())
     {
-        // The FAST_CONTENT_TYPE detector returns 'application/octet-stream'
-        // for all non-empty files without an extension (as it only uses the extension to
-        // determine file type). In these cases, we fall back to the full content type detector.
-        GError* err = nullptr;
-        gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(),
-                                                        G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                                        G_FILE_QUERY_INFO_NONE,
-                                                        /* cancellable */ NULL,
-                                                        &err));
-        if (!full_info)
-        {
-            // LCOV_EXCL_START
-            QString msg = QString(filename.c_str()) + ": g_file_query_info(): " + err->message;
-            g_error_free(err);
-            qCritical() << msg;
-            return "";
-            // LCOV_EXCL_STOP
-        }
-
-        content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-        if (content_type.empty())
-        {
-            return "";  // LCOV_EXCL_LINE
-        }
+        throw runtime_error("get_mime_type(): could not determine content type");
     }
-
     return content_type;
 }
 
