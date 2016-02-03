@@ -16,10 +16,6 @@
  * Authored by: Michi Henning <michi.henning@canonical.com>
  */
 
-// This abomination implements cover art extraction from various audio file formats
-// using taglib. My apologies for the mess. It's the cleanest I could come up with,
-// given the dysfunctional taglib API.
-
 #include <internal/local_album_art.h>
 
 #include <QByteArray>
@@ -78,27 +74,15 @@ protected:
     TagLib::FileRef const fileref_;
 };
 
-class ID3v2Extractor : public ArtExtractor
+class MpegExtractor : public ArtExtractor
 {
 public:
-    ID3v2Extractor(string const& filename, TagLib::FileRef const& fileref)
+    MpegExtractor(string const& filename, TagLib::FileRef const& fileref)
         : ArtExtractor(filename, fileref)
-        , tag_(nullptr)
     {
-        if (dynamic_cast<TagLib::MPEG::File const*>(fileref_.file()))
-        {
-            tag_ = dynamic_cast<TagLib::MPEG::File*>(fileref_.file())->ID3v2Tag();
-        }
-        else if (dynamic_cast<TagLib::FLAC::File const*>(fileref_.file()))
-        {
-            tag_ = dynamic_cast<TagLib::FLAC::File*>(fileref_.file())->ID3v2Tag();
-        }
     }
 
     virtual string get_album_art() const override;
-
-private:
-    TagLib::ID3v2::Tag const* tag_;
 };
 
 class OggExtractor : public ArtExtractor
@@ -137,12 +121,16 @@ public:
     virtual string get_album_art() const override;
 };
 
-string extract_id3v2_art(TagLib::ID3v2::Tag const* tag)
+string MpegExtractor::get_album_art() const
 {
     using namespace TagLib::ID3v2;
 
+    auto file = dynamic_cast<TagLib::MPEG::File const*>(fileref_.file());
+    assert(file);
+
     string art;
 
+    TagLib::ID3v2::Tag const* tag = const_cast<TagLib::MPEG::File*>(file)->ID3v2Tag();
     if (tag)
     {
         auto picture_frames = tag->frameList("APIC");
@@ -179,11 +167,6 @@ string extract_id3v2_art(TagLib::ID3v2::Tag const* tag)
     }
 
     return art;
-}
-
-string ID3v2Extractor::get_album_art() const
-{
-    return extract_id3v2_art(tag_);
 }
 
 TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
@@ -344,7 +327,7 @@ unique_ptr<ArtExtractor> make_extractor(string const& filename, TagLib::FileRef 
 {
     if (dynamic_cast<TagLib::MPEG::File const*>(fileref.file()))
     {
-        return unique_ptr<ArtExtractor>(new ID3v2Extractor(filename, fileref));
+        return unique_ptr<ArtExtractor>(new MpegExtractor(filename, fileref));
     }
     if (dynamic_cast<TagLib::Ogg::File const*>(fileref.file()))
     {
