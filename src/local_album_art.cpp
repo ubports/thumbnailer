@@ -19,7 +19,6 @@
 #include <internal/local_album_art.h>
 
 #include <QByteArray>
-#include <QDebug>  // TODO: remove this
 
 #include <taglib/attachedpictureframe.h>
 #include <taglib/fileref.h>
@@ -156,7 +155,7 @@ string MpegExtractor::get_album_art() const
                 }
                 default:
                 {
-                    break;  // LCOV_EXCL_LINE  // Ignore all the other image types.
+                    break;  // Ignore all the other image types.
                 }
             }
             if (found_front_cover)
@@ -246,7 +245,7 @@ bool extract_flac_art(TagLib::FLAC::Picture const* pic, string& art)
         }
         default:
         {
-            break;  // LCOV_EXCL_LINE  // Ignore all the other image types.
+            break;  // Ignore all the other image types.
         }
     }
     return false;

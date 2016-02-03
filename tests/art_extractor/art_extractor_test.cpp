@@ -27,9 +27,11 @@
 
 #define AIFF_FILE TESTDATADIR "/testsong.aiff"
 #define FLAC_FILE TESTDATADIR "/testsong.flac"
+#define FLAC_OTHER_FILE TESTDATADIR "/testsong_other.flac"
 #define M4A_FILE TESTDATADIR "/testsong.m4a"
 #define MP2_FILE TESTDATADIR "/testsong.mp2"
 #define MP3_FILE TESTDATADIR "/testsong.mp3"
+#define MP3_OTHER_FILE TESTDATADIR "/testsong_other.mp3"
 #define OGG_FILE TESTDATADIR "/testsong.ogg"
 #define OGG_FLAC_FILE TESTDATADIR "/testsong.oga"
 #define OPUS_FILE TESTDATADIR "/testsong.opus"
@@ -61,6 +63,14 @@ TEST(art_extractor, flac)
     EXPECT_EQ(200, img.height());
 }
 
+TEST(art_extractor, flac_other)
+{
+    auto art = get_album_art(FLAC_OTHER_FILE);
+    Image img(art);
+    EXPECT_EQ(128, img.width());
+    EXPECT_EQ(96, img.height());
+}
+
 TEST(art_extractor, m4a)
 {
     auto art = get_album_art(M4A_FILE);
@@ -88,6 +98,14 @@ TEST(art_extractor, mp3)
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, mp3_other)
+{
+    auto art = get_album_art(MP3_OTHER_FILE);
+    Image img(art);
+    EXPECT_EQ(128, img.width());
+    EXPECT_EQ(96, img.height());
 }
 
 TEST(art_extractor, ogg)
