@@ -23,25 +23,19 @@
 #include <internal/local_album_art.h>
 
 #include <QByteArray>
+#include <QDebug>  // TODO: remove this
 
-#include <taglib/aifffile.h>
-#include <taglib/apefile.h>
-#include <taglib/apetag.h>
-#include <taglib/asffile.h>
 #include <taglib/attachedpictureframe.h>
 #include <taglib/fileref.h>
 #include <taglib/flacfile.h>
 #include <taglib/flacpicture.h>
 #include <taglib/id3v2tag.h>
 #include <taglib/mp4file.h>
-#include <taglib/mpcfile.h>
 #include <taglib/mpegfile.h>
 #include <taglib/oggflacfile.h>
 #include <taglib/opusfile.h>
 #include <taglib/speexfile.h>
 #include <taglib/vorbisfile.h>
-#include <taglib/wavfile.h>
-#include <taglib/wavpackfile.h>
 
 #include <cassert>
 #include <memory>
@@ -143,112 +137,44 @@ public:
     virtual string get_album_art() const override;
 };
 
-class ASFExtractor : public ArtExtractor
-{
-public:
-    ASFExtractor(string const& filename, TagLib::FileRef const& fileref)
-        : ArtExtractor(filename, fileref)
-    {
-    }
-
-    virtual string get_album_art() const override;
-};
-
-class APEExtractor : public ArtExtractor
-{
-public:
-    APEExtractor(string const& filename, TagLib::FileRef const& fileref)
-        : ArtExtractor(filename, fileref)
-    {
-    }
-
-    virtual string get_album_art() const override;
-};
-
-class MPCExtractor : public ArtExtractor
-{
-public:
-    MPCExtractor(string const& filename, TagLib::FileRef const& fileref)
-        : ArtExtractor(filename, fileref)
-    {
-    }
-
-    virtual string get_album_art() const override;
-};
-
-class WavPackExtractor : public ArtExtractor
-{
-public:
-    WavPackExtractor(string const& filename, TagLib::FileRef const& fileref)
-        : ArtExtractor(filename, fileref)
-    {
-    }
-
-    virtual string get_album_art() const override;
-};
-
-class AIFFExtractor : public ArtExtractor
-{
-public:
-    AIFFExtractor(string const& filename, TagLib::FileRef const& fileref)
-        : ArtExtractor(filename, fileref)
-    {
-    }
-
-    virtual string get_album_art() const override;
-};
-
-class WAVExtractor : public ArtExtractor
-{
-public:
-    WAVExtractor(string const& filename, TagLib::FileRef const& fileref)
-        : ArtExtractor(filename, fileref)
-    {
-    }
-
-    virtual string get_album_art() const override;
-};
-
 string extract_id3v2_art(TagLib::ID3v2::Tag const* tag)
 {
     using namespace TagLib::ID3v2;
 
-    if (!tag)
-    {
-        return "";
-    }
-
     string art;
 
-    auto picture_frames = tag->frameList("APIC");
-    for (auto const& f : picture_frames)
+    if (tag)
     {
-        bool found_front_cover = false;
-        auto frame = dynamic_cast<AttachedPictureFrame const*>(f);
-        assert(frame);
-        switch (frame->type())
+        auto picture_frames = tag->frameList("APIC");
+        for (auto const& f : picture_frames)
         {
-            case AttachedPictureFrame::FrontCover:
+            bool found_front_cover = false;
+            auto frame = dynamic_cast<AttachedPictureFrame const*>(f);
+            assert(frame);
+            switch (frame->type())
             {
-                auto byte_vector = frame->picture();
-                art = string(byte_vector.data(), byte_vector.size());
-                found_front_cover = true;
+                case AttachedPictureFrame::FrontCover:
+                {
+                    auto byte_vector = frame->picture();
+                    art = string(byte_vector.data(), byte_vector.size());
+                    found_front_cover = true;
+                    break;
+                }
+                case AttachedPictureFrame::Other:
+                {
+                    auto byte_vector = frame->picture();
+                    art = string(byte_vector.data(), byte_vector.size());
+                    break;
+                }
+                default:
+                {
+                    break;  // LCOV_EXCL_LINE  // Ignore all the other image types.
+                }
+            }
+            if (found_front_cover)
+            {
                 break;
             }
-            case AttachedPictureFrame::Other:
-            {
-                auto byte_vector = frame->picture();
-                art = string(byte_vector.data(), byte_vector.size());
-                break;
-            }
-            default:
-            {
-                break;  // LCOV_EXCL_LINE  // Ignore all the other image types.
-            }
-        }
-        if (found_front_cover)
-        {
-            break;
         }
     }
 
@@ -337,7 +263,7 @@ bool extract_flac_art(TagLib::FLAC::Picture const* pic, string& art)
         }
         default:
         {
-            break;  // Ignore all the other image types.
+            break;  // LCOV_EXCL_LINE  // Ignore all the other image types.
         }
     }
     return false;
@@ -345,24 +271,22 @@ bool extract_flac_art(TagLib::FLAC::Picture const* pic, string& art)
 
 string OggExtractor::get_album_art() const
 {
-    auto const xc = get_xiph_comment();
-    if (!xc)
-    {
-        return "";
-    }
-
     string art;
 
-    auto const& map = xc->fieldListMap();
-    auto const it = map.find("METADATA_BLOCK_PICTURE");
-    if (it != map.end())
+    auto const xc = get_xiph_comment();
+    if (xc)
     {
-        for (auto const& base_64 : it->second)
+        auto const& map = xc->fieldListMap();
+        auto const it = map.find("METADATA_BLOCK_PICTURE");
+        if (it != map.end())
         {
-            auto pic = to_picture(base_64);
-            if (extract_flac_art(pic.get(), art))
+            for (auto const& base_64 : it->second)
             {
-                break;
+                auto pic = to_picture(base_64);
+                if (extract_flac_art(pic.get(), art))
+                {
+                    break;
+                }
             }
         }
     }
@@ -393,154 +317,27 @@ string MP4Extractor::get_album_art() const
     TagLib::MP4::File const* file = dynamic_cast<TagLib::MP4::File const*>(fileref_.file());
     assert(file);
 
+    string art;
+
     TagLib::MP4::Tag const* tag = const_cast<TagLib::MP4::File const*>(file)->tag();
-    if (!tag)
+    if (tag)
     {
-        return "";
-    }
-
-    string art;
-
-    // Despite the name, this returns a map<String, Item>, not map<String, ItemList>.
-    auto const& map = const_cast<TagLib::MP4::Tag*>(tag)->itemListMap();
-    auto const it = map.find("covr");
-    if (it != map.end())
-    {
-        auto const& art_list = it->second.toCoverArtList();
-        for (auto const& img : art_list)
+        // Despite the name, this returns a map<String, Item>, not map<String, ItemList>.
+        auto const& map = const_cast<TagLib::MP4::Tag*>(tag)->itemListMap();
+        auto const it = map.find("covr");
+        if (it != map.end())
         {
-            TagLib::ByteVector const raw = img.data();
-            art = string(raw.data(), raw.size());
-            break;  // We use the first image we find.
-        }
-    }
-
-    return art;
-}
-
-// Helper function to pull cover (or other) art from a TagLib::ASF::Picture.
-// Returns true if an image was extracted and that image is the front cover.
-// Otherwise, returns false and the art string is either set to some other
-// image that was found, or remains untouched.
-
-bool extract_asf_art(TagLib::ASF::Picture const& pic, string& art)
-{
-    switch (pic.type())
-    {
-        case TagLib::FLAC::Picture::FrontCover:
-        {
-            TagLib::ByteVector raw(pic.picture());
-            art = string(raw.data(), raw.size());
-            return true;
-        }
-        case TagLib::FLAC::Picture::Other:
-        {
-            TagLib::ByteVector raw(pic.picture());
-            art = string(raw.data(), raw.size());
-            break;
-        }
-        default:
-        {
-            break;  // Ignore all the other image types.
-        }
-    }
-    return false;
-}
-
-string ASFExtractor::get_album_art() const
-{
-    TagLib::ASF::File const* file = dynamic_cast<TagLib::ASF::File const*>(fileref_.file());
-    assert(file);
-
-    TagLib::ASF::Tag const* tag = const_cast<TagLib::ASF::File const*>(file)->tag();
-    if (!tag)
-    {
-        return "";
-    }
-
-    string art;
-
-    auto const& map = const_cast<TagLib::ASF::Tag*>(tag)->attributeListMap();
-    auto const it = map.find("WM/Picture");
-    if (it != map.end())
-    {
-        for (auto const& attr : it->second)
-        {
-            auto const& pic = attr.toPicture();
-            if (extract_asf_art(pic, art))
+            auto const& art_list = it->second.toCoverArtList();
+            for (auto const& img : art_list)
             {
-                break;
+                TagLib::ByteVector const raw = img.data();
+                art = string(raw.data(), raw.size());
+                break;  // We use the first image we find.
             }
         }
     }
 
     return art;
-}
-
-string extract_ape_art(TagLib::APE::Tag const* tag)
-{
-    if (!tag)
-    {
-        return "";
-    }
-
-    string art;
-
-    auto const& map = const_cast<TagLib::APE::Tag*>(tag)->itemListMap();
-    auto const it = map.find("COVER ART (FRONT)");
-    if (it != map.end())
-    {
-        auto filename = it->second.toString();
-        auto raw_bytes = it->second.value();
-        // Image is stored as <filename>\0<image_bytes>.
-        auto skip_count = filename.size() + 1;
-        art = string(raw_bytes.data() + skip_count, raw_bytes.size() - skip_count);
-    }
-
-    return art;
-}
-
-string APEExtractor::get_album_art() const
-{
-    TagLib::APE::File const* file = dynamic_cast<TagLib::APE::File const*>(fileref_.file());
-    assert(file);
-
-    TagLib::APE::Tag const* tag = const_cast<TagLib::APE::File*>(file)->APETag();
-    return extract_ape_art(tag);
-}
-
-string MPCExtractor::get_album_art() const
-{
-    TagLib::MPC::File const* file = dynamic_cast<TagLib::MPC::File const*>(fileref_.file());
-    assert(file);
-
-    TagLib::APE::Tag const* tag = const_cast<TagLib::MPC::File*>(file)->APETag();
-    return extract_ape_art(tag);
-}
-
-string WavPackExtractor::get_album_art() const
-{
-    TagLib::WavPack::File const* file = dynamic_cast<TagLib::WavPack::File const*>(fileref_.file());
-    assert(file);
-
-    TagLib::APE::Tag const* tag = const_cast<TagLib::WavPack::File*>(file)->APETag();
-    return extract_ape_art(tag);
-}
-
-string AIFFExtractor::get_album_art() const
-{
-    TagLib::RIFF::AIFF::File const* file = dynamic_cast<TagLib::RIFF::AIFF::File const*>(fileref_.file());
-    assert(file);
-
-    return extract_id3v2_art(file->tag());
-}
-
-string WAVExtractor::get_album_art() const
-{
-    TagLib::RIFF::WAV::File const* file = dynamic_cast<TagLib::RIFF::WAV::File const*>(fileref_.file());
-    assert(file);
-
-    return extract_id3v2_art(file->tag());
 }
 
 unique_ptr<ArtExtractor> make_extractor(string const& filename, TagLib::FileRef const& fileref)
@@ -560,30 +357,6 @@ unique_ptr<ArtExtractor> make_extractor(string const& filename, TagLib::FileRef 
     if (dynamic_cast<TagLib::MP4::File const*>(fileref.file()))
     {
         return unique_ptr<ArtExtractor>(new MP4Extractor(filename, fileref));
-    }
-    if (dynamic_cast<TagLib::ASF::File const*>(fileref.file()))
-    {
-        return unique_ptr<ArtExtractor>(new ASFExtractor(filename, fileref));
-    }
-    if (dynamic_cast<TagLib::APE::File const*>(fileref.file()))
-    {
-        return unique_ptr<ArtExtractor>(new APEExtractor(filename, fileref));
-    }
-    if (dynamic_cast<TagLib::MPC::File const*>(fileref.file()))
-    {
-        return unique_ptr<ArtExtractor>(new MPCExtractor(filename, fileref));
-    }
-    if (dynamic_cast<TagLib::WavPack::File const*>(fileref.file()))
-    {
-        return unique_ptr<ArtExtractor>(new WavPackExtractor(filename, fileref));
-    }
-    if (dynamic_cast<TagLib::RIFF::AIFF::File const*>(fileref.file()))
-    {
-        return unique_ptr<ArtExtractor>(new AIFFExtractor(filename, fileref));
-    }
-    if (dynamic_cast<TagLib::RIFF::WAV::File const*>(fileref.file()))
-    {
-        return unique_ptr<ArtExtractor>(new WAVExtractor(filename, fileref));
     }
     throw runtime_error(filename + ": unknown container format");
 }

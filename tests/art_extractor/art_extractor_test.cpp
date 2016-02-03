@@ -25,14 +25,62 @@
 #include <testsetup.h>
 #include <gtest/gtest.h>
 
+#define AIFF_FILE TESTDATADIR "/testsong.aiff"
+#define FLAC_FILE TESTDATADIR "/testsong.flac"
+#define M4A_FILE TESTDATADIR "/testsong.m4a"
+#define MP2_FILE TESTDATADIR "/testsong.mp2"
 #define MP3_FILE TESTDATADIR "/testsong.mp3"
 #define OGG_FILE TESTDATADIR "/testsong.ogg"
-#define M4A_FILE TESTDATADIR "/testsong.m4a"
+#define OGG_FLAC_FILE TESTDATADIR "/testsong.oga"
+#define OPUS_FILE TESTDATADIR "/testsong.opus"
+#define SPX_FILE TESTDATADIR "/testsong.spx"
 #define BAD_MP3_FILE TESTDATADIR "/bad.mp3"
 #define NO_EXTENSION TESTDATADIR "/testsong_ogg"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
+
+TEST(art_extractor, aiff)
+{
+    try
+    {
+        get_album_art(AIFF_FILE);
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_TRUE(boost::ends_with(e.what(), "testsong.aiff: unknown container format")) << e.what();
+    }
+}
+
+TEST(art_extractor, flac)
+{
+    auto art = get_album_art(FLAC_FILE);
+    Image img(art);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, m4a)
+{
+    auto art = get_album_art(M4A_FILE);
+    Image img(art);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, mp2)
+{
+    try
+    {
+        get_album_art(MP2_FILE);
+        FAIL();
+    }
+    catch (std::exception const& e)
+    {
+        EXPECT_TRUE(boost::ends_with(e.what(), "testsong.mp2: cannot create TagLib::FileRef")) << e.what();
+    }
+}
 
 TEST(art_extractor, mp3)
 {
@@ -50,9 +98,25 @@ TEST(art_extractor, ogg)
     EXPECT_EQ(200, img.height());
 }
 
-TEST(art_extractor, m4a)
+TEST(art_extractor, ogg_flac)
 {
-    auto art = get_album_art(M4A_FILE);
+    auto art = get_album_art(OGG_FLAC_FILE);
+    Image img(art);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, opus)
+{
+    auto art = get_album_art(OPUS_FILE);
+    Image img(art);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, spx)
+{
+    auto art = get_album_art(SPX_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());

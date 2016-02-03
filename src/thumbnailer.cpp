@@ -584,8 +584,12 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
         }
         if (content_type.find("audio/") == 0)
         {
-            Image scaled(get_album_art(filename_));
-            return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+            string art = get_album_art(filename_);
+            if (!art.empty())
+            {
+                Image scaled(get_album_art(filename_));
+                return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+            }
         }
         if (content_type.find("video/") == 0)
         {
