@@ -345,7 +345,7 @@ unique_ptr<ArtExtractor> make_extractor(string const& filename, TagLib::FileRef 
 
 }  // namespace
 
-string get_album_art(string const& filename)
+string extract_local_album_art(string const& filename)
 {
     {
         // taglib has no error reporting, so we try to open the file for reading

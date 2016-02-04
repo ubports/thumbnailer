@@ -31,7 +31,7 @@ namespace internal
 
 // Returns empty string if there is no album art. Throws if there is an error.
 
-std::string get_album_art(std::string const& filename);
+std::string extract_local_album_art(std::string const& filename);
 
 }  // namespace internal
 

@@ -46,7 +46,7 @@ TEST(art_extractor, aiff)
 {
     try
     {
-        get_album_art(AIFF_FILE);
+        extract_local_album_art(AIFF_FILE);
         FAIL();
     }
     catch (std::exception const& e)
@@ -57,7 +57,7 @@ TEST(art_extractor, aiff)
 
 TEST(art_extractor, flac)
 {
-    auto art = get_album_art(FLAC_FILE);
+    auto art = extract_local_album_art(FLAC_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -65,7 +65,7 @@ TEST(art_extractor, flac)
 
 TEST(art_extractor, flac_other)
 {
-    auto art = get_album_art(FLAC_OTHER_FILE);
+    auto art = extract_local_album_art(FLAC_OTHER_FILE);
     Image img(art);
     EXPECT_EQ(128, img.width());
     EXPECT_EQ(96, img.height());
@@ -73,7 +73,7 @@ TEST(art_extractor, flac_other)
 
 TEST(art_extractor, m4a)
 {
-    auto art = get_album_art(M4A_FILE);
+    auto art = extract_local_album_art(M4A_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -83,7 +83,7 @@ TEST(art_extractor, mp2)
 {
     try
     {
-        get_album_art(MP2_FILE);
+        extract_local_album_art(MP2_FILE);
         FAIL();
     }
     catch (std::exception const& e)
@@ -94,7 +94,7 @@ TEST(art_extractor, mp2)
 
 TEST(art_extractor, mp3)
 {
-    auto art = get_album_art(MP3_FILE);
+    auto art = extract_local_album_art(MP3_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -102,7 +102,7 @@ TEST(art_extractor, mp3)
 
 TEST(art_extractor, mp3_other)
 {
-    auto art = get_album_art(MP3_OTHER_FILE);
+    auto art = extract_local_album_art(MP3_OTHER_FILE);
     Image img(art);
     EXPECT_EQ(128, img.width());
     EXPECT_EQ(96, img.height());
@@ -110,7 +110,7 @@ TEST(art_extractor, mp3_other)
 
 TEST(art_extractor, ogg)
 {
-    auto art = get_album_art(OGG_FILE);
+    auto art = extract_local_album_art(OGG_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -118,7 +118,7 @@ TEST(art_extractor, ogg)
 
 TEST(art_extractor, ogg_flac)
 {
-    auto art = get_album_art(OGG_FLAC_FILE);
+    auto art = extract_local_album_art(OGG_FLAC_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -126,7 +126,7 @@ TEST(art_extractor, ogg_flac)
 
 TEST(art_extractor, opus)
 {
-    auto art = get_album_art(OPUS_FILE);
+    auto art = extract_local_album_art(OPUS_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -134,7 +134,7 @@ TEST(art_extractor, opus)
 
 TEST(art_extractor, spx)
 {
-    auto art = get_album_art(SPX_FILE);
+    auto art = extract_local_album_art(SPX_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
@@ -144,7 +144,7 @@ TEST(art_extractor, no_extension)
 {
     try
     {
-        get_album_art(NO_EXTENSION);
+        extract_local_album_art(NO_EXTENSION);
         FAIL();
     }
     catch (std::exception const& e)
@@ -157,7 +157,7 @@ TEST(art_extractor, no_such_file)
 {
     try
     {
-        get_album_art("no_such_file");
+        extract_local_album_art("no_such_file");
         FAIL();
     }
     catch (std::exception const& e)
@@ -168,7 +168,7 @@ TEST(art_extractor, no_such_file)
 
 TEST(art_extractor, bad_mp3)
 {
-    EXPECT_EQ("", get_album_art(BAD_MP3_FILE));
+    EXPECT_EQ("", extract_local_album_art(BAD_MP3_FILE));
 }
 
 int main(int argc, char** argv)

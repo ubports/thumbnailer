@@ -582,16 +582,15 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             Image scaled(fd.get(), size_hint);
             return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
         }
-        if (content_type.find("audio/") == 0)
+        else if (content_type.find("audio/") == 0)
         {
-            string art = get_album_art(filename_);
+            string art = extract_local_album_art(filename_);
             if (!art.empty())
             {
-                Image scaled(get_album_art(filename_));
-                return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
+                return ImageData(Image(art), CachePolicy::dont_cache_fullsize, Location::local);
             }
         }
-        if (content_type.find("video/") == 0)
+        else if (content_type.find("video/") == 0)
         {
             return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
         }
