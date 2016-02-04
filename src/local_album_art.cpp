@@ -132,6 +132,7 @@ string MpegExtractor::get_album_art() const
     TagLib::ID3v2::Tag const* tag = const_cast<TagLib::MPEG::File*>(file)->ID3v2Tag();
     if (tag)
     {
+        TagLib::ByteVector byte_vector;
         auto picture_frames = tag->frameList("APIC");
         for (auto const& f : picture_frames)
         {
@@ -142,15 +143,23 @@ string MpegExtractor::get_album_art() const
             {
                 case AttachedPictureFrame::FrontCover:
                 {
-                    auto byte_vector = frame->picture();
+                    // If we have a front cover, we use it and break
+                    // out of loop, overwriting any "Other" picture
+                    // we may have found earlier.
+                    byte_vector = frame->picture();
                     art = string(byte_vector.data(), byte_vector.size());
                     found_front_cover = true;
                     break;
                 }
                 case AttachedPictureFrame::Other:
                 {
-                    auto byte_vector = frame->picture();
-                    art = string(byte_vector.data(), byte_vector.size());
+                    // Use the first "Other" picture and ignore any "Other"
+                    // pictures that might follow in the list.
+                    if (byte_vector.size() == 0)
+                    {
+                        byte_vector = frame->picture();
+                        art = string(byte_vector.data(), byte_vector.size());
+                    }
                     break;
                 }
                 default:
@@ -233,14 +242,21 @@ bool extract_flac_art(TagLib::FLAC::Picture const* pic, string& art)
     {
         case TagLib::FLAC::Picture::FrontCover:
         {
+            // If we have a front cover, we use it, overwriting
+            // any "Other" picture we may have found earlier.
             TagLib::ByteVector raw(pic->data());
             art = string(raw.data(), raw.size());
             return true;
         }
         case TagLib::FLAC::Picture::Other:
         {
-            TagLib::ByteVector raw(pic->data());
-            art = string(raw.data(), raw.size());
+            if (art.empty())
+            {
+                // Use the first "Other" picture and ignore any "Other"
+                // pictures that might follow in the list.
+                TagLib::ByteVector raw(pic->data());
+                art = string(raw.data(), raw.size());
+            }
             break;
         }
         default:
@@ -262,6 +278,7 @@ string OggExtractor::get_album_art() const
         auto const it = map.find("METADATA_BLOCK_PICTURE");
         if (it != map.end())
         {
+            TagLib::ByteVector raw;
             for (auto const& base_64 : it->second)
             {
                 auto pic = to_picture(base_64);

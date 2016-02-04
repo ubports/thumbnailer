@@ -60,7 +60,7 @@ string get_mimetype(string const& filename)
     content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
     if (content_type.empty())
     {
-        throw runtime_error("get_mime_type(): could not determine content type");  // LCOV_EXCL_LINE
+        throw runtime_error("get_mimetype(): " + filename + ": could not determine content type");  // LCOV_EXCL_LINE
     }
     return content_type;
 }
