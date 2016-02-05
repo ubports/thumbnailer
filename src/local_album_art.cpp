@@ -212,6 +212,17 @@ TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
     throw runtime_error(filename_ + ": unknown Ogg file type");  // LCOV_EXCL_LINE
 }
 
+// Decode base_64 string into a QByteArray
+
+QByteArray decode_b64(TagLib::String const& base_64)
+{
+    // Use QByteArray to decode from base-64.
+    TagLib::ByteVector b64_bytes = base_64.data(TagLib::String::Latin1);
+    QByteArray bytes;
+    bytes.setRawData(b64_bytes.data(), b64_bytes.size());
+    return QByteArray::fromBase64(bytes);
+}
+
 // Convert base-64 encoded image data from a Xiph comment a picture.
 // We return a unique_ptr because TagLib::Picture has a private
 // copy constructor and no move constructor, so it is impossible
@@ -219,12 +230,7 @@ TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
 
 unique_ptr<TagLib::FLAC::Picture> to_picture(TagLib::String const& base_64)
 {
-    // Use QByteArray to decode from base-64.
-    TagLib::ByteVector b64_bytes = base_64.data(TagLib::String::Latin1);
-    QByteArray bytes;
-    bytes.setRawData(b64_bytes.data(), b64_bytes.size());
-    bytes = QByteArray::fromBase64(bytes);
-
+    QByteArray bytes = decode_b64(base_64);
     // Now we need a byte vector to create the Picture :-(
     TagLib::ByteVector byte_vector(bytes.data(), bytes.size());
     QByteArray().swap(bytes);  // Release memory
@@ -275,7 +281,7 @@ string OggExtractor::get_album_art() const
     if (xc)
     {
         auto const& map = xc->fieldListMap();
-        auto const it = map.find("METADATA_BLOCK_PICTURE");
+        auto it = map.find("METADATA_BLOCK_PICTURE");
         if (it != map.end())
         {
             TagLib::ByteVector raw;
@@ -286,6 +292,15 @@ string OggExtractor::get_album_art() const
                 {
                     break;
                 }
+            }
+        }
+        else if ((it = map.find("COVERART")) != map.end())
+        {
+            // Support decprecated way of storing cover art.
+            // https://wiki.xiph.org/VorbisComment#Unofficial_COVERART_field_.28deprecated.29
+            if (it->second.size() > 0)
+            {
+                art = decode_b64(it->second.front()).toStdString();
             }
         }
     }

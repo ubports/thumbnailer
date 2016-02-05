@@ -33,6 +33,7 @@
 #define MP3_FILE TESTDATADIR "/testsong.mp3"
 #define MP3_OTHER_FILE TESTDATADIR "/testsong_other.mp3"
 #define OGG_FILE TESTDATADIR "/testsong.ogg"
+#define OGG_OLD_ART_FILE TESTDATADIR "/testsong_old_art.ogg"
 #define OGG_FLAC_FILE TESTDATADIR "/testsong.oga"
 #define OPUS_FILE TESTDATADIR "/testsong.opus"
 #define SPX_FILE TESTDATADIR "/testsong.spx"
@@ -111,6 +112,14 @@ TEST(art_extractor, mp3_other)
 TEST(art_extractor, ogg)
 {
     auto art = extract_local_album_art(OGG_FILE);
+    Image img(art);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+}
+
+TEST(art_extractor, ogg_old_art)
+{
+    auto art = extract_local_album_art(OGG_OLD_ART_FILE);
     Image img(art);
     EXPECT_EQ(200, img.width());
     EXPECT_EQ(200, img.height());
