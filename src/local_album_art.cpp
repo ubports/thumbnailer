@@ -35,9 +35,6 @@
 #include <cassert>
 #include <memory>
 
-#include <fcntl.h>
-#include <unistd.h>
-
 using namespace std;
 
 namespace unity
@@ -379,17 +376,6 @@ unique_ptr<ArtExtractor> make_extractor(string const& filename, TagLib::FileRef 
 
 string extract_local_album_art(string const& filename)
 {
-    {
-        // taglib has no error reporting, so we try to open the file for reading
-        // in order to get a decent error message when something is likely to go wrong.
-        int fd = open(filename.c_str(), O_RDONLY);
-        if (fd == -1)
-        {
-            throw runtime_error(filename + ": cannot open for reading: " + strerror(errno));
-        }
-        close(fd);
-    }
-
     TagLib::FileRef fileref(filename.c_str(), true, TagLib::AudioProperties::Fast);
     if (fileref.isNull())
     {

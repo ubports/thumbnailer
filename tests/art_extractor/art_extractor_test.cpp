@@ -171,7 +171,7 @@ TEST(art_extractor, no_such_file)
     }
     catch (std::exception const& e)
     {
-        EXPECT_STREQ("no_such_file: cannot open for reading: No such file or directory", e.what());
+        EXPECT_STREQ("no_such_file: cannot create TagLib::FileRef", e.what());
     }
 }
 
