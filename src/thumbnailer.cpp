@@ -497,6 +497,11 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
     : RequestBase(thumbnailer, "", requested_size, timeout)
     , filename_(filename)
 {
+    if (!boost::filesystem::path(filename).is_absolute())
+    {
+        throw runtime_error("LocalThumbnailRequest(): " + filename_ + ": file name must be an absolute path");
+    }
+
     // We canonicalise the path name both to avoid caching the file
     // multiple times, and to ensure our access checks are against the
     // real file rather than a symlink.

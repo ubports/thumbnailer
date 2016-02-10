@@ -761,7 +761,7 @@ TEST_F(RemoteServer, no_such_local_image)
     auto old_stats = tn.stats();
     try
     {
-        auto request = tn.get_thumbnail("no_such_file", QSize(10, 10));
+        auto request = tn.get_thumbnail("/no_such_file", QSize(10, 10));
         FAIL();
     }
     catch (unity::ResourceException const& e)
@@ -770,6 +770,27 @@ TEST_F(RemoteServer, no_such_local_image)
         EXPECT_TRUE(boost::starts_with(msg,
                                        "unity::ResourceException: Thumbnailer::get_thumbnail():\n"
                                        "    boost::filesystem::canonical: No such file or directory: ")) << msg;
+        auto new_stats = tn.stats();
+        EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
+    }
+}
+
+TEST_F(RemoteServer, relative_path)
+{
+    Thumbnailer tn;
+
+    auto old_stats = tn.stats();
+    try
+    {
+        auto request = tn.get_thumbnail("xxx", QSize(10, 10));
+        FAIL();
+    }
+    catch (unity::ResourceException const& e)
+    {
+        string msg = e.to_string();
+        EXPECT_TRUE(boost::starts_with(msg,
+                                       "unity::ResourceException: Thumbnailer::get_thumbnail():\n"
+                                       "    LocalThumbnailRequest(): xxx: file name must be an absolute path")) << msg;
         auto new_stats = tn.stats();
         EXPECT_EQ(old_stats.failure_stats.size(), new_stats.failure_stats.size());
     }
