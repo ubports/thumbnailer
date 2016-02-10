@@ -1,3 +1,13 @@
+thumbnailer (2.3+16.04.20160210-0ubuntu1) xenial; urgency=medium
+
+  [ James Henstridge ]
+  * When a thumbnail can not be loaded, return an error from the image
+    provider rather than substituting in a fallback image. Users can
+    detect the problem via the status property of the QML Image
+    component and provide their own fallback handling. (LP: #1324142)
+
+ -- Pawel Stolowski <ci-train-bot@canonical.com>  Wed, 10 Feb 2016 00:51:48 +0000
+
 thumbnailer (2.3+16.04.20160108.2-0ubuntu1) xenial; urgency=medium
 
   [ Michi Henning ]
