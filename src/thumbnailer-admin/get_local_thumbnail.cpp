@@ -23,8 +23,6 @@
 #include <internal/safe_strerror.h>
 #include "util.h"
 
-#include <boost/filesystem.hpp>
-
 #include <cassert>
 
 #include <fcntl.h>
@@ -70,9 +68,8 @@ GetLocalThumbnail::GetLocalThumbnail(QCommandLineParser& parser)
     {
         throw parser.helpText();
     }
-    input_path_ = QString::fromStdString(boost::filesystem::canonical(args[1].toStdString()).native());
-    auto dir = args.size() == 3 ? args[2] : current_directory();
-    output_dir_ = QString::fromStdString(boost::filesystem::canonical(dir.toStdString()).native());
+    input_path_ = args[1];
+    output_dir_ = args.size() == 3 ? args[2] : current_directory();
 
     if (parser.isSet(size_option))
     {
@@ -103,12 +100,10 @@ void GetLocalThumbnail::run(DBusConnection& conn)
         string out_path = make_output_path(input_path_.toStdString(), size_, output_dir_.toStdString());
         write_file(out_path, thumbnail);
     }
-    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
         throw string("GetLocalThumbnail::run(): ") + e.what();
     }
-    // LCOV_EXCL_STOP
 }
 
 }  // namespace tools

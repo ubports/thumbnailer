@@ -118,11 +118,11 @@ int main(int argc, char* argv[])
         parse_and_execute();
         rc = EXIT_SUCCESS;
     }
+    // LCOV_EXCL_START
     catch (std::exception const& e)
     {
         cerr << prog_name << ": " << e.what() << endl;
     }
-    // LCOV_EXCL_START
     catch (QString const& msg)
     {
         cerr << prog_name << ": " << msg.toStdString() << endl;

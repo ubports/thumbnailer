@@ -566,13 +566,10 @@ TEST_F(AdminTest, bad_files)
     AdminRunner ar;
 
     EXPECT_EQ(1, ar.run(QStringList{"get", "no_such_file", QString::fromStdString(temp_dir())}));
-    EXPECT_TRUE(starts_with(ar.stderr(),
-                            "thumbnailer-admin: boost::filesystem::canonical: No such file or directory:"))
-        << ar.stderr();
+    EXPECT_TRUE(ends_with(ar.stderr(), ": no_such_file: file name must be an absolute path\n")) << ar.stderr();
 
     EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", "no_such_directory"}));
-    EXPECT_TRUE(starts_with(ar.stderr(), "thumbnailer-admin: boost::filesystem::canonical: No such file or directory: \""))
-        << ar.stderr();
+    EXPECT_TRUE(ends_with(ar.stderr(), ": No such file or directory\n")) << ar.stderr();
 }
 
 TEST_F(AdminTest, shutdown)
