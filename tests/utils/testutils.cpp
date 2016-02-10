@@ -19,10 +19,21 @@
 #include "testutils.h"
 
 #include <QString>
+#include <ostream>
 
 using namespace std;
 
 ostream& operator<<(ostream& stream, const QString& s)
 {
     return stream << s.toUtf8().constData();
+}
+
+ostream& operator<<(ostream& stream, const char* s)
+{
+    return std::operator<<(stream, s);
+}
+
+void PrintTo(const QString& s, ostream* stream)
+{
+    *stream << s;
 }

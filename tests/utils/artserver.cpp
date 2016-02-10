@@ -69,7 +69,6 @@ ArtServer::ArtServer()
     }
     blocked_server_url_ = "http://127.0.0.1:" + std::to_string(addr.sin_port);
 
-    setenv("THUMBNAILER_TEST_DEFAULT_IMAGE", THUMBNAILER_TEST_DEFAULT_IMAGE, true);
     update_env();
 }
 

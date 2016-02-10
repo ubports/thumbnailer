@@ -20,8 +20,6 @@
 
 #include <QQuickImageProvider>
 
-#include <memory>
-
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 namespace unity
@@ -46,24 +44,20 @@ class ThumbnailerImageResponse : public QQuickImageResponse  // LCOV_EXCL_LINE  
 public:
     Q_DISABLE_COPY(ThumbnailerImageResponse)
 
-    ThumbnailerImageResponse(QSize const& requested_size,
-                             QString const& default_image,
-                             QSharedPointer<unity::thumbnailer::qt::Request> const& request);
-    ThumbnailerImageResponse(QSize const& requested_size,
-                             QString const& default_image);
+    ThumbnailerImageResponse(QSharedPointer<unity::thumbnailer::qt::Request> const& request);
+    ThumbnailerImageResponse(QString const& error_message);
     ~ThumbnailerImageResponse();
 
     QQuickTextureFactory* textureFactory() const override;
+    QString errorString() const override;
     void cancel() override;
 
 private Q_SLOTS:
     void requestFinished();
 
 private:
-    QString id_;
-    QSize requested_size_;
     QSharedPointer<unity::thumbnailer::qt::Request> request_;
-    QString default_image_;
+    QString error_message_;
 };
 
 }  // namespace qml

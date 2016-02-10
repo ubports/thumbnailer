@@ -19,35 +19,10 @@
 #include "thumbnailgenerator.h"
 
 #include <QDebug>
-#include <QMimeDatabase>
 #include <QUrl>
 
 #include <settings.h>
 #include "thumbnailerimageresponse.h"
-
-namespace
-{
-
-const char* DEFAULT_VIDEO_ART = "/usr/share/thumbnailer/icons/video_missing.png";
-const char* DEFAULT_ALBUM_ART = "/usr/share/thumbnailer/icons/album_missing.png";
-
-QString default_image_based_on_mime(QString const &id)
-{
-    QMimeDatabase db;
-    QMimeType mime = db.mimeTypeForFile(id);
-
-    if (mime.name().contains(QStringLiteral("audio")))
-    {
-        return DEFAULT_ALBUM_ART;
-    }
-    else if (mime.name().contains(QStringLiteral("video")))
-    {
-        return DEFAULT_VIDEO_ART;  // LCOV_EXCL_LINE  // Being lazy here: default art is about to go away.
-    }
-    return DEFAULT_ALBUM_ART;
-}
-
-}  // namespace
 
 namespace unity
 {
@@ -66,8 +41,6 @@ ThumbnailGenerator::ThumbnailGenerator(std::shared_ptr<unity::thumbnailer::qt::T
 
 QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
-    QSize size = requestedSize;
-
     /* Allow appending a query string (e.g. ?something=timestamp)
      * to the id and then ignore it.
      * This is workaround to force reloading a thumbnail when it has
@@ -79,8 +52,8 @@ QQuickImageResponse* ThumbnailGenerator::requestImageResponse(const QString& id,
      * is the only way around the issue for now. */
     QString src_path = QUrl(id).path();
 
-    auto request = thumbnailer->getThumbnail(src_path, size);
-    return new ThumbnailerImageResponse(size, default_image_based_on_mime(id), request);
+    auto request = thumbnailer->getThumbnail(src_path, requestedSize);
+    return new ThumbnailerImageResponse(request);
 }
 
 }  // namespace qml
