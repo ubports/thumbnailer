@@ -16,11 +16,11 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(utils)
 
 set(unit_test_dirs
+    art_extractor
     check_access
     dbus
     download
     file_io
-    file_lock
     gobj_ptr
     image
     image-provider
@@ -36,6 +36,7 @@ set(unit_test_dirs
 
 set(slow_test_dirs
     backoff_adjuster
+    file_lock
     slow-vs-thumb
     stress
 )

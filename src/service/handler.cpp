@@ -242,7 +242,7 @@ void Handler::checkFinished()
         // LCOV_EXCL_STOP
     }
 
-    // Did we find a valid thumbnail in the cache or generated it locally from an image file?
+    // Did we find a valid thumbnail in the cache or generated it locally from an image or audio file?
     if (ba_error.ba.size() != 0)
     {
         sendThumbnail(ba_error.ba);
