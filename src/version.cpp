@@ -44,22 +44,22 @@ Version::Version(string const& cache_dir)
     ifstream ifile(version_file_);
     if (!ifile.is_open())
     {
-        old_major_ = 2;
-        old_minor_ = 3;
-        old_micro_ = 0;
+        prev_major_ = 2;
+        prev_minor_ = 3;
+        prev_micro_ = 0;
     }
     else
     {
-        ifile >> old_major_ >> old_minor_ >> old_micro_;
+        ifile >> prev_major_ >> prev_minor_ >> prev_micro_;
         if (ifile.fail())
         {
-            old_major_ = 2;
-            old_minor_ = 3;
-            old_micro_ = 0;
+            prev_major_ = 2;
+            prev_minor_ = 3;
+            prev_micro_ = 0;
             qCritical() << "Cannot read" << version_file_.c_str();  // LCOV_EXCL_LINE
         }
     }
-    update_version_ = old_major_ != major || old_minor_ != minor || old_micro_ != micro;
+    update_version_ = prev_major_ != major || prev_minor_ != minor || prev_micro_ != micro;
 }
 
 Version::~Version()
@@ -79,19 +79,19 @@ Version::~Version()
     }
 }
 
-int Version::old_major() const
+int Version::prev_major() const
 {
-    return old_major_;
+    return prev_major_;
 }
 
-int Version::old_minor() const
+int Version::prev_minor() const
 {
-    return old_minor_;
+    return prev_minor_;
 }
 
-int Version::old_micro() const
+int Version::prev_micro() const
 {
-    return old_micro_;
+    return prev_micro_;
 }
 
 }  // namespace internal

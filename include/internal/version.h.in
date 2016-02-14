@@ -49,17 +49,17 @@ public:
     Version& operator=(Version&&) = default;
 
     // Remembered version from last time the thumbnailer was run
-    int old_major() const;
-    int old_minor() const;
-    int old_micro() const;
+    int prev_major() const;
+    int prev_minor() const;
+    int prev_micro() const;
 
     std::string version_file_;  // Path of version file
-    bool update_version_;        // True if we need to write out the current version from destructor
+    bool update_version_;       // True if we need to write out the current version from destructor
 
 private:
-    int old_major_;
-    int old_minor_;
-    int old_micro_;
+    int prev_major_;
+    int prev_minor_;
+    int prev_micro_;
 };
 
 }  // namespace internal

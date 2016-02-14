@@ -1,11 +1,12 @@
-thumbnailer (2.3+16.04.20160108.2-0ubuntu2) UNRELEASED; urgency=medium
+thumbnailer (2.4) UNRELEASED; urgency=medium
 
   [ Michi Henning ]
   * Fixed incorrect build dependency for settings-defaults.h.
   * Re-enabled tests on powerpc and s390x, except for qml test.
   * Disabled vs-thumb test on powerpc64le due to gstreamer codec bug.
+  * Added version check on start-up and automatic cache wipe for version <= 2.3.x.
 
- -- Michi Henning <michi.henning@canonical.com>  Sat, 09 Jan 2016 13:21:19 +1000
+ -- Michi Henning <michi.henning@canonical.com>  Mon, 15 Feb 2016 09:47:52 +1000
 
 thumbnailer (2.3+16.04.20160108.2-0ubuntu1) xenial; urgency=medium
 

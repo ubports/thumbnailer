@@ -814,14 +814,16 @@ Thumbnailer::~Thumbnailer()
 void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
 {
     Version v(cache_dir);
-    if ((v.major == 2 && v.minor >= 4) || v.major > 2)
+    if (v.prev_major() == 2 && v.prev_minor() == 3)
     {
-        // 2.4.0 added a bunch of fixes. Clean out the cache
-        // when upgrading from an older version so we don't
-        // leave incorrect artwork behind indefinitely.
-        if (v.old_major() == 2 && v.old_minor() == 3)
+        if ((v.major == 2 && v.minor >= 4) || v.major > 2)
         {
-            clear(Thumbnailer::CacheSelector::all);
+            // 2.4.0 added a bunch of fixes. Clean out the cache
+            // when upgrading from an older version so we don't
+            // leave incorrect artwork behind (potentially indefinitely).
+            {
+                clear(Thumbnailer::CacheSelector::all);
+            }
         }
     }
 }
