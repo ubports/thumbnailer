@@ -55,6 +55,11 @@ set(LIBTHUMBNAILER_QT_SO_VERSION_MICRO "0")
 set(LIBTHUMBNAILER_QT_SO_VERSION ${LIBTHUMBNAILER_QT_SO_VERSION_MAJOR}.${LIBTHUMBNAILER_QT_SO_VERSION_MINOR})
 set(LIBTHUMBNAILER_QT_HDR_INSTALL_DIR include/${LIBTHUMBNAILER_QT}-${LIBTHUMBNAILER_QT_SO_VERSION}/unity/thumbnailer/qt)
 
+# thumbnailer-service version
+set(THUMBNAILER_VERSION_MAJOR "2")
+set(THUMBNAILER_VERSION_MINOR "4")
+set(THUMBNAILER_VERSION_MICRO "0")
+
 # Flags for thread/address sanitizer
 set(SANITIZER "" CACHE STRING "Build with -fsanitize=<value> (legal values: thread, address)")
 

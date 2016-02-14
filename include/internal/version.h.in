@@ -1,0 +1,69 @@
+/*
+ * Copyright (C) 2016 Canonical Ltd.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: Michi Henning <michi.henning@canonical.com>
+ */
+
+#pragma once
+
+#include <string>
+
+namespace unity
+{
+
+namespace thumbnailer
+{
+
+namespace internal
+{
+
+#define THUMBNAILER_VERSION_MAJOR @THUMBNAILER_VERSION_MAJOR@
+#define THUMBNAILER_VERSION_MINOR @THUMBNAILER_VERSION_MINOR@
+#define THUMBNAILER_VERSION_MICRO @THUMBNAILER_VERSION_MICRO@
+
+#define THUMBNAILER_VERSION_FILENAME ".thumbnailer-version"
+
+class Version final
+{
+public:
+    // Current version
+    static constexpr int major = THUMBNAILER_VERSION_MAJOR;
+    static constexpr int minor = THUMBNAILER_VERSION_MINOR;
+    static constexpr int micro = THUMBNAILER_VERSION_MICRO;
+
+    Version(std::string const& version_dir);  // <version_dir>/.thumbnailer-version contains remembered version
+    ~Version();                               // Writes current version.
+    Version(Version&&) = default;
+    Version& operator=(Version&&) = default;
+
+    // Remembered version from last time the thumbnailer was run
+    int old_major() const;
+    int old_minor() const;
+    int old_micro() const;
+
+    std::string version_file_;  // Path of version file
+    bool update_version_;        // True if we need to write out the current version from destructor
+
+private:
+    int old_major_;
+    int old_minor_;
+    int old_micro_;
+};
+
+}  // namespace internal
+
+}  // namespace thumbnailer
+
+}  // namespace unity

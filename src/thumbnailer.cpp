@@ -32,6 +32,7 @@
 #include <internal/safe_strerror.h>
 #include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
+#include <internal/version.h>
 
 #include <boost/filesystem.hpp>
 #include <unity/UnityExceptions.h>
@@ -779,6 +780,9 @@ Thumbnailer::Thumbnailer()
             auto backoff = failure_cache_->get(BACKOFF_PERIOD_KEY);
             backoff_.set_backoff_period(chrono::seconds(stoll(*backoff)));
         }
+
+        // Apply any adjustments to the caches that are version-dependent.
+        apply_upgrade_actions(cache_dir);
     }
     catch (std::exception const& e)
     {
@@ -805,6 +809,21 @@ Thumbnailer::~Thumbnailer()
         qDebug() << "~Thumbnailer(): cannot update network failure time: unknown exception";
     }
     // LCOV_EXCL_STOP
+}
+
+void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
+{
+    Version v(cache_dir);
+    if ((v.major == 2 && v.minor >= 4) || v.major > 2)
+    {
+        // 2.4.0 added a bunch of fixes. Clean out the cache
+        // when upgrading from an older version so we don't
+        // leave incorrect artwork behind indefinitely.
+        if (v.old_major() == 2 && v.old_minor() == 3)
+        {
+            clear(Thumbnailer::CacheSelector::all);
+        }
+    }
 }
 
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,

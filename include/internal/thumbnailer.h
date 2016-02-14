@@ -123,6 +123,7 @@ private:
     {
         return downloader_.get();
     }
+    void apply_upgrade_actions(std::string const& cache_dir);
 
     typedef std::vector<PersistentCacheHelper*> CacheVec;
     CacheVec select_caches(CacheSelector selector) const;
