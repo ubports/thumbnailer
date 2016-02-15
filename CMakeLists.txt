@@ -60,6 +60,9 @@ set(THUMBNAILER_VERSION_MAJOR "2")
 set(THUMBNAILER_VERSION_MINOR "4")
 set(THUMBNAILER_VERSION_MICRO "0")
 
+# Encoding version of cache files
+set(THUMBNAILER_CACHE_VERSION "1")
+
 # Flags for thread/address sanitizer
 set(SANITIZER "" CACHE STRING "Build with -fsanitize=<value> (legal values: thread, address)")
 

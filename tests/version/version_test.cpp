@@ -24,7 +24,8 @@
 using namespace std;
 using namespace unity::thumbnailer::internal;
 
-char const* VFILE = TESTBINDIR "/.thumbnailer-version";
+char const* VFILE = TESTBINDIR "/thumbnailer-version";
+char const* CACHE_VFILE = TESTBINDIR "/thumbnailer-cache-version";
 
 TEST(version, current_version)
 {
@@ -61,6 +62,35 @@ TEST(version, new_version)
     EXPECT_EQ(15, v.prev_major());
     EXPECT_EQ(20, v.prev_minor());
     EXPECT_EQ(25, v.prev_micro());
+}
+
+TEST(cache_version, current_version)
+{
+    EXPECT_EQ(THUMBNAILER_CACHE_VERSION, Version::cache_version);
+}
+
+TEST(cache_version, no_previous_file)
+{
+    ::unlink(CACHE_VFILE);
+
+    Version v(TESTBINDIR);
+    EXPECT_EQ(0, v.prev_cache_version());
+}
+
+TEST(cache_version, empty_file)
+{
+    system((string(">") + CACHE_VFILE).c_str());
+
+    Version v(TESTBINDIR);
+    EXPECT_EQ(0, v.prev_cache_version());
+}
+
+TEST(cache_version, new_version)
+{
+    system((string("echo 7 >") + CACHE_VFILE).c_str());
+
+    Version v(TESTBINDIR);
+    EXPECT_EQ(7, v.prev_cache_version());
 }
 
 int main(int argc, char** argv)

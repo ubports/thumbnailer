@@ -814,15 +814,15 @@ Thumbnailer::~Thumbnailer()
 void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
 {
     Version v(cache_dir);
-    if (v.prev_major() == 2 && v.prev_minor() == 3)
+    if (v.prev_cache_version() != v.cache_version)
     {
-        if ((v.major == 2 && v.minor >= 4) || v.major > 2)
-        {
-            // 2.4.0 added a bunch of fixes. Clean out the cache
-            // when upgrading from an older version so we don't
-            // leave incorrect artwork behind (potentially indefinitely).
-            clear(Thumbnailer::CacheSelector::all);
-        }
+        // Whenever the version changes, we wipe all three caches.
+        // That's useful to, for example, get rid of old unknown
+        // artist images from the remote server. Changing the version
+        // is also needed if we ever change the way keys and values
+        // are stored in the caches.
+        qDebug() << "cache version update from" << v.prev_cache_version() << "to" << v.cache_version;
+        clear(Thumbnailer::CacheSelector::all);
     }
 }
 

@@ -639,7 +639,7 @@ TEST_F(ThumbnailerTest, empty_file)
     }
 }
 
-TEST_F(ThumbnailerTest, clear_if_old_version)
+TEST_F(ThumbnailerTest, clear_if_old_cache_version)
 {
     {
         Thumbnailer tn;
@@ -661,8 +661,8 @@ TEST_F(ThumbnailerTest, clear_if_old_version)
     }
 
     // Pretend that this cache is an old 2.3.x cache.
-    string version_file = tempdir_path() + "/unity-thumbnailer/.thumbnailer-version";
-    system((string("echo 2 3 0 >") + version_file).c_str());
+    string cache_version_file = tempdir_path() + "/unity-thumbnailer/thumbnailer-cache-version";
+    system((string("echo 0 >") + cache_version_file).c_str());
 
     // Re-open and check that the cache was wiped.
     {
