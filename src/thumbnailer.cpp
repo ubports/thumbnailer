@@ -821,9 +821,7 @@ void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
             // 2.4.0 added a bunch of fixes. Clean out the cache
             // when upgrading from an older version so we don't
             // leave incorrect artwork behind (potentially indefinitely).
-            {
-                clear(Thumbnailer::CacheSelector::all);
-            }
+            clear(Thumbnailer::CacheSelector::all);
         }
     }
 }
