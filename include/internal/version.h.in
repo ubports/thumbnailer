@@ -39,9 +39,9 @@ class Version final
 {
 public:
     // Current version
-    static constexpr int major = THUMBNAILER_VERSION_MAJOR;
-    static constexpr int minor = THUMBNAILER_VERSION_MINOR;
-    static constexpr int micro = THUMBNAILER_VERSION_MICRO;
+    static int const major = THUMBNAILER_VERSION_MAJOR;
+    static int const minor = THUMBNAILER_VERSION_MINOR;
+    static int const micro = THUMBNAILER_VERSION_MICRO;
 
     Version(std::string const& version_dir);  // <version_dir>/.thumbnailer-version contains remembered version
     ~Version();                               // Writes current version.

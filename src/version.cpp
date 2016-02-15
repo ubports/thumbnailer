@@ -33,8 +33,15 @@ namespace thumbnailer
 namespace internal
 {
 
+int const Version::major;
+int const Version::minor;
+int const Version::micro;
+
 Version::Version(string const& cache_dir)
     : version_file_(cache_dir + "/" + THUMBNAILER_VERSION_FILENAME)
+    , prev_major_(2)
+    , prev_minor_(3)
+    , prev_micro_(0)
 {
     // Check if a version file exists. If not, we assume that
     // the previous version was 2.3.0. Otherwise, read the
@@ -42,21 +49,12 @@ Version::Version(string const& cache_dir)
     // writes the file back out, provided there is a difference
     // in any of the version numbers.
     ifstream ifile(version_file_);
-    if (!ifile.is_open())
-    {
-        prev_major_ = 2;
-        prev_minor_ = 3;
-        prev_micro_ = 0;
-    }
-    else
+    if (ifile.is_open())
     {
         ifile >> prev_major_ >> prev_minor_ >> prev_micro_;
         if (ifile.fail())
         {
-            prev_major_ = 2;
-            prev_minor_ = 3;
-            prev_micro_ = 0;
-            qCritical() << "Cannot read" << version_file_.c_str();  // LCOV_EXCL_LINE
+            qCritical() << "Cannot read" << version_file_.c_str();
         }
     }
     update_version_ = prev_major_ != major || prev_minor_ != minor || prev_micro_ != micro;
@@ -69,10 +67,14 @@ Version::~Version()
         ofstream ofile(version_file_, ios_base::trunc);
         if (!ofile.is_open())
         {
+            // LCOV_EXCL_START
             qCritical() << "Cannot open" << version_file_.c_str();
+            return;
+            // LCOV_EXCL_STOP
         }
         ofile << major << " " << minor << " " << micro << endl;
-        if (!ofile.fail())
+        ofile.close();
+        if (ofile.fail())
         {
             qCritical() << "Cannot write" << version_file_.c_str();  // LCOV_EXCL_LINE
         }
