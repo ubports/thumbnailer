@@ -376,7 +376,7 @@ unique_ptr<ArtExtractor> make_extractor(string const& filename, TagLib::FileRef 
 
 string extract_local_album_art(string const& filename)
 {
-    TagLib::FileRef fileref(filename.c_str(), true, TagLib::AudioProperties::Fast);
+    TagLib::FileRef fileref(filename.c_str(), false, TagLib::AudioProperties::Fast);
     if (fileref.isNull())
     {
         // Unfortunately, this happens for all files without a file extension.
