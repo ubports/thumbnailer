@@ -24,13 +24,6 @@
 
 #include "thumbnailerimageresponse.h"
 
-namespace
-{
-
-const char DEFAULT_ALBUM_ART[] = "/usr/share/thumbnailer/icons/album_missing.png";
-
-}  // namespace
-
 namespace unity
 {
 
@@ -48,19 +41,18 @@ AlbumArtGenerator::AlbumArtGenerator(std::shared_ptr<unity::thumbnailer::qt::Thu
 
 QQuickImageResponse* AlbumArtGenerator::requestImageResponse(const QString& id, const QSize& requestedSize)
 {
-    QSize size = requestedSize;
     QUrlQuery query(id);
     if (!query.hasQueryItem(QStringLiteral("artist")) || !query.hasQueryItem(QStringLiteral("album")))
     {
         qWarning() << "AlbumArtGenerator::requestImageResponse(): Invalid albumart uri:" << id;
-        return new ThumbnailerImageResponse(requestedSize, DEFAULT_ALBUM_ART);
+        return new ThumbnailerImageResponse("Invalid albumart ID: " + id);
     }
 
     const QString artist = query.queryItemValue(QStringLiteral("artist"), QUrl::FullyDecoded);
     const QString album = query.queryItemValue(QStringLiteral("album"), QUrl::FullyDecoded);
 
-    auto request = thumbnailer->getAlbumArt(artist, album, size);
-    return new ThumbnailerImageResponse(size, DEFAULT_ALBUM_ART, request);
+    auto request = thumbnailer->getAlbumArt(artist, album, requestedSize);
+    return new ThumbnailerImageResponse(request);
 }
 
 }  // namespace qml

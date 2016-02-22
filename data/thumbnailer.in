@@ -1,6 +1,1 @@
-@CMAKE_INSTALL_PREFIX@/lib/x86_64-linux-gnu/thumbnailer/vs-thumb
-@CMAKE_INSTALL_PREFIX@/lib/i386-linux-gnu/thumbnailer/vs-thumb
-@CMAKE_INSTALL_PREFIX@/lib/powerpc-linux-gnu/thumbnailer/vs-thumb
-@CMAKE_INSTALL_PREFIX@/lib/powerpc64le-linux-gnu/thumbnailer/vs-thumb
-@CMAKE_INSTALL_PREFIX@/lib/arm-linux-gnueabihf/thumbnailer/vs-thumb
-@CMAKE_INSTALL_PREFIX@/lib/aarch64-linux-gnu/thumbnailer/vs-thumb
+@CMAKE_INSTALL_FULL_LIBDIR@/thumbnailer/vs-thumb

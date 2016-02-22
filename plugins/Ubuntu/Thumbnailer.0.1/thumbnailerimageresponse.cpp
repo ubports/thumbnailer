@@ -31,21 +31,15 @@ namespace thumbnailer
 namespace qml
 {
 
-ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
-                                                   QString const& default_image,
-                                                   QSharedPointer<thumb_qt::Request> const& request)
-    : requested_size_(requested_size)
-    , request_(request)
-    , default_image_(default_image)
+ThumbnailerImageResponse::ThumbnailerImageResponse(QSharedPointer<thumb_qt::Request> const& request)
+    : request_(request)
 {
     Q_ASSERT(request);
     connect(request_.data(), &thumb_qt::Request::finished, this, &ThumbnailerImageResponse::requestFinished);
 }
 
-ThumbnailerImageResponse::ThumbnailerImageResponse(QSize const& requested_size,
-                                                   QString const& default_image)
-    : requested_size_(requested_size)
-    , default_image_(default_image)
+ThumbnailerImageResponse::ThumbnailerImageResponse(QString const& error_message)
+    : error_message_(error_message)
 {
     // Queue the signal emission so there is time for the caller to connect.
     QMetaObject::invokeMethod(this, "finished", Qt::QueuedConnection);
@@ -58,20 +52,20 @@ ThumbnailerImageResponse::~ThumbnailerImageResponse()
 
 QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
 {
-    // TODO: Once we remove fallback image support, this test for request_ != nullptr
-    //       (here and elsewhere) needs to be removed because request_ is nullptr
-    //       only if the default image constructor above was called.
     if (request_ && request_->isValid())
     {
         return QQuickTextureFactory::textureFactoryForImage(request_->image());
     }
     else
     {
-        char const* env_default = getenv("THUMBNAILER_TEST_DEFAULT_IMAGE");
-        QImage aux;
-        aux.load(env_default ? QString(env_default) : default_image_);
-        return QQuickTextureFactory::textureFactoryForImage(aux);
+        qWarning() << "ThumbnailerImageResponse::textureFactory(): method called without valid request.";
+        return nullptr;
     }
+}
+
+QString ThumbnailerImageResponse::errorString() const
+{
+    return error_message_;
 }
 
 void ThumbnailerImageResponse::cancel()
@@ -84,9 +78,9 @@ void ThumbnailerImageResponse::cancel()
 
 void ThumbnailerImageResponse::requestFinished()
 {
-    if (!request_->isValid() && !request_->isCancelled())
+    if (!request_->isValid())
     {
-        qWarning() << "ThumbnailerImageResponse::dbusCallFinished(): D-Bus error: " << request_->errorMessage();
+        error_message_ = request_->errorMessage();
     }
     Q_EMIT finished();
 }

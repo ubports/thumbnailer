@@ -22,22 +22,21 @@ Fixture {
     }
 
     function test_artistart_not_found() {
-        loadArtistArt("beck2", "odelay")
-        compare(size.width, 96);
-        compare(size.height, 96);
+        expectLoadError("image://artistart/artist=beck2&album=odelay");
     }
 
     function test_albumart_not_found() {
-        loadAlbumArt("beck2", "odelay")
-        compare(size.width, 96);
-        compare(size.height, 96);
+        expectLoadError("image://albumart/artist=beck2&album=odelay");
     }
 
-    function test_bad_artist_art_url() {
-        loadBadArtistUrl("load")
-    }
-
-    function test_bad_album_art_url() {
-        loadBadAlbumUrl("metallica")
+    function test_missing_parameter() {
+        expectLoadError("image://albumart/");
+        expectLoadError("image://albumart/foo");
+        expectLoadError("image://albumart/artist=X");
+        expectLoadError("image://albumart/album=Y");
+        expectLoadError("image://artistart/");
+        expectLoadError("image://artistart/foo");
+        expectLoadError("image://artistart/artist=X");
+        expectLoadError("image://artistart/album=Y");
     }
 }

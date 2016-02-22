@@ -69,16 +69,6 @@ TestCase {
                    encodeURIComponent(album));
     }
 
-    function loadBadAlbumUrl(artist) {
-        load("image://albumart/artist=" +
-                   encodeURIComponent(artist));
-    }
-
-    function loadBadArtistUrl(album) {
-        load("image://artistart/album=" +
-                   encodeURIComponent(album));
-    }
-
     function load(url) {
         // Have the image component load the image
         image.source = url;
@@ -107,6 +97,14 @@ TestCase {
 
         // And finally read in the image data
         imageData = canvas.context.createImageData(dumpfile);
+    }
+
+    function expectLoadError(url) {
+        image.source = url;
+        while (image.status === Image.Loading) {
+            statusSpy.wait();
+        }
+        compare(image.status, Image.Error);
     }
 
     function pixel(x, y) {
