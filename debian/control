@@ -47,8 +47,8 @@ Multi-Arch: foreign
 Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-Conflicts: libthumbnailer0
-Replaces: libthumbnailer0
+Conflicts: libthumbnailer0, thumbnailer-common
+Replaces: libthumbnailer0, thumbnailer-common
 Description: D-Bus service for out of process thumbnailing
  This package provides a D-Bus service that can provide thumbnails on
  behalf of another process.
@@ -73,7 +73,6 @@ Pre-Depends: ${misc:Pre-Depends},
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          libthumbnailer-qt1.0 (= ${binary:Version}),
-         thumbnailer-common (= ${source:Version}),
 Provides: ubuntu-thumbnailer-impl,
           ubuntu-thumbnailer-impl-0,
 Recommends: thumbnailer-service (= ${binary:Version}),
@@ -82,14 +81,6 @@ Replaces: qtdeclarative5-ubuntu-thumbnailer0.1 (<< 2.3~)
 Description: QML interface for the thumbnailer.
  This package provides image providers that allow access to the
  thumbnailer from Qt Quick 2 / QML applications.
-
-Package: thumbnailer-common
-Architecture: all
-Multi-Arch: foreign
-Depends: ${misc:Depends},
-Description: Common files for the thumbnailer service.
- This package provides common files for the thumbnailer service, such
- as default icons.
 
 Package: libthumbnailer-qt1.0
 Architecture: any

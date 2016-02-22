@@ -54,6 +54,6 @@ Fixture {
     }
 
     function test_no_such_photo() {
-        loadThumbnail("no_such_photo.jpg");
+        expectLoadError("image://thumbnailer/file:///no_such_photo.jpg");
     }
 }
