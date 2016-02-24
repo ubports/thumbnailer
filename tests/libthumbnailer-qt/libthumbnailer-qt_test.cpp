@@ -60,7 +60,7 @@ namespace
 {
     // Time to wait for an expected signal to arrive. The wait()
     // calls on the spy should always report success before this.
-    int const SIGNAL_WAIT_TIME = 5000;
+    int const SIGNAL_WAIT_TIME = 10000;
 }
 
 class LibThumbnailerTest : public ::testing::Test
@@ -459,6 +459,25 @@ TEST_F(LibThumbnailerTest, server_error_sync)
     EXPECT_FALSE(reply->isValid());
 }
 
+TEST_F(LibThumbnailerTest, request_timeout)
+{
+    if (!SLOW_TESTS)
+    {
+        return;
+    }
+
+    Thumbnailer thumbnailer(dbus_->connection());
+    auto reply = thumbnailer.getArtistArt("sleep", "12", QSize(256, 256));
+
+    reply->waitForFinished();
+
+    EXPECT_TRUE(reply->isFinished());
+    EXPECT_EQ("Thumbnailer: RequestImpl::dbusCallFinished(): D-Bus error: Handler::createFinished(): "
+              "could not get thumbnail for artist: sleep/12 (256,256): TIMEOUT",
+              reply->errorMessage());
+    EXPECT_FALSE(reply->isValid());
+}
+
 void make_links(string const& source_path, string const& target_dir, int num_copies)
 {
     using namespace boost::filesystem;
@@ -653,9 +672,9 @@ TEST_F(LibThumbnailerTest, cancel)
 
 TEST_F(LibThumbnailerTest, cancel_many)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-theora"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for Theora decoder\n");
         return;
     }
 
@@ -665,9 +684,9 @@ TEST_F(LibThumbnailerTest, cancel_many)
 
     Thumbnailer thumbnailer(dbus_->connection());
 
-    int N_REQUESTS = 200;
+    int N_REQUESTS = 50;
 
-    string source = "short-track.mp3";
+    string source = "testvideo.ogg";
     string target_dir = temp_dir();
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
@@ -700,9 +719,9 @@ TEST_F(LibThumbnailerTest, cancel_many)
 
 TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-theora"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for Theora decoder\n");
         return;
     }
 
@@ -714,7 +733,7 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
 
     int N_REQUESTS = 200;
 
-    string source = "short-track.mp3";
+    string source = "testvideo.ogg";
     string target_dir = temp_dir();
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
@@ -743,7 +762,7 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
     }
 
     // Allow all the signals to trickle in (can be slow on Jenkins).
-    EXPECT_TRUE(spy.wait(10000));
+    EXPECT_TRUE(spy.wait(20000));
 
     // We must have both completed and cancelled requests.
     EXPECT_GT(counter.completed(), 5);

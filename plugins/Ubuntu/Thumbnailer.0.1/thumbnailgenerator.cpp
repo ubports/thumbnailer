@@ -21,7 +21,6 @@
 #include <QDebug>
 #include <QUrl>
 
-#include <settings.h>
 #include "thumbnailerimageresponse.h"
 
 namespace unity

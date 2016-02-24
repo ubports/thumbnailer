@@ -1,0 +1,80 @@
+/*
+ * Copyright (C) 2016 Canonical Ltd.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authored by: Michi Henning <michi.henning@canonical.com>
+ */
+
+#pragma once
+
+#include <string>
+
+namespace unity
+{
+
+namespace thumbnailer
+{
+
+namespace internal
+{
+
+// Software release version.
+#define THUMBNAILER_VERSION_MAJOR @THUMBNAILER_VERSION_MAJOR@
+#define THUMBNAILER_VERSION_MINOR @THUMBNAILER_VERSION_MINOR@
+#define THUMBNAILER_VERSION_MICRO @THUMBNAILER_VERSION_MICRO@
+#define THUMBNAILER_VERSION_FILENAME "thumbnailer-version"
+
+// Encoding version of caches.
+#define THUMBNAILER_CACHE_VERSION @THUMBNAILER_CACHE_VERSION@
+#define THUMBNAILER_CACHE_VERSION_FILENAME "thumbnailer-cache-version"
+
+class Version final
+{
+public:
+    // Current software version
+    static int const major = THUMBNAILER_VERSION_MAJOR;
+    static int const minor = THUMBNAILER_VERSION_MINOR;
+    static int const micro = THUMBNAILER_VERSION_MICRO;
+
+    // Current cache encoding version.
+    static int const cache_version = THUMBNAILER_CACHE_VERSION;
+
+    Version(std::string const& version_dir);  // <version_dir>/.thumbnailer-version contains remembered version
+    ~Version();                               // Writes current version.
+    Version(Version&&) = default;
+    Version& operator=(Version&&) = default;
+
+    // Remembered versions from last time the thumbnailer was run
+    int prev_major() const;
+    int prev_minor() const;
+    int prev_micro() const;
+    int prev_cache_version() const;
+
+    std::string version_file_;        // Path of version file
+    std::string cache_version_file_;  // Path of cache encoding version file
+    bool update_version_;             // True if we need to write out the current version from destructor
+    bool update_cache_version_;       // True if we need to write out the current cache version from destructor
+
+private:
+    int prev_major_;
+    int prev_minor_;
+    int prev_micro_;
+    int prev_cache_version_;
+};
+
+}  // namespace internal
+
+}  // namespace thumbnailer
+
+}  // namespace unity

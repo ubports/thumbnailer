@@ -16,7 +16,7 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <settings.h>
+#include <internal/settings.h>
 
 #include <internal/env_vars.h>
 #include "settings-defaults.h"
@@ -37,6 +37,9 @@ namespace unity
 {
 
 namespace thumbnailer
+{
+
+namespace internal
 {
 
 Settings::Settings()
@@ -219,6 +222,8 @@ bool Settings::get_bool(char const* key, bool default_value) const
 
     return g_settings_get_boolean(settings_.get(), key);
 }
+
+}  // namespace internal
 
 }  // namespace thumbnailer
 

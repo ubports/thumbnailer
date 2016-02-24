@@ -48,7 +48,13 @@ This variable overrides the URI of the remote image server. If not set, the defa
 \fBhttps://dash.ubuntu.com\fP is used.
 .TP
 .B THUMBNAILER_LOG_LEVEL
-This variable overrides the value of the \fBlog-level\fP setting.
+This variable overrides the value of the \fBlog\-level\fP setting.
+.TP
+.B XDG_CACHE_HOME
+This variable determines the location of the on\-disk caches. Caches are written to subdirectories of
+\fB$XDG_CACHE_HOME/unity\-thumbnailer\fP. If \fBXDG_CACHE_HOME\fP is not set, \fB$HOME/.cache/unity\-thumbnailer\fP
+is used. If \fB$HOME\fP is also not set, the home directory is determined by its setting in \fB/etc/passwd\fP
+and \fIhome\-dir\fB/.cache/unity\-thumbnailer\fR is used.
 
 .SH "SEE ALSO"
 .B thumbnailer\-admin\fR(1)\fP, thumbnailer\-settings\fR(5)\fP, dconf\fR(7)\fP, gsettings\fR(1)\fP

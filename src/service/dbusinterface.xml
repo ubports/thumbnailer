@@ -20,5 +20,16 @@
       <arg direction="out" type="ay" name="thumbnail" />
       <annotation name="org.qtproject.QtDBus.QtTypeName.In1" value="QSize" />
     </method>
+
+    <!--
+    ClientConfig returns gsettings values that are relevant to the client-side library.
+    Currently, in order:
+        trace-client (bool)
+        max-backlog (int)
+    -->
+    <method name="ClientConfig">
+      <arg direction="out" type="(bi)" name="config" />
+      <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="unity::thumbnailer::service::ConfigValues" />
+    </method>
   </interface>
 </node>

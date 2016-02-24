@@ -61,7 +61,7 @@
       <default>0</default>
       <summary>Maximum number of concurrent image extractions</summary>
       <description>
-        This parameter sets the maximum number of concurrent image extractions from local media files. The default value is zero, which sets the value according to the number of CPU cores.
+        This parameter sets the maximum number of concurrent image extractions from local video files. The default value is zero, which sets the value according to the number of CPU cores.
      </description>
     </key>
 
@@ -77,7 +77,7 @@
       <default>10</default>
       <summary>Maximum number of pending DBus requests before the thumbnailer starts queuing them.</summary>
       <description>
-        This parameter limits the number of pending DBus requests to the thumbnailer service. If there are more requests than this currently in progress, additional requests are queued and sent once the backlog drops below the limit.
+        This parameter limits the number of pending DBus requests to the thumbnailer service. If the number of concurrent requests exceeds the backlog, additional requests are queued and sent once the backlog drops below the limit.
      </description>
     </key>
 

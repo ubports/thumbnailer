@@ -4,6 +4,7 @@ add_definitions(${QTDBUSTEST_DEPS_CFLAGS})
 set_source_files_properties(
     "${CMAKE_SOURCE_DIR}/src/service/dbusinterface.xml" PROPERTIES
     CLASSNAME ThumbnailerInterface
+    INCLUDE ${CMAKE_SOURCE_DIR}/include/service/client_config.h
 )
 qt5_add_dbus_interface(
     interface_files

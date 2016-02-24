@@ -22,8 +22,8 @@ override_dh_auto_configure:
 # and gstreamer has bugs in the plugins for PPC.
 test_args = --max-parallel=1 -- ARGS=\"--verbose\"
 override_dh_auto_test:
-ifneq (,$(filter powerpc ppc64el s390x,$(DEB_HOST_ARCH)))
-	dh_auto_test $(test_args) || :
-else
+#ifneq (,$(filter powerpc ppc64el s390x,$(DEB_HOST_ARCH)))
+#	dh_auto_test $(test_args) || :
+#else
 	dh_auto_test $(test_args)
-endif
+#endif

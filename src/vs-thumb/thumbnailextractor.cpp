@@ -289,7 +289,7 @@ bool ThumbnailExtractor::extract_video_frame()
 
 #pragma GCC diagnostic pop
 
-// Try to find an embedded image in an audio or video file.
+// Try to find an embedded image in the file.
 // If an image cover was found, set sample_ to point at the image data and return true.
 
 bool ThumbnailExtractor::extract_cover_art()
@@ -308,15 +308,17 @@ bool ThumbnailExtractor::extract_cover_art()
     auto image = std::move(find_cover(tags, GST_TAG_IMAGE));
     if (image.sample && image.type == cover)
     {
+        // LCOV_EXCL_START
         sample_ = std::move(image.sample);
         return true;
+        // LCOV_EXCL_STOP
     }
 
     // We didn't find a full-size cover image. Try to find a preview image instead.
     auto preview_image = find_cover(tags, GST_TAG_PREVIEW_IMAGE);
     if (preview_image.sample && preview_image.type == cover)
     {
-        // Michi: I have no idea how to create an audio file with this tag :-(
+        // Michi: I have no idea how to create a video file with this tag :-(
         // LCOV_EXCL_START
         sample_ = std::move(preview_image.sample);
         return true;
@@ -326,8 +328,10 @@ bool ThumbnailExtractor::extract_cover_art()
     // See if we found some other normal image.
     if (image.sample)
     {
+        // LCOV_EXCL_START
         sample_ = std::move(image.sample);
         return true;
+        // LCOV_EXCL_STOP
     }
 
     // We might have found a non-cover preview image.
@@ -439,6 +443,7 @@ void ThumbnailExtractor::write_image(const std::string& filename)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-align"
 
 void ThumbnailExtractor::change_state(GstElement* element, GstState state)
 {

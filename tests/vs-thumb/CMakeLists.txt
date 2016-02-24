@@ -12,5 +12,11 @@ target_link_libraries(vs-thumb_test
   testutils
   gtest
 )
-add_test(vs-thumb vs-thumb_test)
 add_dependencies(vs-thumb_test vs-thumb)
+
+execute_process(COMMAND lsb_release -c -s OUTPUT_VARIABLE distro OUTPUT_STRIP_TRAILING_WHITESPACE)
+if ("${distro}" STREQUAL "vivid" AND "${CMAKE_LIBRARY_ARCHITECTURE}" STREQUAL "powerpc64le-linux-gnu")
+    message("skipping vs-thumb test for ${CMAKE_LIBRARY_ARCHITECTURE}")
+else()
+    add_test(vs-thumb vs-thumb_test)
+endif()
