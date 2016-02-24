@@ -67,13 +67,23 @@ public:
     // requested size.
     Image scale(QSize requested_size) const;
 
-    // Returns image as JPEG data (quality must be in the range 0-100).
-    std::string to_jpeg(int quality = 75) const;
+    bool has_alpha() const;  // Returns true if the image has an alpha channel (whether transparency is used or not).
+
+    // Returns image as JPEG data if the source does not use transparency,
+    // and as PNG, otherwise.
+    // The quality must be in the range 0-100, regardless of the whether
+    // the source image uses transparency but, if PNG is returned,
+    // the quality setting has no effect.
+    std::string get_data(int quality = 75) const;
+
+    std::string get_jpeg(int quality = 75) const;
+    std::string get_png() const;
 
 private:
     void load(Reader& reader, QSize requested_size);
 
     gobj_ptr<struct _GdkPixbuf> pixbuf_;
+    bool has_alpha_;
 };
 
 }  // namespace internal

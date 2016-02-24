@@ -34,6 +34,8 @@
 #define HORIZONTAL_STRIP TESTDATADIR "/horizontal-strip.jpg"
 #define VERTICAL_STRIP TESTDATADIR "/vertical-strip.jpg"
 #define ANIMATEDIMAGE TESTDATADIR "/animated.gif"
+#define SVG_TRANSPARENT_IMAGE TESTDATADIR "/transparent.svg"
+#define PNG_TRANSPARENT_IMAGE TESTDATADIR "/transparent.png"
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -53,6 +55,7 @@ TEST(Image, basic)
         EXPECT_EQ(0xFFFF00, i.pixel(639, 0));
         EXPECT_EQ(0x00FF01, i.pixel(639, 479));
         EXPECT_EQ(0x0000FE, i.pixel(0, 479));
+        EXPECT_FALSE(i.has_alpha());
 
         // Move constructor
         Image i2(move(i));
@@ -175,7 +178,7 @@ TEST(Image, save_jpeg)
     EXPECT_EQ(640, i.width());
     EXPECT_EQ(480, i.height());
 
-    string jpeg = i.to_jpeg();
+    string jpeg = i.get_data();
     Image i2(jpeg);
     EXPECT_EQ(640, i2.width());
     EXPECT_EQ(480, i2.height());
@@ -355,24 +358,24 @@ TEST(Image, exceptions)
 
         try
         {
-            i.to_jpeg(-1);
+            i.get_data(-1);
             FAIL();
         }
         catch (invalid_argument const& e)
         {
-            EXPECT_STREQ("Image::to_jpeg(): quality out of range [0..100]: -1", e.what());
+            EXPECT_STREQ("Image::get_data(): quality out of range [0..100]: -1", e.what());
         }
         try
         {
-            i.to_jpeg(101);
+            i.get_data(101);
             FAIL();
         }
         catch (invalid_argument const& e)
         {
-            EXPECT_STREQ("Image::to_jpeg(): quality out of range [0..100]: 101", e.what());
+            EXPECT_STREQ("Image::get_data(): quality out of range [0..100]: 101", e.what());
         }
-        EXPECT_NO_THROW(i.to_jpeg(0));
-        EXPECT_NO_THROW(i.to_jpeg(100));
+        EXPECT_NO_THROW(i.get_data(0));
+        EXPECT_NO_THROW(i.get_data(100));
     }
 }
 
@@ -407,8 +410,9 @@ TEST(Image, animated_gif)
     Image img(fd.get());
     EXPECT_EQ(480, img.width());
     EXPECT_EQ(360, img.height());
-    EXPECT_EQ(0xDDDFDC, img.pixel(0, 0));
-    EXPECT_EQ(0xD1D3D0, img.pixel(479, 359));
+    EXPECT_EQ(0xDDDFDCFF, img.pixel(0, 0));
+    EXPECT_EQ(0xD1D3D0FF, img.pixel(479, 359));
+    EXPECT_TRUE(img.has_alpha());
 
     // We stopped reading the image before the end of the file:
     off_t pos = lseek(fd.get(), 0, SEEK_CUR);
@@ -425,12 +429,52 @@ TEST(Image, animated_gif_scaled)
     Image img(fd.get(), QSize(400, 0));
     EXPECT_EQ(400, img.width());
     EXPECT_EQ(300, img.height());
-    EXPECT_EQ(0xDDDFDC, img.pixel(0, 0));
-    EXPECT_EQ(0xD1D3D0, img.pixel(399, 299));
+    EXPECT_EQ(0xDDDFDCFF, img.pixel(0, 0));
+    EXPECT_EQ(0xD1D3D0FF, img.pixel(399, 299));
+    EXPECT_TRUE(img.has_alpha());
 
     // We stopped reading the image before the end of the file:
     off_t pos = lseek(fd.get(), 0, SEEK_CUR);
     struct stat st;
     ASSERT_EQ(0, fstat(fd.get(), &st));
     EXPECT_LT(pos, st.st_size);
+}
+
+TEST(Image, svg_transparency)
+{
+    FdPtr fd(open(SVG_TRANSPARENT_IMAGE, O_RDONLY), do_close);
+    ASSERT_GT(fd.get(), 0);
+
+    Image img(fd.get(), QSize(400, 400));
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+    EXPECT_EQ(0x0, img.pixel(0, 0));
+    EXPECT_EQ(0xFF0000FF, img.pixel(100, 100));
+    EXPECT_TRUE(img.has_alpha());
+}
+
+TEST(Image, svg_transparency_no_size)
+{
+    FdPtr fd(open(SVG_TRANSPARENT_IMAGE, O_RDONLY), do_close);
+    ASSERT_GT(fd.get(), 0);
+
+    Image img(fd.get(), QSize());
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+    EXPECT_EQ(0x0, img.pixel(0, 0));
+    EXPECT_EQ(0xFF0000FF, img.pixel(100, 100));
+    EXPECT_TRUE(img.has_alpha());
+}
+
+TEST(Image, png_transparency)
+{
+    FdPtr fd(open(PNG_TRANSPARENT_IMAGE, O_RDONLY), do_close);
+    ASSERT_GT(fd.get(), 0);
+
+    Image img(fd.get(), QSize(400, 400));
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+    EXPECT_EQ(0x0, img.pixel(0, 0));
+    EXPECT_EQ(0xFF0000FF, img.pixel(100, 100));
+    EXPECT_TRUE(img.has_alpha());
 }

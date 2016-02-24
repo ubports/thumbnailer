@@ -273,18 +273,21 @@ void maybe_scale_image(GdkPixbufLoader* loader, int width, int height, void* use
 }  // namespace
 
 Image::Image(string const& data, QSize requested_size)
+    : has_alpha_(false)
 {
     BufferReader reader(reinterpret_cast<unsigned char const*>(&data[0]), data.size());
     load(reader, requested_size);
 }
 
 Image::Image(QByteArray const& ba, QSize requested_size)
+    : has_alpha_(false)
 {
     BufferReader reader(reinterpret_cast<unsigned char const*>(ba.constData()), ba.size());
     load(reader, requested_size);
 }
 
 Image::Image(int fd, QSize requested_size)
+    : has_alpha_(false)
 {
     FdReader reader(fd);
     load(reader, requested_size);
@@ -358,6 +361,7 @@ void Image::load(Reader& reader, QSize requested_size)
     {
         pixbuf_ = load_image(reader, G_CALLBACK(maybe_scale_image), &unrotated_requested_size);
     }
+    has_alpha_ = gdk_pixbuf_get_has_alpha(pixbuf_.get());
 
     // Correct the image orientation, if needed
     switch (orientation)
@@ -445,7 +449,14 @@ int Image::pixel(int x, int y) const
     unsigned char* data = gdk_pixbuf_get_pixels(pixbuf_.get());
 
     unsigned char* p = data + y * rowstride + x * n_channels;
-    return p[0] << 16 | p[1] << 8 | p[2];
+    if (has_alpha_)
+    {
+        return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
+    }
+    else
+    {
+        return p[0] << 16 | p[1] << 8 | p[2];
+    }
 }
 
 Image Image::scale(QSize requested_size) const
@@ -493,13 +504,25 @@ Image Image::scale(QSize requested_size) const
     return scaled;
 }
 
-string Image::to_jpeg(int quality) const
+bool Image::has_alpha() const
+{
+    return has_alpha_;
+}
+
+string Image::get_data(int quality) const
+{
+    assert(pixbuf_);
+
+    return has_alpha_ ? get_png() : get_jpeg(quality);
+}
+
+string Image::get_jpeg(int quality) const
 {
     assert(pixbuf_);
 
     if (quality < 0 || quality > 100)
     {
-        throw invalid_argument("Image::to_jpeg(): quality out of range [0..100]: " + to_string(quality));
+        throw invalid_argument("Image::get_data(): quality out of range [0..100]: " + to_string(quality));
     }
     string s_qual = to_string(quality);
 
@@ -510,6 +533,26 @@ string Image::to_jpeg(int quality) const
     {
         // LCOV_EXCL_START
         string msg = string("Image::get_data(): cannot convert to jpeg: ") + err->message;
+        g_error_free(err);
+        throw runtime_error(msg);
+        // LCOV_EXCL_STOP
+    }
+    string s(buf, size);
+    g_free(buf);
+    return s;
+}
+
+string Image::get_png() const
+{
+    assert(pixbuf_);
+
+    gchar* buf;
+    gsize size;
+    GError* err = nullptr;
+    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "png", &err, "compression", "6", NULL))
+    {
+        // LCOV_EXCL_START
+        string msg = string("Image::get_png(): cannot convert to png: ") + err->message;
         g_error_free(err);
         throw runtime_error(msg);
         // LCOV_EXCL_STOP
