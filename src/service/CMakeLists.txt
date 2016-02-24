@@ -7,6 +7,7 @@ qt5_add_dbus_interface(interface_files bus.xml businterface)
 
 add_executable(thumbnailer-service
   admininterface.cpp
+  client_config.cpp
   credentialscache.cpp
   dbusinterface.cpp
   handler.cpp
@@ -15,7 +16,7 @@ add_executable(thumbnailer-service
   stats.cpp
   ${adaptor_files}
   ${interface_files}
-  )
+)
 
 qt5_use_modules(thumbnailer-service DBus Concurrent)
 target_link_libraries(thumbnailer-service thumbnailer-static Qt5::DBus Qt5::Concurrent)

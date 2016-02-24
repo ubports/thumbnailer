@@ -19,10 +19,11 @@
 
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
-#include <settings-defaults.h>
 #include <ratelimiter.h>
-#include <thumbnailerinterface.h>
+#include <service/client_config.h>
 #include <service/dbus_names.h>
+#include <settings-defaults.h>
+#include <thumbnailerinterface.h>
 
 #include <boost/filesystem.hpp>
 #include <QSharedPointer>
@@ -319,48 +320,33 @@ void RequestImpl::waitForFinished()
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
+    qDBusRegisterMetaType<unity::thumbnailer::service::ConfigValues>();
 
     // We need to retrieve config parameters from the server because, when an app runs confined,
     // it cannot read gsettings. We do this synchronously because we can't do anything else until
     // after we get the settings anyway.
 
-    auto trace_client_call = iface_->TraceClient();
-    auto max_backlog_call = iface_->MaxBacklog();
-
+    auto client_config_call = iface_->ClientConfig();
     {
-        trace_client_call.waitForFinished();
-        if (trace_client_call.isValid())
+        trace_client_ = TRACE_CLIENT_DEFAULT;
+        int max_backlog = MAX_BACKLOG_DEFAULT;
+
+        client_config_call.waitForFinished();
+        if (client_config_call.isValid())
         {
-            trace_client_ = trace_client_call.value();
+            auto const& config = client_config_call.value();
+            trace_client_ = config.trace_client;
+            max_backlog = config.max_backlog;
         }
         // LCOV_EXCL_START
         else
         {
-            bool const dflt = TRACE_CLIENT_DEFAULT;
-            trace_client_ = dflt;
-            qCritical().nospace() << "could not retrieve trace-client setting: " << trace_client_call.error().message()
-                                  << " (using default value of " << dflt << ")";
+            qCritical().nospace() << "could not retrieve client config: " << client_config_call.error().message()
+                                  << " (using default values)";
 
         }
         // LCOV_EXCL_STOP
-    }
-
-    {
-        int constexpr dflt_backlog = MAX_BACKLOG_DEFAULT;
-        max_backlog_call.waitForFinished();
-        if (max_backlog_call.isValid())
-        {
-            int backlog = max_backlog_call.value();
-            limiter_.reset(new RateLimiter(backlog));
-        }
-        // LCOV_EXCL_START
-        else
-        {
-            limiter_.reset(new RateLimiter(dflt_backlog));
-            qCritical().nospace() << "could not retrieve max-backlog setting: " << max_backlog_call.error().message()
-                                  << " (using default value of " << dflt_backlog << ")";
-        }
-        // LCOV_EXCL_STOP
+        limiter_.reset(new RateLimiter(max_backlog));
     }
 }
 
