@@ -176,37 +176,7 @@ string MpegExtractor::get_album_art() const
 
 TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
 {
-    using namespace TagLib::Ogg;
-
-    {
-        FLAC::File const* file = dynamic_cast<FLAC::File const*>(fileref_.file());
-        if (file)
-        {
-            return file->tag();
-        }
-    }
-    {
-        Opus::File const* file = dynamic_cast<Opus::File const*>(fileref_.file());
-        if (file)
-        {
-            return file->tag();
-        }
-    }
-    {
-        Speex::File const* file = dynamic_cast<Speex::File const*>(fileref_.file());
-        if (file)
-        {
-            return file->tag();
-        }
-    }
-    {
-        Vorbis::File const* file = dynamic_cast<Vorbis::File const*>(fileref_.file());
-        if (file)
-        {
-            return file->tag();
-        }
-    }
-    throw runtime_error(filename_ + ": unknown Ogg file type");  // LCOV_EXCL_LINE
+    return dynamic_cast<TagLib::Ogg::XiphComment*>(fileref_.tag());
 }
 
 // Decode base_64 string into a QByteArray
@@ -214,6 +184,9 @@ TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
 QByteArray decode_b64(TagLib::String const& base_64)
 {
     // Use QByteArray to decode from base-64.
+    // TODO: taglib 1.10 has helper methods for base_64. Once we get that
+    //       version into the archives, we might be able to avoid the
+    //       extra copy.
     TagLib::ByteVector b64_bytes = base_64.data(TagLib::String::Latin1);
     QByteArray bytes;
     bytes.setRawData(b64_bytes.data(), b64_bytes.size());
@@ -227,6 +200,9 @@ QByteArray decode_b64(TagLib::String const& base_64)
 
 unique_ptr<TagLib::FLAC::Picture> to_picture(TagLib::String const& base_64)
 {
+    // TODO: taglib 1.10 has helper methods for base_64. Once we get that
+    //       version into the archives, we might be able to avoid the
+    //       extra copy.
     QByteArray bytes = decode_b64(base_64);
     // Now we need a byte vector to create the Picture :-(
     TagLib::ByteVector byte_vector(bytes.data(), bytes.size());
@@ -291,7 +267,7 @@ string OggExtractor::get_album_art() const
                 }
             }
         }
-        else if ((it = map.find("COVERART")) != map.end())
+        if (art.empty() && (it = map.find("COVERART")) != map.end())
         {
             // Support decprecated way of storing cover art.
             // https://wiki.xiph.org/VorbisComment#Unofficial_COVERART_field_.28deprecated.29
