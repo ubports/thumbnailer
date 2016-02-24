@@ -639,6 +639,40 @@ TEST_F(ThumbnailerTest, empty_file)
     }
 }
 
+TEST_F(ThumbnailerTest, clear_if_old_cache_version)
+{
+    {
+        Thumbnailer tn;
+
+        // Load a song so we have something in the thumbnail cache.
+        auto request = tn.get_thumbnail(TEST_SONG, QSize(200, 200));
+        ASSERT_NE(nullptr, request.get());
+        request->thumbnail();
+        auto stats = tn.stats().thumbnail_stats;
+        EXPECT_EQ(1, stats.size());
+    }
+
+    // Re-open and check that stats are still the same.
+    {
+        Thumbnailer tn;
+
+        auto stats = tn.stats().thumbnail_stats;
+        EXPECT_EQ(1, stats.size());
+    }
+
+    // Pretend that this cache is an old 2.3.x cache.
+    string cache_version_file = tempdir_path() + "/unity-thumbnailer/thumbnailer-cache-version";
+    system((string("echo 0 >") + cache_version_file).c_str());
+
+    // Re-open and check that the cache was wiped.
+    {
+        Thumbnailer tn;
+
+        auto stats = tn.stats().thumbnail_stats;
+        EXPECT_EQ(0, stats.size());
+    }
+}
+
 class RemoteServer : public ThumbnailerTest
 {
 protected:

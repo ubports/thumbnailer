@@ -32,6 +32,7 @@
 #include <internal/safe_strerror.h>
 #include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
+#include <internal/version.h>
 
 #include <boost/filesystem.hpp>
 #include <unity/UnityExceptions.h>
@@ -779,6 +780,9 @@ Thumbnailer::Thumbnailer()
             auto backoff = failure_cache_->get(BACKOFF_PERIOD_KEY);
             backoff_.set_backoff_period(chrono::seconds(stoll(*backoff)));
         }
+
+        // Apply any adjustments to the caches that are version-dependent.
+        apply_upgrade_actions(cache_dir);
     }
     catch (std::exception const& e)
     {
@@ -805,6 +809,21 @@ Thumbnailer::~Thumbnailer()
         qDebug() << "~Thumbnailer(): cannot update network failure time: unknown exception";
     }
     // LCOV_EXCL_STOP
+}
+
+void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
+{
+    Version v(cache_dir);
+    if (v.prev_cache_version() != v.cache_version)
+    {
+        // Whenever the version changes, we wipe all three caches.
+        // That's useful to, for example, get rid of old unknown
+        // artist images from the remote server. Changing the version
+        // is also needed if we ever change the way keys and values
+        // are stored in the caches.
+        qDebug() << "cache version update from" << v.prev_cache_version() << "to" << v.cache_version;
+        clear(Thumbnailer::CacheSelector::all);
+    }
 }
 
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,

@@ -31,6 +31,7 @@ set(unit_test_dirs
     settings
     thumbnailer
     thumbnailer-admin
+    version
     vs-thumb
 )
 
