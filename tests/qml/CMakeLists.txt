@@ -14,9 +14,9 @@ if (${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "powerpc-linux-gnu"
     message("Skipping qml test for ${CMAKE_LIBRARY_ARCHITECTURE}")
 else()
     add_test(qml ${CMAKE_SOURCE_DIR}/tools/run-xvfb.sh ./qml_test -import ${CMAKE_BINARY_DIR}/plugins)
+    # Clear some environment variables that can interfere with the tests
+    set_tests_properties(qml PROPERTIES
+      ENVIRONMENT "DBUS_SESSION_BUS_ADDRESS=;QT_QPA_PLATFORMTHEME="
+    )
 endif()
 
-# Clear some environment variables that can interfere with the tests
-set_tests_properties(qml PROPERTIES
-  ENVIRONMENT "DBUS_SESSION_BUS_ADDRESS=;QT_QPA_PLATFORMTHEME="
-)
