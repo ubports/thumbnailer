@@ -20,25 +20,20 @@
 
 #include <internal/thumbnailer.h>
 
+#include <internal/local_album_art.h>
 #include <internal/artreply.h>
 #include <internal/cachehelper.h>
 #include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
 #include <internal/make_directories.h>
+#include <internal/mimetype.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
 #include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
 
 #include <boost/filesystem.hpp>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <gio/gio.h>
-#pragma GCC diagnostic pop
-
 #include <unity/UnityExceptions.h>
 
 #include <fcntl.h>
@@ -565,56 +560,16 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
             image_data.cache_policy = CachePolicy::cache_fullsize;
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
+            // TODO: Need to add to full-size cache here. See bug 1540753
         }
 
-        // Work out content type.
-        gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
-        assert(file);  // Cannot fail according to doc.
-
-        gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                                                   G_FILE_QUERY_INFO_NONE,
-                                                   /* cancellable */ NULL,
-                                                   /* error */ NULL));
-        string content_type = "application/octet-stream";
-        if (info)
-        {
-            string content_type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-            if (content_type.empty())
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
-        }
-
-        if (content_type == "application/octet-stream")
-        {
-            // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
-            // for all files without an extension (as it only uses the extension to
-            // determine file type). In these cases, we fall back to the full content
-            // type detector.
-            gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                                            G_FILE_QUERY_INFO_NONE,
-                                                            /* cancellable */ NULL,
-                                                            /* error */ NULL));  // TODO: need decent error reporting
-            if (!full_info)
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
-
-            content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-            if (content_type.empty())
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
-        }
+        string content_type = get_mimetype(filename_);
+        assert(!content_type.empty());
 
         // Call the appropriate image extractor and return the image data as JPEG (not scaled).
-        // We indicate that full-size images are to be cached only for audio and video files,
-        // for which extraction is expensive. For local images, we don't cache full size.
+        // We indicate that full-size images are to be cached only for video files,
+        // for which extraction is expensive. For local audio and images, we don't cache full size.
 
-        if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
-        {
-            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
-        }
         if (content_type.find("image/") == 0)
         {
             FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
@@ -627,9 +582,22 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             Image scaled(fd.get(), size_hint);
             return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
         }
+        else if (content_type.find("audio/") == 0)
+        {
+            string art = extract_local_album_art(filename_);
+            if (!art.empty())
+            {
+                return ImageData(Image(art), CachePolicy::dont_cache_fullsize, Location::local);
+            }
+        }
+        else if (content_type.find("video/") == 0)
+        {
+            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
+        }
     }
     catch (std::exception const& e)
     {
+        qCritical().nospace() << "LocalThumbnailRequest::fetch(): " << e.what();
         set_error_message(e.what());
         return image_data;
     }
