@@ -21,8 +21,9 @@
 #include "credentialscache.h"
 #include "handler.h"
 
-#include <ratelimiter.h>
 #include <internal/settings.h>
+#include <ratelimiter.h>
+#include <service/client_config.h>
 
 #include <QDBusContext>
 #include <QThreadPool>
@@ -53,10 +54,9 @@ public Q_SLOTS:
     QByteArray GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QByteArray GetThumbnail(QString const& filename, QSize const& requestedSize);
 
-    // These methods return the value of the corresponding gsettings key. We need to do this on the server
+    // These methods return the values of gsettings keys relevant to the client. We retrieve these on the server
     // side because the client-side API runs under confinement, which disallows access to gsettings.
-    bool TraceClient();
-    int MaxBacklog();
+    ConfigValues ClientConfig();
 
 private:
     void queueRequest(Handler* handler);
@@ -81,8 +81,7 @@ private:
     std::shared_ptr<RateLimiter> download_limiter_;
     std::shared_ptr<RateLimiter> extraction_limiter_;
     int log_level_;
-    bool trace_client_;
-    int max_backlog_;
+    ConfigValues config_values_;
 };
 
 }  // namespace service

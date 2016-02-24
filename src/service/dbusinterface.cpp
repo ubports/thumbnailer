@@ -94,8 +94,8 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
     extraction_limiter_ = make_shared<RateLimiter>(limit);
 
     log_level_ = settings_.log_level();
-    trace_client_ = settings_.trace_client();
-    max_backlog_ = settings_.max_backlog();
+    config_values_.trace_client = settings_.trace_client();
+    config_values_.max_backlog = settings_.max_backlog();
 }
 
 DBusInterface::~DBusInterface()
@@ -305,14 +305,9 @@ void DBusInterface::requestFinished()
     }
 }
 
-bool DBusInterface::TraceClient()
+ConfigValues DBusInterface::ClientConfig()
 {
-    return trace_client_;
-}
-
-int DBusInterface::MaxBacklog()
-{
-    return max_backlog_;
+    return config_values_;
 }
 
 }  // namespace service

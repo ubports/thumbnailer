@@ -1,10 +1,12 @@
 set(dbusinterface_xml "${CMAKE_SOURCE_DIR}/src/service/dbusinterface.xml")
 set_source_files_properties(${dbusinterface_xml} PROPERTIES
-  CLASSNAME ThumbnailerInterface)
+  CLASSNAME ThumbnailerInterface
+  INCLUDE ${CMAKE_SOURCE_DIR}/include/service/client_config.h)
 qt5_add_dbus_interface(interface_files ${dbusinterface_xml} thumbnailerinterface)
 
 add_library(${LIBTHUMBNAILER_QT} SHARED
   libthumbnailer-qt.cpp
+  ${CMAKE_SOURCE_DIR}/src/service/client_config.cpp
   ${CMAKE_SOURCE_DIR}/include/unity/thumbnailer/qt/thumbnailer-qt.h
   ${interface_files}
 )
