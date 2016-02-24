@@ -19,4 +19,3 @@ else()
       ENVIRONMENT "DBUS_SESSION_BUS_ADDRESS=;QT_QPA_PLATFORMTHEME="
     )
 endif()
-
