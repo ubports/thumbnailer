@@ -462,7 +462,8 @@ QByteArray RequestBase::thumbnail()
                     // than max_size to max_size, and then scaling a second time.
                     image_data.image = image_data.image.scale(QSize(max_size, max_size));
                 }
-                thumbnailer_->full_size_cache_->put(key_, image_data.image.get_data(90));  // Keep high-quality image.
+                // Keep high-quality image.
+                thumbnailer_->full_size_cache_->put(key_, image_data.image.jpeg_or_png_data(90));
             }
             // If the image is already within the target dimensions, this
             // will be a no-op.
@@ -470,7 +471,7 @@ QByteArray RequestBase::thumbnail()
             image_data.image = Image();
         }
 
-        string data = scaled_image.get_data();
+        string data = scaled_image.jpeg_or_png_data();
         scaled_image = Image();
         thumbnailer_->thumbnail_cache_->put(sized_key, data);
         return QByteArray::fromStdString(data);

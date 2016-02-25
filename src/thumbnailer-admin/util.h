@@ -21,6 +21,8 @@
 #include <QSize>
 #include <QString>
 
+class QByteArray;
+
 namespace unity
 {
 
@@ -41,6 +43,9 @@ QString current_directory();
 // If dir is non-empty, it is prepended to the returned path.
 
 std::string make_output_path(std::string const& inpath, QSize const& size, std::string const& dir);
+
+// Convert the image in ba to PNG (if it isn't PNG already).
+void to_png(QByteArray& ba);
 
 }  // namespace tools
 

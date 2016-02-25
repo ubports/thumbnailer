@@ -96,6 +96,7 @@ void GetLocalThumbnail::run(DBusConnection& conn)
             throw reply.error().message();  // LCOV_EXCL_LINE
         }
         QByteArray thumbnail = reply.value();
+        to_png(thumbnail);
 
         string out_path = make_output_path(input_path_.toStdString(), size_, output_dir_.toStdString());
         write_file(out_path, thumbnail);

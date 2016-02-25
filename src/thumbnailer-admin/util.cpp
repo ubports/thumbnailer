@@ -72,6 +72,10 @@ string make_output_path(string const& inpath, QSize const& size, string const& d
     return out_path;
 }
 
+void to_png(QByteArray& ba)
+{
+}
+
 }  // namespace tools
 
 }  // namespace thumbnailer

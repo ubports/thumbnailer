@@ -363,7 +363,7 @@ void Image::load(Reader& reader, QSize requested_size)
     }
     // It would be nice to scan here to see whether there actually are any transparent pixels,
     // but doing that is too expensive. So, images that support alpha always end up being
-    // returned as PNG files by get_data().
+    // returned as PNG files by jpeg_data_or_png().
     has_alpha_ = gdk_pixbuf_get_has_alpha(pixbuf_.get());
 
     // Correct the image orientation, if needed
@@ -514,20 +514,20 @@ bool Image::has_alpha() const
     return has_alpha_;
 }
 
-string Image::get_data(int quality) const
+string Image::jpeg_or_png_data(int quality) const
 {
     assert(pixbuf_);
 
-    return !has_alpha_ ? get_jpeg(quality) : get_png();
+    return !has_alpha_ ? jpeg_data(quality) : png_data();
 }
 
-string Image::get_jpeg(int quality) const
+string Image::jpeg_data(int quality) const
 {
     assert(pixbuf_);
 
     if (quality < 0 || quality > 100)
     {
-        throw invalid_argument("Image::get_data(): quality out of range [0..100]: " + to_string(quality));
+        throw invalid_argument("Image::jpeg_data(): quality out of range [0..100]: " + to_string(quality));
     }
     string s_qual = to_string(quality);
 
@@ -537,7 +537,7 @@ string Image::get_jpeg(int quality) const
     if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, "quality", s_qual.c_str(), NULL))
     {
         // LCOV_EXCL_START
-        string msg = string("Image::get_data(): cannot convert to jpeg: ") + err->message;
+        string msg = string("Image::jpeg_data(): cannot convert to jpeg: ") + err->message;
         g_error_free(err);
         throw runtime_error(msg);
         // LCOV_EXCL_STOP
@@ -547,7 +547,7 @@ string Image::get_jpeg(int quality) const
     return s;
 }
 
-string Image::get_png() const
+string Image::png_data() const
 {
     assert(pixbuf_);
 
@@ -557,7 +557,7 @@ string Image::get_png() const
     if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "png", &err, "compression", "6", NULL))
     {
         // LCOV_EXCL_START
-        string msg = string("Image::get_png(): cannot convert to png: ") + err->message;
+        string msg = string("Image::png_data(): cannot convert to png: ") + err->message;
         g_error_free(err);
         throw runtime_error(msg);
         // LCOV_EXCL_STOP

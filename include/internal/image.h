@@ -74,10 +74,10 @@ public:
     // The quality must be in the range 0-100, regardless of the whether
     // the source image uses transparency but, if PNG is returned,
     // the quality setting has no effect.
-    std::string get_data(int quality = 75) const;
+    std::string jpeg_or_png_data(int quality = 75) const;
 
-    std::string get_jpeg(int quality = 75) const;
-    std::string get_png() const;
+    std::string jpeg_data(int quality = 75) const;
+    std::string png_data() const;
 
 private:
     void load(Reader& reader, QSize requested_size);
