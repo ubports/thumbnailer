@@ -67,7 +67,7 @@ public:
     // requested size.
     Image scale(QSize requested_size) const;
 
-    bool has_alpha() const;  // Returns true if the image has an alpha channel (whether transparency is used or not).
+    bool has_alpha() const;  // Returns true if the image has an alpha channel, even if transparency is not used.
 
     // Returns image as JPEG data if the source does not use transparency,
     // and as PNG, otherwise.

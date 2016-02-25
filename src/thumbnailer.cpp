@@ -113,6 +113,7 @@ public:
 
         ImageData(FetchStatus status, CachePolicy policy, Location location)
             : status(status)
+            , image(Image())
             , cache_policy(policy)
             , location(location)
         {

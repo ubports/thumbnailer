@@ -26,12 +26,12 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
 #include <libexif/exif-loader.h>
+#include <unistd.h>
 
-#include <memory>
-#include <stdexcept>
 #include <cassert>
 #include <cmath>
-#include <unistd.h>
+#include <memory>
+#include <stdexcept>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -155,7 +155,7 @@ gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb
     }
 
     g_signal_connect(loader.get(), "size-prepared", size_prepared_cb, user_data);
-    unsigned char const* data = nullptr;
+    guint8 const* data = nullptr;
     size_t length = 0;
     gobj_ptr<GdkPixbufAnimationIter> iter;
     bool first_frame_finished = false;
@@ -361,6 +361,9 @@ void Image::load(Reader& reader, QSize requested_size)
     {
         pixbuf_ = load_image(reader, G_CALLBACK(maybe_scale_image), &unrotated_requested_size);
     }
+    // It would be nice to scan here to see whether there actually are any transparent pixels,
+    // but doing that is too expensive. So, images that support alpha always end up being
+    // returned as PNG files by get_data().
     has_alpha_ = gdk_pixbuf_get_has_alpha(pixbuf_.get());
 
     // Correct the image orientation, if needed
@@ -446,10 +449,10 @@ int Image::pixel(int x, int y) const
 
     int n_channels = gdk_pixbuf_get_n_channels(pixbuf_.get());
     int rowstride = gdk_pixbuf_get_rowstride(pixbuf_.get());
-    unsigned char* data = gdk_pixbuf_get_pixels(pixbuf_.get());
+    guint8 const* data = gdk_pixbuf_read_pixels(pixbuf_.get());
 
-    unsigned char* p = data + y * rowstride + x * n_channels;
-    if (has_alpha_)
+    guint8 const* p = data + y * rowstride + x * n_channels;
+    if (n_channels == 4)
     {
         return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
     }
@@ -506,6 +509,8 @@ Image Image::scale(QSize requested_size) const
 
 bool Image::has_alpha() const
 {
+    assert(pixbuf_);
+
     return has_alpha_;
 }
 
@@ -513,7 +518,7 @@ string Image::get_data(int quality) const
 {
     assert(pixbuf_);
 
-    return has_alpha_ ? get_png() : get_jpeg(quality);
+    return !has_alpha_ ? get_jpeg(quality) : get_png();
 }
 
 string Image::get_jpeg(int quality) const
