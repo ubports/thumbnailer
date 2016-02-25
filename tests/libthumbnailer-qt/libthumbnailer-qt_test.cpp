@@ -763,8 +763,9 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
     // Allow all the signals to trickle in (can be slow on Jenkins).
     EXPECT_TRUE(spy.wait(40000));
 
-    // We must have both completed and cancelled requests.
-    EXPECT_GT(counter.completed(), 5);
+    // We must have cancelled requests. (We don't check completed requests because,
+    // on s-Jenkins, this causes regular failures because machines often are
+    // ridiculously slow.
     EXPECT_GT(counter.cancelled(), 0);
 
     // The last few requests must have finished successfully.
