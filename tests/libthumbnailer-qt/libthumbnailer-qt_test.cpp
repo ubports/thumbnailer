@@ -672,9 +672,9 @@ TEST_F(LibThumbnailerTest, cancel)
 
 TEST_F(LibThumbnailerTest, cancel_many)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-theora"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for Theora decoder\n");
         return;
     }
 
@@ -684,9 +684,9 @@ TEST_F(LibThumbnailerTest, cancel_many)
 
     Thumbnailer thumbnailer(dbus_->connection());
 
-    int N_REQUESTS = 200;
+    int N_REQUESTS = 50;
 
-    string source = "short-track.mp3";
+    string source = "testvideo.ogg";
     string target_dir = temp_dir();
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
@@ -719,9 +719,9 @@ TEST_F(LibThumbnailerTest, cancel_many)
 
 TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
 {
-    if (!supports_decoder("audio/mpeg"))
+    if (!supports_decoder("video/x-theora"))
     {
-        fprintf(stderr, "No support for MP3 decoder\n");
+        fprintf(stderr, "No support for Theora decoder\n");
         return;
     }
 
@@ -733,7 +733,7 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
 
     int N_REQUESTS = 200;
 
-    string source = "short-track.mp3";
+    string source = "testvideo.ogg";
     string target_dir = temp_dir();
     make_links(string(TESTDATADIR) + "/" + source, target_dir, N_REQUESTS);
 
@@ -762,7 +762,7 @@ TEST_F(LibThumbnailerTest, cancel_many_with_remaining_requests)
     }
 
     // Allow all the signals to trickle in (can be slow on Jenkins).
-    EXPECT_TRUE(spy.wait(10000));
+    EXPECT_TRUE(spy.wait(20000));
 
     // We must have both completed and cancelled requests.
     EXPECT_GT(counter.completed(), 5);

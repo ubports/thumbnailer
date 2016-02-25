@@ -108,6 +108,7 @@ int main(int argc, char** argv)
         bus.registerObject(ADMIN_BUS_PATH, &admin_server);
 
         qDBusRegisterMetaType<unity::thumbnailer::service::AllStats>();
+        qDBusRegisterMetaType<unity::thumbnailer::service::ConfigValues>();
 
         if (!bus.registerService(BUS_NAME))
         {

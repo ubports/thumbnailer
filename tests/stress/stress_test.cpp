@@ -336,7 +336,7 @@ TEST_F(StressTest, mp3)
         return;
     }
 
-    int const N_REQUESTS = 300;
+    int const N_REQUESTS = 100;
 
     string source = "short-track.mp3";
     string target_dir = temp_dir() + "/Music";

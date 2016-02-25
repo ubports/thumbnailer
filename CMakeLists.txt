@@ -55,6 +55,14 @@ set(LIBTHUMBNAILER_QT_SO_VERSION_MICRO "0")
 set(LIBTHUMBNAILER_QT_SO_VERSION ${LIBTHUMBNAILER_QT_SO_VERSION_MAJOR}.${LIBTHUMBNAILER_QT_SO_VERSION_MINOR})
 set(LIBTHUMBNAILER_QT_HDR_INSTALL_DIR include/${LIBTHUMBNAILER_QT}-${LIBTHUMBNAILER_QT_SO_VERSION}/unity/thumbnailer/qt)
 
+# thumbnailer-service version
+set(THUMBNAILER_VERSION_MAJOR "2")
+set(THUMBNAILER_VERSION_MINOR "4")
+set(THUMBNAILER_VERSION_MICRO "0")
+
+# Encoding version of cache files
+set(THUMBNAILER_CACHE_VERSION "1")
+
 # Flags for thread/address sanitizer
 set(SANITIZER "" CACHE STRING "Build with -fsanitize=<value> (legal values: thread, address)")
 
@@ -116,6 +124,7 @@ pkg_check_modules(GIO_DEPS REQUIRED gio-2.0 gio-unix-2.0)
 pkg_check_modules(IMG_DEPS REQUIRED gdk-pixbuf-2.0 libexif)
 pkg_check_modules(UNITY_API_DEPS REQUIRED libunity-api)
 pkg_check_modules(APPARMOR_DEPS REQUIRED libapparmor)
+pkg_check_modules(TAGLIB_DEPS REQUIRED taglib)
 pkg_check_modules(CACHE_DEPS REQUIRED libpersistent-cache-cpp)
 
 include_directories(${GST_DEPS_INCLUDE_DIRS})
@@ -124,6 +133,7 @@ include_directories(${GIO_DEPS_INCLUDE_DIRS})
 include_directories(${IMG_DEPS_INCLUDE_DIRS})
 include_directories(${UNITY_API_DEPS_INCLUDE_DIRS})
 include_directories(${APPARMOR_DEPS_INCLUDE_DIRS})
+include_directories(${TAGLIB_DEPS_INCLUDE_DIRS})
 include_directories(include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 

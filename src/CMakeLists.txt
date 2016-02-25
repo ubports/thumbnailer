@@ -22,13 +22,16 @@ add_library(thumbnailer-static STATIC
     file_lock.cpp
     image.cpp
     imageextractor.cpp
+    local_album_art.cpp
     make_directories.cpp
+    mimetype.cpp
     ratelimiter.cpp
     safe_strerror.cpp
     settings.cpp
     trace.cpp
     thumbnailer.cpp
     ubuntuserverdownloader.cpp
+    version.cpp
     ${CMAKE_SOURCE_DIR}/include/internal/artdownloader.h
     ${CMAKE_SOURCE_DIR}/include/internal/artreply.h
     ${CMAKE_SOURCE_DIR}/include/internal/imageextractor.h
@@ -48,6 +51,7 @@ target_link_libraries(thumbnailer-static
     ${IMG_DEPS_LDFLAGS}
     ${UNITY_API_DEPS_LDFLAGS}
     ${APPARMOR_DEPS_LDFLAGS}
+    ${TAGLIB_DEPS_LDFLAGS}
     ${CACHE_DEPS_LDFLAGS}
 )
 
