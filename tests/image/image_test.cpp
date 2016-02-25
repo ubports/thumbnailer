@@ -178,7 +178,7 @@ TEST(Image, save_jpeg)
     EXPECT_EQ(640, i.width());
     EXPECT_EQ(480, i.height());
 
-    string jpeg = i.get_data();
+    string jpeg = i.jpeg_data();
     Image i2(jpeg);
     EXPECT_EQ(640, i2.width());
     EXPECT_EQ(480, i2.height());
@@ -358,24 +358,24 @@ TEST(Image, exceptions)
 
         try
         {
-            i.get_data(-1);
+            i.jpeg_data(-1);
             FAIL();
         }
         catch (invalid_argument const& e)
         {
-            EXPECT_STREQ("Image::get_data(): quality out of range [0..100]: -1", e.what());
+            EXPECT_STREQ("Image::jpeg_data(): quality out of range [0..100]: -1", e.what());
         }
         try
         {
-            i.get_data(101);
+            i.jpeg_data(101);
             FAIL();
         }
         catch (invalid_argument const& e)
         {
-            EXPECT_STREQ("Image::get_data(): quality out of range [0..100]: 101", e.what());
+            EXPECT_STREQ("Image::jpeg_data(): quality out of range [0..100]: 101", e.what());
         }
-        EXPECT_NO_THROW(i.get_data(0));
-        EXPECT_NO_THROW(i.get_data(100));
+        EXPECT_NO_THROW(i.jpeg_data(0));
+        EXPECT_NO_THROW(i.jpeg_data(100));
     }
 }
 

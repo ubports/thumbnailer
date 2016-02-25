@@ -226,7 +226,7 @@ void RequestImpl::dbusCallFinished()
 
     try
     {
-        image_ = QImage::fromData(reply.value(), "JPG");
+        image_ = QImage::fromData(reply.value());
         finished_ = true;
         is_valid_ = true;
         error_message_ = QLatin1String("");

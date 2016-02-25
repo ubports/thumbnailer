@@ -20,12 +20,12 @@
 
 #include <internal/thumbnailer.h>
 
-#include <internal/local_album_art.h>
 #include <internal/artreply.h>
 #include <internal/cachehelper.h>
 #include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
+#include <internal/local_album_art.h>
 #include <internal/make_directories.h>
 #include <internal/mimetype.h>
 #include <internal/raii.h>
@@ -35,6 +35,13 @@
 #include <internal/version.h>
 
 #include <boost/filesystem.hpp>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <gio/gio.h>
+#pragma GCC diagnostic pop
+
 #include <unity/UnityExceptions.h>
 
 #include <fcntl.h>

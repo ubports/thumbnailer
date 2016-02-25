@@ -27,6 +27,9 @@ using namespace unity::thumbnailer::internal;
 char const* VFILE = TESTBINDIR "/thumbnailer-version";
 char const* CACHE_VFILE = TESTBINDIR "/thumbnailer-cache-version";
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"  // For calls to system().
+
 TEST(version, current_version)
 {
     EXPECT_EQ(THUMBNAILER_VERSION_MAJOR, Version::major);
@@ -92,6 +95,8 @@ TEST(cache_version, new_version)
     Version v(TESTBINDIR);
     EXPECT_EQ(7, v.prev_cache_version());
 }
+
+#pragma GCC diagnostic pop
 
 int main(int argc, char** argv)
 {

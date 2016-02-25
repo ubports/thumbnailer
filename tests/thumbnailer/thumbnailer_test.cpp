@@ -639,6 +639,9 @@ TEST_F(ThumbnailerTest, empty_file)
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"  // For calls to system().
+
 TEST_F(ThumbnailerTest, clear_if_old_cache_version)
 {
     {
@@ -672,6 +675,8 @@ TEST_F(ThumbnailerTest, clear_if_old_cache_version)
         EXPECT_EQ(0, stats.size());
     }
 }
+
+#pragma GCC diagnostic pop
 
 class RemoteServer : public ThumbnailerTest
 {
