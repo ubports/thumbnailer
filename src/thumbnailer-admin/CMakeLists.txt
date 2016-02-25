@@ -26,7 +26,7 @@ add_executable(thumbnailer-admin
     ${interface_files}
 )
 qt5_use_modules(thumbnailer-admin DBus)
-target_link_libraries(thumbnailer-admin Qt5::DBus ${CACHE_DEPS_LDFLAGS} ${Boost_LIBRARIES})
+target_link_libraries(thumbnailer-admin thumbnailer-static Qt5::DBus ${CACHE_DEPS_LDFLAGS} ${Boost_LIBRARIES})
 add_dependencies(thumbnailer-admin thumbnailer-service)
 
 INSTALL(TARGETS thumbnailer-admin
