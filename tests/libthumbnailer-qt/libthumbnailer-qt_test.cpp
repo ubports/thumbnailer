@@ -332,8 +332,8 @@ TEST_F(LibThumbnailerTest, video_image)
 {
     Thumbnailer thumbnailer(dbus_->connection());
     // We do this twice, so we get a cache hit on the second try.
-    //for (int i = 0; i < 2; ++i)
-    //{
+    for (int i = 0; i < 2; ++i)
+    {
         const char* filename = TESTDATADIR "/testvideo.ogg";
 
         auto reply = thumbnailer.getThumbnail(filename, QSize(256, 256));
@@ -349,7 +349,7 @@ TEST_F(LibThumbnailerTest, video_image)
         QImage image = reply->image();
         EXPECT_EQ(256, image.width());
         EXPECT_EQ(144, image.height());
-    //}
+    }
 }
 
 TEST_F(LibThumbnailerTest, video_image_sync)

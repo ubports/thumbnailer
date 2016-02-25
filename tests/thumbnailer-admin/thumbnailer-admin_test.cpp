@@ -432,14 +432,13 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
 TEST_F(AdminTest, get_fullsize)
 {
-    auto filename = temp_dir() + "/orientation-1_0x0.jpg";
-    auto out_filename = temp_dir() + "/orientation-1_0x0.png";
+    auto filename = temp_dir() + "/orientation-1_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/orientation-1.jpg"}));
 
     // Image must have been created with the right name and contents.
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
@@ -451,14 +450,13 @@ TEST_F(AdminTest, get_fullsize)
 
 TEST_F(AdminTest, get_large_thumbnail)
 {
-    auto filename = temp_dir() + "/orientation-1_320x240.jpg";
-    auto out_filename = temp_dir() + "/orientation-1_320x240.png";
+    auto filename = temp_dir() + "/orientation-1_320x240.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "-s=320x240", TESTDATADIR "/orientation-1.jpg"}));
 
     // Image must have been created with the right name and contents.
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(320, img.width());
     EXPECT_EQ(240, img.height());
@@ -470,14 +468,13 @@ TEST_F(AdminTest, get_large_thumbnail)
 
 TEST_F(AdminTest, get_small_thumbnail_square)
 {
-    auto filename = temp_dir() + "/orientation-1_48x48.jpg";
-    auto out_filename = temp_dir() + "/orientation-1_48x48.png";
+    auto filename = temp_dir() + "/orientation-1_48x48.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=48", TESTDATADIR "/orientation-1.jpg"}));
 
     // Image must have been created with the right name and contents.
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(36, img.height());
@@ -489,13 +486,12 @@ TEST_F(AdminTest, get_small_thumbnail_square)
 
 TEST_F(AdminTest, get_unconstrained_width)
 {
-    auto filename = temp_dir() + "/orientation-1_0x240.jpg";
-    auto out_filename = temp_dir() + "/orientation-1_0x240.png";
+    auto filename = temp_dir() + "/orientation-1_0x240.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x240", TESTDATADIR "/orientation-1.jpg"}));
 
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(320, img.width());
     EXPECT_EQ(240, img.height());
@@ -503,13 +499,12 @@ TEST_F(AdminTest, get_unconstrained_width)
 
 TEST_F(AdminTest, get_unconstrained_height)
 {
-    auto filename = temp_dir() + "/Photo-with-exif_240x0.jpg";  // Portrait orientation
-    auto out_filename = temp_dir() + "/Photo-with-exif_240x0.png";
+    auto filename = temp_dir() + "/Photo-with-exif_240x0.png";  // Portrait orientation
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=240x0", TESTDATADIR "/Photo-with-exif.jpg"}));
 
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(240, img.width());
     EXPECT_EQ(426, img.height());
@@ -517,12 +512,12 @@ TEST_F(AdminTest, get_unconstrained_height)
 
 TEST_F(AdminTest, get_unconstrained_height_large)
 {
-    auto out_filename = temp_dir() + "/big_0x2048.png";
+    auto filename = temp_dir() + "/big_0x2048.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x2048", TESTDATADIR "/big.jpg"}));
 
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
@@ -530,13 +525,12 @@ TEST_F(AdminTest, get_unconstrained_height_large)
 
 TEST_F(AdminTest, get_unconstrained_both_large)
 {
-    auto filename = temp_dir() + "/big_0x0.jpg";
-    auto out_filename = temp_dir() + "/big_0x0.png";
+    auto filename = temp_dir() + "/big_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x0", TESTDATADIR "/big.jpg"}));
 
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
@@ -544,14 +538,13 @@ TEST_F(AdminTest, get_unconstrained_both_large)
 
 TEST_F(AdminTest, get_with_dir)
 {
-    auto filename = temp_dir() + "/orientation-2_0x0.jpg";
-    auto out_filename = temp_dir() + "/orientation-2_0x0.png";
+    auto filename = temp_dir() + "/orientation-2_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", QString::fromStdString(temp_dir())}));
 
     // Image must have been created with the right name and contents.
-    string data = read_file(out_filename);
+    string data = read_file(filename);
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
@@ -641,26 +634,24 @@ unique_ptr<ArtServer> RemoteServer::art_server_;
 
 TEST_F(RemoteServer, get_artist)
 {
-    auto filename = temp_dir() + "/metallica_load_artist_0x0.jpg";
-    auto out_filename = temp_dir() + "/metallica_load_artist_0x0.png";
+    auto filename = temp_dir() + "/metallica_load_artist_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get-artist", "metallica", "load"})) << ar.stderr();
 
-    string cmd = "/usr/bin/test -s " + out_filename + " || exit 1";
+    string cmd = "/usr/bin/test -s " + filename + " || exit 1";
     int rc = system(cmd.c_str());
     EXPECT_EQ(0, rc);
 }
 
 TEST_F(RemoteServer, get_album)
 {
-    auto filename = temp_dir() + "/metallica_load_album_48x48.jpg";
-    auto out_filename = temp_dir() + "/metallica_load_album_48x48.png";
+    auto filename = temp_dir() + "/metallica_load_album_48x48.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get-album", "metallica", "load", "--size=48"})) << ar.stderr();
 
-    string cmd = "/usr/bin/test -s " + out_filename + " || exit 1";
+    string cmd = "/usr/bin/test -s " + filename + " || exit 1";
     int rc = system(cmd.c_str());
     EXPECT_EQ(0, rc);
 }

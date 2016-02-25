@@ -25,7 +25,6 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
-#include <iostream>  // TODO: remove this
 
 #include <fcntl.h>
 
@@ -385,7 +384,6 @@ void ThumbnailExtractor::write_image(const std::string& filename)
 
     if (still_frame_)
     {
-std::cerr << "writing tiff" << std::endl;
         // We extracted a still frame from a video. We save as tiff without compression because that is
         // lossless and efficient. (There is no point avoiding the tiff encoding step because
         // still frame extraction is so slow that the gain would be insignificant.)

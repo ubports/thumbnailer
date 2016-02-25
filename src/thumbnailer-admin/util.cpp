@@ -86,6 +86,7 @@ void to_png(QByteArray& ba)
 
     Image img(ba);
     auto jpeg = img.jpeg_data();
+    ba.resize(jpeg.size());
     ba.replace(0, jpeg.size(), jpeg.data(), jpeg.size());
 }
 

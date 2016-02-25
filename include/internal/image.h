@@ -60,7 +60,9 @@ public:
     int height() const;
 
     // Return the pixel value at the (x,y) coordinates as an integer:
-    //  r << 16 | g << 8 | b
+    //     r << 16 | g << 8 | b
+    // If the image has an alpha channel, the pixel is returned as
+    //     r << 24 | g << 16 | b << 8 | a
     int pixel(int x, int y) const;
 
     // Return a scaled version of the image that fits within the given
@@ -76,7 +78,10 @@ public:
     // the quality setting has no effect.
     std::string jpeg_or_png_data(int quality = 75) const;
 
+    // Returns image as JPEG data.
     std::string jpeg_data(int quality = 75) const;
+
+    // Returns image as PNG data.
     std::string png_data() const;
 
 private:
