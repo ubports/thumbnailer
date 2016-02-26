@@ -84,7 +84,7 @@ GetLocalThumbnail::GetLocalThumbnail(QCommandLineParser& parser)
         {
             input_path_ = QString::fromStdString(boost::filesystem::canonical(input_path_.toStdString()).native());
         }
-        catch (std::exception const& e)
+        catch (std::exception const&)
         {
             // If name can't be canonicalised, errors will be dealt with on the server side.
         }
