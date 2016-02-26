@@ -23,6 +23,8 @@
 #include <internal/safe_strerror.h>
 #include "util.h"
 
+#include <boost/filesystem.hpp>
+
 #include <cassert>
 
 #include <fcntl.h>
@@ -68,8 +70,31 @@ GetLocalThumbnail::GetLocalThumbnail(QCommandLineParser& parser)
     {
         throw parser.helpText();
     }
+
     input_path_ = args[1];
+    if (input_path_.isEmpty())
+    {
+        throw QString("GetLocalThumbnail(): invalid empty input path");
+    }
+
+    // Remote end needs an absolute path.
+    if (!boost::filesystem::path(input_path_.toStdString()).is_absolute())
+    {
+        try
+        {
+            input_path_ = QString::fromStdString(boost::filesystem::canonical(input_path_.toStdString()).native());
+        }
+        catch (std::exception const& e)
+        {
+            // If name can't be canonicalised, errors will be dealt with on the server side.
+        }
+    }
+
     output_dir_ = args.size() == 3 ? args[2] : current_directory();
+    if (output_dir_.isEmpty())
+    {
+        throw QString("GetLocalThumbnail(): invalid empty output directory");
+    }
 
     if (parser.isSet(size_option))
     {
