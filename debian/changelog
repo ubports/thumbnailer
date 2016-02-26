@@ -1,4 +1,4 @@
-thumbnailer (2.4) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.04.20160226-0ubuntu1) xenial; urgency=medium
 
   [ Michi Henning ]
   * Fixed incorrect build dependency for settings-defaults.h.
@@ -13,7 +13,10 @@ thumbnailer (2.4) UNRELEASED; urgency=medium
   [ James Henstridge ]
   * Fixed thumbnail extraction from large animated GIF files (LP: #1527315).
 
- -- Michi Henning <michi.henning@canonical.com>  Wed, 24 Feb 2016 22:21:52 +1000
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- James Henstridge <james.henstridge@canonical.com>  Fri, 26 Feb 2016 03:27:56 +0000
 
 thumbnailer (2.3+16.04.20160210-0ubuntu1) xenial; urgency=medium
 
