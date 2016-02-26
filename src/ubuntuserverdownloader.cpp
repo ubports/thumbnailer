@@ -22,7 +22,7 @@
 
 #include <internal/artreply.h>
 #include <internal/env_vars.h>
-#include <settings.h>
+#include <internal/settings.h>
 
 #include <QNetworkReply>
 #include <QTimer>

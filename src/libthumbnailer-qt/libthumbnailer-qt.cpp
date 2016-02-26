@@ -20,10 +20,12 @@
 #include <unity/thumbnailer/qt/thumbnailer-qt.h>
 
 #include <ratelimiter.h>
-#include <settings.h>
-#include <thumbnailerinterface.h>
+#include <service/client_config.h>
 #include <service/dbus_names.h>
+#include <settings-defaults.h>
+#include <thumbnailerinterface.h>
 
+#include <boost/filesystem.hpp>
 #include <QSharedPointer>
 
 #include <memory>
@@ -132,8 +134,8 @@ private:
                                           QSize const& requested_size,
                                           std::function<QDBusPendingReply<QByteArray>()> const& job);
     std::unique_ptr<ThumbnailerInterface> iface_;
-    RateLimiter limiter_;
     bool trace_client_;
+    std::unique_ptr<RateLimiter> limiter_;
 };
 
 RequestImpl::RequestImpl(QString const& details,
@@ -316,10 +318,36 @@ void RequestImpl::waitForFinished()
 }
 
 ThumbnailerImpl::ThumbnailerImpl(QDBusConnection const& connection)
-    : limiter_(Settings().max_backlog())
-    , trace_client_(Settings().trace_client())
 {
     iface_.reset(new ThumbnailerInterface(service::BUS_NAME, service::THUMBNAILER_BUS_PATH, connection));
+    qDBusRegisterMetaType<unity::thumbnailer::service::ConfigValues>();
+
+    // We need to retrieve config parameters from the server because, when an app runs confined,
+    // it cannot read gsettings. We do this synchronously because we can't do anything else until
+    // after we get the settings anyway.
+
+    auto client_config_call = iface_->ClientConfig();
+    {
+        trace_client_ = TRACE_CLIENT_DEFAULT;
+        int max_backlog = MAX_BACKLOG_DEFAULT;
+
+        client_config_call.waitForFinished();
+        if (client_config_call.isValid())
+        {
+            auto const& config = client_config_call.value();
+            trace_client_ = config.trace_client;
+            max_backlog = config.max_backlog;
+        }
+        // LCOV_EXCL_START
+        else
+        {
+            qCritical().nospace() << "could not retrieve client config: " << client_config_call.error().message()
+                                  << " (using default values)";
+
+        }
+        // LCOV_EXCL_STOP
+        limiter_.reset(new RateLimiter(max_backlog));
+    }
 }
 
 QSharedPointer<Request> ThumbnailerImpl::getAlbumArt(QString const& artist,
@@ -359,7 +387,17 @@ QSharedPointer<Request> ThumbnailerImpl::getThumbnail(QString const& filename, Q
     s << "getThumbnail: (" << requestedSize.width() << "," << requestedSize.height() << ") " << filename;
     auto job = [this, filename, requestedSize]
     {
-        return iface_->GetThumbnail(filename, requestedSize);
+        // Remote end requires an absolute path.
+        QString canonical_name = filename;
+        try
+        {
+            canonical_name = QString::fromStdString(boost::filesystem::canonical(filename.toStdString()).native());
+        }
+        catch (std::exception const&)
+        {
+            // If name can't be canonicalised, errors will be dealt with on the server side.
+        }
+        return iface_->GetThumbnail(canonical_name, requestedSize);
     };
     return createRequest(details, requestedSize, job);
 }
@@ -384,12 +422,12 @@ QSharedPointer<Request> ThumbnailerImpl::createRequest(QString const& details,
 
 RateLimiter& ThumbnailerImpl::limiter()
 {
-    return limiter_;
+    return *limiter_;
 }
 
 void ThumbnailerImpl::pump_limiter()
 {
-    return limiter_.done();
+    return limiter_->done();
 }
 
 }  // namespace internal

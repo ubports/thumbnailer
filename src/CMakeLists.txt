@@ -1,14 +1,18 @@
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/src/settings-defaults.h
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
     COMMAND ${CMAKE_SOURCE_DIR}/tools/parse-settings.py
         -i ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml
-        -o ${CMAKE_BINARY_DIR}/src/settings-defaults.h
+        -o ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
     DEPENDS ${CMAKE_SOURCE_DIR}/data/com.canonical.Unity.Thumbnailer.gschema.xml)
 
-set_source_files_properties(${CMAKE_BINARY_DIR}/src/settings-defaults.h
-    PROPERTIES HEADER_FILE_ONLY TRUE)
+add_custom_target(generate-settings-defaults
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
+
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h
+    PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE)
 
 set_source_files_properties(settings.cpp PROPERTIES
-    OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/src/settings-defaults.h)
+    OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/settings-defaults.h)
 
 add_library(thumbnailer-static STATIC
     artdownloader.cpp
@@ -18,13 +22,16 @@ add_library(thumbnailer-static STATIC
     file_lock.cpp
     image.cpp
     imageextractor.cpp
+    local_album_art.cpp
     make_directories.cpp
+    mimetype.cpp
     ratelimiter.cpp
     safe_strerror.cpp
     settings.cpp
     trace.cpp
     thumbnailer.cpp
     ubuntuserverdownloader.cpp
+    version.cpp
     ${CMAKE_SOURCE_DIR}/include/internal/artdownloader.h
     ${CMAKE_SOURCE_DIR}/include/internal/artreply.h
     ${CMAKE_SOURCE_DIR}/include/internal/imageextractor.h
@@ -44,6 +51,7 @@ target_link_libraries(thumbnailer-static
     ${IMG_DEPS_LDFLAGS}
     ${UNITY_API_DEPS_LDFLAGS}
     ${APPARMOR_DEPS_LDFLAGS}
+    ${TAGLIB_DEPS_LDFLAGS}
     ${CACHE_DEPS_LDFLAGS}
 )
 

@@ -123,7 +123,6 @@ int main(int argc, char* argv[])
     {
         cerr << prog_name << ": " << e.what() << endl;
     }
-    // LCOV_EXCL_STOP
     catch (QString const& msg)
     {
         cerr << prog_name << ": " << msg.toStdString() << endl;
@@ -132,7 +131,6 @@ int main(int argc, char* argv[])
     {
         cerr << prog_name << ": " << msg << endl;
     }
-    // LCOV_EXCL_START
     catch (char const* msg)
     {
         cerr << prog_name << ": " << msg << endl;

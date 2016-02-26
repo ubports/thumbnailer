@@ -20,25 +20,21 @@
 
 #include <internal/thumbnailer.h>
 
+#include <internal/local_album_art.h>
 #include <internal/artreply.h>
 #include <internal/cachehelper.h>
 #include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
 #include <internal/make_directories.h>
+#include <internal/mimetype.h>
 #include <internal/raii.h>
 #include <internal/safe_strerror.h>
+#include <internal/settings.h>
 #include <internal/ubuntuserverdownloader.h>
-#include <settings.h>
+#include <internal/version.h>
 
 #include <boost/filesystem.hpp>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <gio/gio.h>
-#pragma GCC diagnostic pop
-
 #include <unity/UnityExceptions.h>
 
 #include <fcntl.h>
@@ -200,10 +196,7 @@ protected:
     void download(std::chrono::milliseconds timeout) override;
 
 private:
-    void verify_image_is_acceptable(string const& content_type);
-
     string filename_;
-    off_t filesize_;
     unique_ptr<ImageExtractor> image_extractor_;
 };
 
@@ -500,6 +493,11 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
     : RequestBase(thumbnailer, "", requested_size, timeout)
     , filename_(filename)
 {
+    if (!boost::filesystem::path(filename).is_absolute())
+    {
+        throw runtime_error("LocalThumbnailRequest(): " + filename_ + ": file name must be an absolute path");
+    }
+
     // We canonicalise the path name both to avoid caching the file
     // multiple times, and to ensure our access checks are against the
     // real file rather than a symlink.
@@ -517,8 +515,6 @@ LocalThumbnailRequest::LocalThumbnailRequest(Thumbnailer* thumbnailer,
     {
         throw runtime_error("LocalThumbnailRequest(): '" + filename_ + "' is not a regular file");
     }
-
-    filesize_ = st.st_size;
 
     // The full cache key for the file is the concatenation of path
     // name, inode, modification time, and inode modification time
@@ -554,24 +550,6 @@ void LocalThumbnailRequest::check_client_credentials(uid_t user,
 
 }
 
-// Animated GIFs can do terrible things to memory consumption (see lp:1527315).
-// Trying deal with animated GIFs cheaply is far more effort than it is worth
-// because we would have to use async APIs for image extraction to avoid the
-// memory problems. So, we just enforce an arbitrary limit of 2 MB. This allows
-// smallish animated GIFs, and it normal GIFs of reasonable size.
-
-void LocalThumbnailRequest::verify_image_is_acceptable(string const& content_type)
-{
-    auto constexpr max_gif_size = 2 * 1024 * 1024;
-    if (content_type == "image/gif" && filesize_ > max_gif_size)
-    {
-        string msg = "LocalThumbnailRequest::fetch(): GIF image " + filename_ +
-                     " exceeds maximum file size of " + to_string(max_gif_size) + " bytes";
-        qDebug() << msg.c_str();
-        throw runtime_error(msg);
-    }
-}
-
 RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noexcept
 {
     // Default in case something below throws.
@@ -583,59 +561,18 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
             image_data.cache_policy = CachePolicy::cache_fullsize;
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
+            // TODO: Need to add to full-size cache here. See bug 1540753
         }
 
-        // Work out content type.
-        gobj_ptr<GFile> file(g_file_new_for_path(filename_.c_str()));
-        assert(file);  // Cannot fail according to doc.
-
-        gobj_ptr<GFileInfo> info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE,
-                                                   G_FILE_QUERY_INFO_NONE,
-                                                   /* cancellable */ NULL,
-                                                   /* error */ NULL));
-        string content_type = "application/octet-stream";
-        if (info)
-        {
-            string content_type = g_file_info_get_attribute_string(info.get(), G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
-            if (content_type.empty())
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
-        }
-
-        if (content_type == "application/octet-stream")
-        {
-            // The FAST_CONTENT_TYPE detector will return 'application/octet-stream'
-            // for all files without an extension (as it only uses the extension to
-            // determine file type). In these cases, we fall back to the full content
-            // type detector.
-            gobj_ptr<GFileInfo> full_info(g_file_query_info(file.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
-                                                            G_FILE_QUERY_INFO_NONE,
-                                                            /* cancellable */ NULL,
-                                                            /* error */ NULL));  // TODO: need decent error reporting
-            if (!full_info)
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
-
-            content_type = g_file_info_get_attribute_string(full_info.get(), G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
-            if (content_type.empty())
-            {
-                return image_data;  // LCOV_EXCL_LINE
-            }
-        }
+        string content_type = get_mimetype(filename_);
+        assert(!content_type.empty());
 
         // Call the appropriate image extractor and return the image data as JPEG (not scaled).
-        // We indicate that full-size images are to be cached only for audio and video files,
-        // for which extraction is expensive. For local images, we don't cache full size.
+        // We indicate that full-size images are to be cached only for video files,
+        // for which extraction is expensive. For local audio and images, we don't cache full size.
 
-        if (content_type.find("audio/") == 0 || content_type.find("video/") == 0)
-        {
-            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
-        }
         if (content_type.find("image/") == 0)
         {
-            verify_image_is_acceptable(content_type);  // Throws if no good.
             FdPtr fd(open(filename_.c_str(), O_RDONLY | O_CLOEXEC), do_close);
             if (fd.get() < 0)
             {
@@ -646,9 +583,22 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
             Image scaled(fd.get(), size_hint);
             return ImageData(scaled, CachePolicy::dont_cache_fullsize, Location::local);
         }
+        else if (content_type.find("audio/") == 0)
+        {
+            string art = extract_local_album_art(filename_);
+            if (!art.empty())
+            {
+                return ImageData(Image(art), CachePolicy::dont_cache_fullsize, Location::local);
+            }
+        }
+        else if (content_type.find("video/") == 0)
+        {
+            return ImageData(FetchStatus::needs_download, CachePolicy::cache_fullsize, Location::local);
+        }
     }
     catch (std::exception const& e)
     {
+        qCritical().nospace() << "LocalThumbnailRequest::fetch(): " << e.what();
         set_error_message(e.what());
         return image_data;
     }
@@ -830,6 +780,9 @@ Thumbnailer::Thumbnailer()
             auto backoff = failure_cache_->get(BACKOFF_PERIOD_KEY);
             backoff_.set_backoff_period(chrono::seconds(stoll(*backoff)));
         }
+
+        // Apply any adjustments to the caches that are version-dependent.
+        apply_upgrade_actions(cache_dir);
     }
     catch (std::exception const& e)
     {
@@ -858,10 +811,28 @@ Thumbnailer::~Thumbnailer()
     // LCOV_EXCL_STOP
 }
 
+void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
+{
+    Version v(cache_dir);
+    if (v.prev_cache_version() != v.cache_version)
+    {
+        // Whenever the version changes, we wipe all three caches.
+        // That's useful to, for example, get rid of old unknown
+        // artist images from the remote server. Changing the version
+        // is also needed if we ever change the way keys and values
+        // are stored in the caches.
+        qDebug() << "cache version update from" << v.prev_cache_version() << "to" << v.cache_version;
+        clear(Thumbnailer::CacheSelector::all);
+    }
+}
+
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
                                                         QSize const& requested_size)
 {
-    assert(!filename.empty());
+    if (filename.empty())
+    {
+        throw unity::InvalidArgumentException("Thumbnailer::get_thumbnail(): filename is empty");
+    }
 
     try
     {

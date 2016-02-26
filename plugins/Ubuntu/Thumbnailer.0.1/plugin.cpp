@@ -18,7 +18,6 @@
 
 #include "plugin.h"
 
-#include <settings.h>
 #include "albumartgenerator.h"
 #include "artistartgenerator.h"
 #include "thumbnailgenerator.h"

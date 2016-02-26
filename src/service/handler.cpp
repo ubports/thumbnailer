@@ -156,8 +156,10 @@ void Handler::gotCredentials(CredentialsCache::Credentials const& credentials)
 {
     if (p->cancelled)
     {
+        // LCOV_EXCL_START  // Too small a window to hit with a test.
         Q_EMIT finished();
         return;
+        // LCOV_EXCL_STOP
     }
 
     if (!credentials.valid)
@@ -208,7 +210,7 @@ QByteArray Handler::check()
 {
     if (p->cancelled)
     {
-        return QByteArray();
+        return QByteArray();  // LCOV_EXCL_LINE  // Too small a window to hit with a test.
     }
     return p->request->thumbnail();
 }
@@ -231,14 +233,16 @@ void Handler::checkFinished()
         sendError("Handler::checkFinished(): exception: " + details() + ": " + e.what());
         return;
     }
+    // LCOV_EXCL_STOP
     if (!ba_error.error.isNull())
     {
+        // LCOV_EXCL_START
         sendError("Handler::checkFinished(): result error: " + details() + ": " + ba_error.error);
         return;
+        // LCOV_EXCL_STOP
     }
-    // LCOV_EXCL_STOP
 
-    // Did we find a valid thumbnail in the cache or generated it locally from an image file?
+    // Did we find a valid thumbnail in the cache or generated it locally from an image or audio file?
     if (ba_error.ba.size() != 0)
     {
         sendThumbnail(ba_error.ba);
@@ -305,7 +309,7 @@ QByteArray Handler::create()
 {
     if (p->cancelled)
     {
-        return QByteArray();
+        return QByteArray();  // LCOV_EXCL_LINE  // Too small a window to hit with a test.
     }
 
     QByteArray art_image = p->request->thumbnail();

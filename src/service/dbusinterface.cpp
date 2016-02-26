@@ -19,7 +19,6 @@
 #include "dbusinterface.h"
 
 #include <internal/file_io.h>
-#include <settings.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -94,8 +93,9 @@ DBusInterface::DBusInterface(shared_ptr<Thumbnailer> const& thumbnailer,
 
     extraction_limiter_ = make_shared<RateLimiter>(limit);
 
-    Settings s;
-    log_level_ = s.log_level();
+    log_level_ = settings_.log_level();
+    config_values_.trace_client = settings_.trace_client();
+    config_values_.max_backlog = settings_.max_backlog();
 }
 
 DBusInterface::~DBusInterface()
@@ -129,7 +129,7 @@ QByteArray DBusInterface::GetAlbumArt(QString const& artist,
     // LCOV_EXCL_START
     catch (exception const& e)
     {
-        QString msg = "DBusInterface::GetArtistArt(): " + artist + "/" + album + ": " + e.what();
+        QString msg = "DBusInterface::GetAlbumArt(): " + artist + "/" + album + ": " + e.what();
         qWarning() << msg;
         sendErrorReply(ART_ERROR, e.what());
     }
@@ -303,6 +303,11 @@ void DBusInterface::requestFinished()
                 break;
         }
     }
+}
+
+ConfigValues DBusInterface::ClientConfig()
+{
+    return config_values_;
 }
 
 }  // namespace service

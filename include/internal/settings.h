@@ -32,6 +32,9 @@ namespace unity
 namespace thumbnailer
 {
 
+namespace internal
+{
+
 class Settings
 {
 public:
@@ -65,6 +68,8 @@ private:
     std::string schema_name_;
     internal::gobj_ptr<GSettings> settings_;
 };
+
+}  // namespace internal
 
 }  // namespace thumbnailer
 
