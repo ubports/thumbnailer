@@ -429,6 +429,17 @@ TEST_F(ThumbnailerTest, exceptions)
         EXPECT_EQ(0, msg.compare(0, exp.length(), exp)) << msg;
     }
     ASSERT_EQ(0, chmod(cache_dir.c_str(), 0700));
+
+    try
+    {
+        Thumbnailer tn;
+        tn.get_thumbnail("", QSize(0, 0));
+        FAIL();
+    }
+    catch (unity::InvalidArgumentException const& e)
+    {
+        EXPECT_STREQ("unity::InvalidArgumentException: Thumbnailer::get_thumbnail(): filename is empty", e.what());
+    }
 }
 
 TEST_F(ThumbnailerTest, vs_thumb_exec_failure)

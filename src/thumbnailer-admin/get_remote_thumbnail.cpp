@@ -96,8 +96,9 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
 {
     try
     {
-        auto method =
-            command_ == QLatin1String("get-artist") ? &ThumbnailerInterface::GetArtistArt : &ThumbnailerInterface::GetAlbumArt;
+        auto method = command_ == QLatin1String("get-artist")
+                        ? &ThumbnailerInterface::GetArtistArt
+                        : &ThumbnailerInterface::GetAlbumArt;
         auto reply = (conn.thumbnailer().*method)(artist_, album_, size_);
         reply.waitForFinished();
         if (!reply.isValid())

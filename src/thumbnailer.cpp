@@ -838,7 +838,10 @@ void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
 unique_ptr<ThumbnailRequest> Thumbnailer::get_thumbnail(string const& filename,
                                                         QSize const& requested_size)
 {
-    assert(!filename.empty());
+    if (filename.empty())
+    {
+        throw unity::InvalidArgumentException("Thumbnailer::get_thumbnail(): filename is empty");
+    }
 
     try
     {

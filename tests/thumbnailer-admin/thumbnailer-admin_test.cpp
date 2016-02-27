@@ -554,6 +554,39 @@ TEST_F(AdminTest, get_with_dir)
     EXPECT_EQ(0x0000FE, img.pixel(0, 479));
 }
 
+TEST_F(AdminTest, get_with_relative_input_path)
+{
+    auto filename = TESTDATADIR "/orientation-2.jpg";
+    ASSERT_EQ(0, system((string("cp ") + filename + " .").c_str()));
+
+    AdminRunner ar;
+    EXPECT_EQ(0, ar.run(QStringList{"get", "./orientation-2.jpg"}));
+
+    // Image must have been created in the right location and with correct contents.
+    string data = read_file("./orientation-2_0x0.png");
+    Image img(data);
+    EXPECT_EQ(640, img.width());
+    EXPECT_EQ(480, img.height());
+    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+}
+
+TEST_F(AdminTest, empty_input_path)
+{
+    AdminRunner ar;
+    EXPECT_EQ(1, ar.run(QStringList{"get", ""}));
+    EXPECT_EQ(ar.stderr(), "thumbnailer-admin: GetLocalThumbnail(): invalid empty input path\n");
+}
+
+TEST_F(AdminTest, empty_output_path)
+{
+    AdminRunner ar;
+    EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", ""}));
+    EXPECT_EQ(ar.stderr(), "thumbnailer-admin: GetLocalThumbnail(): invalid empty output directory\n");
+}
+
 TEST_F(AdminTest, get_parsing)
 {
     AdminRunner ar;
