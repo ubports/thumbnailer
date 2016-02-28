@@ -536,6 +536,38 @@ TEST_F(AdminTest, get_unconstrained_both_large)
     EXPECT_EQ(1439, img.height());
 }
 
+TEST_F(AdminTest, get_png)
+{
+    auto filename = temp_dir() + "/transparent_0x0.png";
+
+    AdminRunner ar;
+    // Image has alpha channel.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/transparent.png", QString::fromStdString(temp_dir())}));
+
+    // Image must have been created with the right name and contents.
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+    EXPECT_EQ(0, img.pixel(0, 0));
+}
+
+TEST_F(AdminTest, get_png_no_alpha)
+{
+    auto filename = temp_dir() + "/RGB_0x0.png";
+
+    AdminRunner ar;
+    // Image does not have alpha channel.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/RGB.png", QString::fromStdString(temp_dir())}));
+
+    // Image must have been created with the right name and contents.
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(48, img.width());
+    EXPECT_EQ(48, img.height());
+    EXPECT_EQ(0xC80000, img.pixel(0, 0));
+}
+
 TEST_F(AdminTest, get_with_dir)
 {
     auto filename = temp_dir() + "/orientation-2_0x0.png";

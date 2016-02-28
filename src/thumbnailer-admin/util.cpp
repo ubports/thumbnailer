@@ -81,13 +81,13 @@ void to_png(QByteArray& ba)
     unsigned char const* data = reinterpret_cast<unsigned char const*>(ba.data());
     if (equal(begin(png_magic), end(png_magic), data))
     {
-        return;
+        return;  // Already in PNG format.
     }
 
     Image img(ba);
-    auto jpeg = img.jpeg_data();
-    ba.resize(jpeg.size());
-    ba.replace(0, jpeg.size(), jpeg.data(), jpeg.size());
+    auto png = img.png_data();
+    ba.resize(png.size());
+    ba.replace(0, png.size(), png.data(), png.size());
 }
 
 }  // namespace tools
