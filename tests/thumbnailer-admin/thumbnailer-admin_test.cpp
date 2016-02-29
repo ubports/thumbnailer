@@ -302,11 +302,11 @@ TEST_F(AdminTest, clear_and_clear_stats)
     AdminRunner ar;
 
     // Put something in the cache.
-    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testsong.ogg"}));
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testvideo.ogg"}));
     // Again, so we get a hit on thumbnail cache.
-    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testsong.ogg"}));
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testvideo.ogg"}));
     // Again, with different size, so we get a hit on full-size cache.
-    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testsong.ogg", "--size=20x20"}));
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/testvideo.ogg", "--size=20x20"}));
     // Put something in the failure cache.
     EXPECT_EQ(1, ar.run(QStringList{"get", TESTDATADIR "/empty"}));
     // Again, so we get a hit on the failure cache.
@@ -316,9 +316,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     auto output = ar.stdout();
-    // TODO: broken, see bug 1540753
-    //EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
-    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
     output = ar.stdout();
@@ -332,9 +330,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
-    // TODO: broken, see bug 1540753
-    //EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
-    EXPECT_TRUE(output.find("Hits:                  0") != string::npos) << output;
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
     output = ar.stdout();
@@ -350,9 +346,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
-    // TODO: broken, see bug 1540753
-    //EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
-    EXPECT_TRUE(output.find("Hits:                  0") != string::npos) << output;
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
     output = ar.stdout();
@@ -383,9 +377,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
-    // TODO: broken, see bug 1540753
-    //EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
-    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
     output = ar.stdout();
@@ -401,9 +393,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "i"}));
     output = ar.stdout();
-    // TODO: broken, see bug 1540753
-    //EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
-    EXPECT_TRUE(output.find("Size:                  0") != string::npos) << output;
+    EXPECT_TRUE(output.find("Size:                  1") != string::npos) << output;
 
     EXPECT_EQ(0, ar.run(QStringList{"stats", "t"}));
     output = ar.stdout();

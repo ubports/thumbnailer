@@ -558,10 +558,9 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
     {
         if (image_extractor_)
         {
-            // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
+            // The image data has been extracted via vs-thumb. Update image_data policy in case read() throws.
             image_data.cache_policy = CachePolicy::cache_fullsize;
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
-            // TODO: Need to add to full-size cache here. See bug 1540753
         }
 
         string content_type = get_mimetype(filename_);
