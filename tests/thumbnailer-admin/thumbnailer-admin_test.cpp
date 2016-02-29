@@ -442,10 +442,10 @@ TEST_F(AdminTest, get_fullsize)
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 }
 
 TEST_F(AdminTest, get_large_thumbnail)
@@ -460,10 +460,10 @@ TEST_F(AdminTest, get_large_thumbnail)
     Image img(data);
     EXPECT_EQ(320, img.width());
     EXPECT_EQ(240, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(319, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(319, 239));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 239));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(319, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(319, 239));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 239));
 }
 
 TEST_F(AdminTest, get_small_thumbnail_square)
@@ -478,10 +478,10 @@ TEST_F(AdminTest, get_small_thumbnail_square)
     Image img(data);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(36, img.height());
-    EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF80, img.pixel(47, 0));
-    EXPECT_EQ(0x81FF81, img.pixel(47, 35));
-    EXPECT_EQ(0x807FFE, img.pixel(0, 35));
+    EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF80FF, img.pixel(47, 0));
+    EXPECT_EQ(0x81FF81FF, img.pixel(47, 35));
+    EXPECT_EQ(0x807FFEFF, img.pixel(0, 35));
 }
 
 TEST_F(AdminTest, get_unconstrained_width)
@@ -565,7 +565,7 @@ TEST_F(AdminTest, get_png_no_alpha)
     Image img(data);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(48, img.height());
-    EXPECT_EQ(0xC80000, img.pixel(0, 0));
+    EXPECT_EQ(0xC80000FF, img.pixel(0, 0));
 }
 
 TEST_F(AdminTest, get_with_dir)
@@ -580,10 +580,10 @@ TEST_F(AdminTest, get_with_dir)
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 }
 
 TEST_F(AdminTest, get_with_relative_input_path)
@@ -599,10 +599,10 @@ TEST_F(AdminTest, get_with_relative_input_path)
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 }
 
 TEST_F(AdminTest, empty_input_path)

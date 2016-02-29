@@ -88,7 +88,7 @@ private:
     void load(Reader& reader, QSize requested_size);
 
     gobj_ptr<struct _GdkPixbuf> pixbuf_;
-    bool has_alpha_;
+    bool has_alpha_ = false;
 };
 
 }  // namespace internal

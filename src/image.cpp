@@ -273,21 +273,18 @@ void maybe_scale_image(GdkPixbufLoader* loader, int width, int height, void* use
 }  // namespace
 
 Image::Image(string const& data, QSize requested_size)
-    : has_alpha_(false)
 {
     BufferReader reader(reinterpret_cast<unsigned char const*>(&data[0]), data.size());
     load(reader, requested_size);
 }
 
 Image::Image(QByteArray const& ba, QSize requested_size)
-    : has_alpha_(false)
 {
     BufferReader reader(reinterpret_cast<unsigned char const*>(ba.constData()), ba.size());
     load(reader, requested_size);
 }
 
 Image::Image(int fd, QSize requested_size)
-    : has_alpha_(false)
 {
     FdReader reader(fd);
     load(reader, requested_size);
@@ -452,14 +449,7 @@ int Image::pixel(int x, int y) const
     guint8 const* data = gdk_pixbuf_read_pixels(pixbuf_.get());
 
     guint8 const* p = data + y * rowstride + x * n_channels;
-    if (n_channels == 4)
-    {
-        return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3];
-    }
-    else
-    {
-        return p[0] << 16 | p[1] << 8 | p[2];
-    }
+    return p[0] << 24 | p[1] << 16 | p[2] << 8 | (n_channels == 4 ? p[3] : 0xff);
 }
 
 Image Image::scale(QSize requested_size) const

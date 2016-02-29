@@ -85,9 +85,7 @@ void to_png(QByteArray& ba)
     }
 
     Image img(ba);
-    auto png = img.png_data();
-    ba.resize(png.size());
-    ba.replace(0, png.size(), png.data(), png.size());
+    ba = QByteArray::fromStdString(img.png_data());
 }
 
 }  // namespace tools

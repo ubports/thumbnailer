@@ -51,10 +51,10 @@ TEST(Image, basic)
         Image i(data);
         EXPECT_EQ(640, i.width());
         EXPECT_EQ(480, i.height());
-        EXPECT_EQ(0xFE0000, i.pixel(0, 0));
-        EXPECT_EQ(0xFFFF00, i.pixel(639, 0));
-        EXPECT_EQ(0x00FF01, i.pixel(639, 479));
-        EXPECT_EQ(0x0000FE, i.pixel(0, 479));
+        EXPECT_EQ(0xFE0000FF, i.pixel(0, 0));
+        EXPECT_EQ(0xFFFF00FF, i.pixel(639, 0));
+        EXPECT_EQ(0x00FF01FF, i.pixel(639, 479));
+        EXPECT_EQ(0x0000FEFF, i.pixel(0, 479));
         EXPECT_FALSE(i.has_alpha());
 
         // Move constructor
@@ -196,10 +196,10 @@ TEST(Image, use_exif_thumbnail)
 
         EXPECT_EQ(160, img.width());
         EXPECT_EQ(120, img.height());
-        EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF80, img.pixel(159, 0));
-        EXPECT_EQ(0x81FF81, img.pixel(159, 119));
-        EXPECT_EQ(0x807FFE, img.pixel(0, 119));
+        EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF80FF, img.pixel(159, 0));
+        EXPECT_EQ(0x81FF81FF, img.pixel(159, 119));
+        EXPECT_EQ(0x807FFEFF, img.pixel(0, 119));
     }
 
     {
@@ -209,10 +209,10 @@ TEST(Image, use_exif_thumbnail)
 
         EXPECT_EQ(160, img.width());
         EXPECT_EQ(120, img.height());
-        EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF80, img.pixel(159, 0));
-        EXPECT_EQ(0x81FF81, img.pixel(159, 119));
-        EXPECT_EQ(0x807FFE, img.pixel(0, 119));
+        EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF80FF, img.pixel(159, 0));
+        EXPECT_EQ(0x81FF81FF, img.pixel(159, 119));
+        EXPECT_EQ(0x807FFEFF, img.pixel(0, 119));
     }
 
     {
@@ -222,10 +222,10 @@ TEST(Image, use_exif_thumbnail)
 
         EXPECT_EQ(160, img.width());
         EXPECT_EQ(120, img.height());
-        EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF80, img.pixel(159, 0));
-        EXPECT_EQ(0x81FF81, img.pixel(159, 119));
-        EXPECT_EQ(0x807FFE, img.pixel(0, 119));
+        EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF80FF, img.pixel(159, 0));
+        EXPECT_EQ(0x81FF81FF, img.pixel(159, 119));
+        EXPECT_EQ(0x807FFEFF, img.pixel(0, 119));
     }
 
     {
@@ -235,10 +235,10 @@ TEST(Image, use_exif_thumbnail)
 
         EXPECT_EQ(80, img.width());
         EXPECT_EQ(60, img.height());
-        EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF80, img.pixel(79, 0));
-        EXPECT_EQ(0x81FF81, img.pixel(79, 59));
-        EXPECT_EQ(0x807FFE, img.pixel(0, 59));
+        EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF80FF, img.pixel(79, 0));
+        EXPECT_EQ(0x81FF81FF, img.pixel(79, 59));
+        EXPECT_EQ(0x807FFEFF, img.pixel(0, 59));
     }
 
     {
@@ -249,10 +249,10 @@ TEST(Image, use_exif_thumbnail)
 
         EXPECT_EQ(200, img.width());
         EXPECT_EQ(150, img.height());
-        EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF00, img.pixel(199, 0));
-        EXPECT_EQ(0x00FF01, img.pixel(199, 149));
-        EXPECT_EQ(0x0000FE, img.pixel(0, 149));
+        EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF00FF, img.pixel(199, 0));
+        EXPECT_EQ(0x00FF01FF, img.pixel(199, 149));
+        EXPECT_EQ(0x0000FEFF, img.pixel(0, 149));
     }
 }
 
@@ -265,29 +265,29 @@ TEST(Image, orientation)
         Image img(data);
         EXPECT_EQ(640, img.width());
         EXPECT_EQ(480, img.height());
-        EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-        EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-        EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+        EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+        EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+        EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 
         // Scaled version
         img = Image(data, QSize(320, 240));
         EXPECT_EQ(320, img.width());
         EXPECT_EQ(240, img.height());
-        EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF00, img.pixel(319, 0));
-        EXPECT_EQ(0x00FF01, img.pixel(319, 239));
-        EXPECT_EQ(0x0000FE, img.pixel(0, 239));
+        EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF00FF, img.pixel(319, 0));
+        EXPECT_EQ(0x00FF01FF, img.pixel(319, 239));
+        EXPECT_EQ(0x0000FEFF, img.pixel(0, 239));
 
         // This version will be produced from the thumbnail, which has
         // been tinted to distinguish it from the original.
         img = Image(data, QSize(160, 160));
         EXPECT_EQ(160, img.width());
         EXPECT_EQ(120, img.height());
-        EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-        EXPECT_EQ(0xFFFF80, img.pixel(159, 0));
-        EXPECT_EQ(0x81FF81, img.pixel(159, 119));
-        EXPECT_EQ(0x807FFE, img.pixel(0, 119));
+        EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+        EXPECT_EQ(0xFFFF80FF, img.pixel(159, 0));
+        EXPECT_EQ(0x81FF81FF, img.pixel(159, 119));
+        EXPECT_EQ(0x807FFEFF, img.pixel(0, 119));
     }
 }
 
