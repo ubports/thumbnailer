@@ -58,8 +58,10 @@ QQuickTextureFactory* ThumbnailerImageResponse::textureFactory() const
     }
     else
     {
+        // LCOV_EXCL_START
         qWarning() << "ThumbnailerImageResponse::textureFactory(): method called without valid request.";
         return nullptr;
+        // LCOV_EXCL_END
     }
 }
 

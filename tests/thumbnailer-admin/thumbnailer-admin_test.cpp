@@ -422,7 +422,7 @@ TEST_F(AdminTest, clear_and_clear_stats)
 
 TEST_F(AdminTest, get_fullsize)
 {
-    auto filename = temp_dir() + "/orientation-1_0x0.jpg";
+    auto filename = temp_dir() + "/orientation-1_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/orientation-1.jpg"}));
@@ -432,15 +432,15 @@ TEST_F(AdminTest, get_fullsize)
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 }
 
 TEST_F(AdminTest, get_large_thumbnail)
 {
-    auto filename = temp_dir() + "/orientation-1_320x240.jpg";
+    auto filename = temp_dir() + "/orientation-1_320x240.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "-s=320x240", TESTDATADIR "/orientation-1.jpg"}));
@@ -450,15 +450,15 @@ TEST_F(AdminTest, get_large_thumbnail)
     Image img(data);
     EXPECT_EQ(320, img.width());
     EXPECT_EQ(240, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(319, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(319, 239));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 239));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(319, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(319, 239));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 239));
 }
 
 TEST_F(AdminTest, get_small_thumbnail_square)
 {
-    auto filename = temp_dir() + "/orientation-1_48x48.jpg";
+    auto filename = temp_dir() + "/orientation-1_48x48.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=48", TESTDATADIR "/orientation-1.jpg"}));
@@ -468,15 +468,15 @@ TEST_F(AdminTest, get_small_thumbnail_square)
     Image img(data);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(36, img.height());
-    EXPECT_EQ(0xFE8081, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF80, img.pixel(47, 0));
-    EXPECT_EQ(0x81FF81, img.pixel(47, 35));
-    EXPECT_EQ(0x807FFE, img.pixel(0, 35));
+    EXPECT_EQ(0xFE8081FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF80FF, img.pixel(47, 0));
+    EXPECT_EQ(0x81FF81FF, img.pixel(47, 35));
+    EXPECT_EQ(0x807FFEFF, img.pixel(0, 35));
 }
 
 TEST_F(AdminTest, get_unconstrained_width)
 {
-    auto filename = temp_dir() + "/orientation-1_0x240.jpg";
+    auto filename = temp_dir() + "/orientation-1_0x240.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x240", TESTDATADIR "/orientation-1.jpg"}));
@@ -489,7 +489,7 @@ TEST_F(AdminTest, get_unconstrained_width)
 
 TEST_F(AdminTest, get_unconstrained_height)
 {
-    auto filename = temp_dir() + "/Photo-with-exif_240x0.jpg";  // Portrait orientation
+    auto filename = temp_dir() + "/Photo-with-exif_240x0.png";  // Portrait orientation
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=240x0", TESTDATADIR "/Photo-with-exif.jpg"}));
@@ -502,7 +502,7 @@ TEST_F(AdminTest, get_unconstrained_height)
 
 TEST_F(AdminTest, get_unconstrained_height_large)
 {
-    auto filename = temp_dir() + "/big_0x2048.jpg";
+    auto filename = temp_dir() + "/big_0x2048.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x2048", TESTDATADIR "/big.jpg"}));
@@ -515,7 +515,7 @@ TEST_F(AdminTest, get_unconstrained_height_large)
 
 TEST_F(AdminTest, get_unconstrained_both_large)
 {
-    auto filename = temp_dir() + "/big_0x0.jpg";
+    auto filename = temp_dir() + "/big_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "--size=0x0", TESTDATADIR "/big.jpg"}));
@@ -526,9 +526,41 @@ TEST_F(AdminTest, get_unconstrained_both_large)
     EXPECT_EQ(1439, img.height());
 }
 
+TEST_F(AdminTest, get_png)
+{
+    auto filename = temp_dir() + "/transparent_0x0.png";
+
+    AdminRunner ar;
+    // Image has alpha channel.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/transparent.png", QString::fromStdString(temp_dir())}));
+
+    // Image must have been created with the right name and contents.
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(200, img.width());
+    EXPECT_EQ(200, img.height());
+    EXPECT_EQ(0, img.pixel(0, 0));
+}
+
+TEST_F(AdminTest, get_png_no_alpha)
+{
+    auto filename = temp_dir() + "/RGB_0x0.png";
+
+    AdminRunner ar;
+    // Image does not have alpha channel.
+    EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/RGB.png", QString::fromStdString(temp_dir())}));
+
+    // Image must have been created with the right name and contents.
+    string data = read_file(filename);
+    Image img(data);
+    EXPECT_EQ(48, img.width());
+    EXPECT_EQ(48, img.height());
+    EXPECT_EQ(0xC80000FF, img.pixel(0, 0));
+}
+
 TEST_F(AdminTest, get_with_dir)
 {
-    auto filename = temp_dir() + "/orientation-2_0x0.jpg";
+    auto filename = temp_dir() + "/orientation-2_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", TESTDATADIR "/orientation-2.jpg", QString::fromStdString(temp_dir())}));
@@ -538,10 +570,10 @@ TEST_F(AdminTest, get_with_dir)
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 }
 
 TEST_F(AdminTest, get_with_relative_input_path)
@@ -552,15 +584,15 @@ TEST_F(AdminTest, get_with_relative_input_path)
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get", "./orientation-2.jpg"}));
 
-    // Image must have been created with the right name and contents.
-    string data = read_file("./orientation-2_0x0.jpg");
+    // Image must have been created in the right location and with correct contents.
+    string data = read_file("./orientation-2_0x0.png");
     Image img(data);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    EXPECT_EQ(0xFE0000, img.pixel(0, 0));
-    EXPECT_EQ(0xFFFF00, img.pixel(639, 0));
-    EXPECT_EQ(0x00FF01, img.pixel(639, 479));
-    EXPECT_EQ(0x0000FE, img.pixel(0, 479));
+    EXPECT_EQ(0xFE0000FF, img.pixel(0, 0));
+    EXPECT_EQ(0xFFFF00FF, img.pixel(639, 0));
+    EXPECT_EQ(0x00FF01FF, img.pixel(639, 479));
+    EXPECT_EQ(0x0000FEFF, img.pixel(0, 479));
 }
 
 TEST_F(AdminTest, empty_input_path)
@@ -657,7 +689,7 @@ unique_ptr<ArtServer> RemoteServer::art_server_;
 
 TEST_F(RemoteServer, get_artist)
 {
-    auto filename = temp_dir() + "/metallica_load_artist_0x0.jpg";
+    auto filename = temp_dir() + "/metallica_load_artist_0x0.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get-artist", "metallica", "load"})) << ar.stderr();
@@ -669,7 +701,7 @@ TEST_F(RemoteServer, get_artist)
 
 TEST_F(RemoteServer, get_album)
 {
-    auto filename = temp_dir() + "/metallica_load_album_48x48.jpg";
+    auto filename = temp_dir() + "/metallica_load_album_48x48.png";
 
     AdminRunner ar;
     EXPECT_EQ(0, ar.run(QStringList{"get-album", "metallica", "load", "--size=48"})) << ar.stderr();

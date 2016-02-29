@@ -60,20 +60,35 @@ public:
     int height() const;
 
     // Return the pixel value at the (x,y) coordinates as an integer:
-    //  r << 16 | g << 8 | b
+    //     r << 16 | g << 8 | b
+    // If the image has an alpha channel, the pixel is returned as
+    //     r << 24 | g << 16 | b << 8 | a
     int pixel(int x, int y) const;
 
     // Return a scaled version of the image that fits within the given
     // requested size.
     Image scale(QSize requested_size) const;
 
-    // Returns image as JPEG data (quality must be in the range 0-100).
-    std::string to_jpeg(int quality = 75) const;
+    bool has_alpha() const;  // Returns true if the image has an alpha channel, even if transparency is not used.
+
+    // Returns image as JPEG data if the source does not use transparency,
+    // and as PNG, otherwise.
+    // The quality must be in the range 0-100, regardless of the whether
+    // the source image uses transparency but, if PNG is returned,
+    // the quality setting has no effect.
+    std::string jpeg_or_png_data(int quality = 75) const;
+
+    // Returns image as JPEG data.
+    std::string jpeg_data(int quality = 75) const;
+
+    // Returns image as PNG data.
+    std::string png_data() const;
 
 private:
     void load(Reader& reader, QSize requested_size);
 
     gobj_ptr<struct _GdkPixbuf> pixbuf_;
+    bool has_alpha_ = false;
 };
 
 }  // namespace internal
