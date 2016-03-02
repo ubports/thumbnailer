@@ -106,6 +106,7 @@ void GetRemoteThumbnail::run(DBusConnection& conn)
             throw reply.error().message();
         }
         QByteArray thumbnail = reply.value();
+        to_png(thumbnail);
 
         string suffix = command_ == QLatin1String("get-artist") ? "artist" : "album";
         string inpath = (artist_ + "_" + album_).toStdString() + "_" + suffix;

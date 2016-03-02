@@ -18,6 +18,7 @@
 
 #include "util.h"
 
+#include <internal/image.h>
 #include <internal/safe_strerror.h>
 
 #include <boost/filesystem.hpp>
@@ -53,9 +54,9 @@ QString current_directory()
 }
 
 // Construct an output path from inpath and size. The outputh path
-// is the stem of the input path with the size and ".jpg" appended.
-// For example, if the input is "xyz/some_image.png", and the size
-// is (32, 48), the output becomes "some_image_32x48.jpg".
+// is the stem of the input path with the size and ".png" appended.
+// For example, if the input is "xyz/some_image.jpg", and the size
+// is (32, 48), the output becomes "some_image_32x48.png".
 // If dir is non-empty, it is prepended to the returned path.
 
 string make_output_path(string const& inpath, QSize const& size, string const& dir)
@@ -68,8 +69,23 @@ string make_output_path(string const& inpath, QSize const& size, string const& d
     boost::filesystem::path p = inpath;
     out_path += p.filename().stem().native();
     out_path += string("_") + to_string(size.width()) + "x" + to_string(size.height());
-    out_path += ".jpg";
+    out_path += ".png";
     return out_path;
+}
+
+void to_png(QByteArray& ba)
+{
+    assert(ba.size() >= 8);
+
+    static constexpr array<unsigned char, 8> png_magic = { 137, 80, 78, 71, 13, 10, 26, 10 };
+    unsigned char const* data = reinterpret_cast<unsigned char const*>(ba.data());
+    if (equal(begin(png_magic), end(png_magic), data))
+    {
+        return;  // Already in PNG format.
+    }
+
+    Image img(ba);
+    ba = QByteArray::fromStdString(img.png_data());
 }
 
 }  // namespace tools

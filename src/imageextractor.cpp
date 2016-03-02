@@ -54,7 +54,7 @@ ImageExtractor::~ImageExtractor()
         if (!process_.waitForFinished(timeout_ms_))
         {
             qWarning().nospace() << "~ImageExtractor(): " << exe_path_ << " (pid" << process_.pid()
-                       << ") did not exit after " << timeout_ms_ << " milliseconds";
+                                 << ") did not exit after " << timeout_ms_ << " milliseconds";
         }
         // LCOV_EXCL_STOP
     }

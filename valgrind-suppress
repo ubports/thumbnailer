@@ -209,6 +209,13 @@
 }
 
 {
+    gstreamer_uninitialized_jump_2
+    Memcheck:Cond
+    fun:avcodec_open2
+    obj:/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstlibav.so
+}
+
+{
     gdk_pixbuf_save_to_buffer
     Memcheck:Value8
     ...

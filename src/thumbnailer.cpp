@@ -20,12 +20,12 @@
 
 #include <internal/thumbnailer.h>
 
-#include <internal/local_album_art.h>
 #include <internal/artreply.h>
 #include <internal/cachehelper.h>
 #include <internal/check_access.h>
 #include <internal/image.h>
 #include <internal/imageextractor.h>
+#include <internal/local_album_art.h>
 #include <internal/make_directories.h>
 #include <internal/mimetype.h>
 #include <internal/raii.h>
@@ -109,6 +109,7 @@ public:
 
         ImageData(FetchStatus status, CachePolicy policy, Location location)
             : status(status)
+            , image(Image())
             , cache_policy(policy)
             , location(location)
         {
@@ -457,7 +458,8 @@ QByteArray RequestBase::thumbnail()
                     // than max_size to max_size, and then scaling a second time.
                     image_data.image = image_data.image.scale(QSize(max_size, max_size));
                 }
-                thumbnailer_->full_size_cache_->put(key_, image_data.image.to_jpeg(90));  // Keep high-quality image.
+                // Keep high-quality image.
+                thumbnailer_->full_size_cache_->put(key_, image_data.image.jpeg_or_png_data(90));
             }
             // If the image is already within the target dimensions, this
             // will be a no-op.
@@ -465,10 +467,10 @@ QByteArray RequestBase::thumbnail()
             image_data.image = Image();
         }
 
-        string jpeg = scaled_image.to_jpeg();
+        string data = scaled_image.jpeg_or_png_data();
         scaled_image = Image();
-        thumbnailer_->thumbnail_cache_->put(sized_key, jpeg);
-        return QByteArray::fromStdString(jpeg);
+        thumbnailer_->thumbnail_cache_->put(sized_key, data);
+        return QByteArray::fromStdString(data);
     }
     // LCOV_EXCL_START
     catch (std::exception const& e)
@@ -558,10 +560,9 @@ RequestBase::ImageData LocalThumbnailRequest::fetch(QSize const& size_hint) noex
     {
         if (image_extractor_)
         {
-            // The image data has been extracted via vs-thumb. Update image_data in case read() throws.
+            // The image data has been extracted via vs-thumb. Update image_data policy in case read() throws.
             image_data.cache_policy = CachePolicy::cache_fullsize;
             return ImageData(Image(image_extractor_->read()), CachePolicy::cache_fullsize, Location::local);
-            // TODO: Need to add to full-size cache here. See bug 1540753
         }
 
         string content_type = get_mimetype(filename_);
