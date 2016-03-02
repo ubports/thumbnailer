@@ -1,12 +1,22 @@
-thumbnailer (2.4) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.04.20160226-0ubuntu1) xenial; urgency=medium
 
   [ Michi Henning ]
   * Fixed incorrect build dependency for settings-defaults.h.
   * Re-enabled tests on powerpc and s390x, except for qml test.
   * Disabled vs-thumb test on powerpc64le due to gstreamer codec bug.
-  * Added version check on start-up and automatic cache wipe for version <= 2.3.x.
+  * Added version check on start-up and automatic cache wipe if cache
+    encoding version changes.
+  * Changed local audio extraction for better performance: 12 times
+    faster on Mako, 5 times faster on desktop.
+  * thumbnailer-admin now works with relative paths (LP: #1538774).
 
- -- Michi Henning <michi.henning@canonical.com>  Mon, 15 Feb 2016 09:47:52 +1000
+  [ James Henstridge ]
+  * Fixed thumbnail extraction from large animated GIF files (LP: #1527315).
+
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- James Henstridge <james.henstridge@canonical.com>  Fri, 26 Feb 2016 03:27:56 +0000
 
 thumbnailer (2.3+16.04.20160210-0ubuntu1) xenial; urgency=medium
 
