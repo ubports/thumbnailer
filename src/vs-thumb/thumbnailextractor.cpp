@@ -23,8 +23,8 @@
 #include <unity/util/ResourcePtr.h>
 
 #include <cstdio>
-#include <stdexcept>
 #include <cstring>
+#include <stdexcept>
 
 #include <fcntl.h>
 

@@ -240,30 +240,32 @@ TEST_F(ThumbnailerTest, clear)
             EXPECT_EQ("", request->thumbnail());
         }
 
+        // Thumbnail a video so we get something into the full-size cache.
         {
-            // Load a video, so we have something in the full-size cache.
-            auto request = tn.get_thumbnail(TEST_VIDEO, QSize(40, 40));
+            auto request = tn.get_thumbnail(TEST_VIDEO, QSize(1920, 1920));
             ASSERT_NE(nullptr, request.get());
-
             // Video thumbnails cannot be produced immediately
             ASSERT_EQ("", request->thumbnail());
 
-            QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-            request->download(chrono::milliseconds(15000));
-            ASSERT_TRUE(spy.wait(20000));
-        }
+            {
+                QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+                request->download(chrono::milliseconds(15000));
+                ASSERT_TRUE(spy.wait(20000));
+            }
 
-        {
-            // Load the video again at different size, so we get a hit on the full-size cache.
-            auto request = tn.get_thumbnail(TEST_VIDEO, QSize(20, 20));
+            request = tn.get_thumbnail(TEST_VIDEO, QSize(100, 100));
             ASSERT_NE(nullptr, request.get());
 
-            // Video thumbnails cannot be produced immediately
-            ASSERT_EQ("", request->thumbnail());
+            {
+                QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
+                request->download(chrono::milliseconds(15000));
+                ASSERT_TRUE(spy.wait(20000));
+            }
 
-            QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
-            request->download(chrono::milliseconds(15000));
-            ASSERT_TRUE(spy.wait(20000));
+            auto thumb = request->thumbnail();
+            Image img(thumb);
+            EXPECT_EQ(100, img.width());
+            EXPECT_EQ(56, img.height());
         }
     };
 
@@ -271,10 +273,10 @@ TEST_F(ThumbnailerTest, clear)
 
     // Just to show that fill_cache() does put things into the cache and the stats are as expected.
     auto stats = tn.stats();
-    EXPECT_EQ(0, stats.full_size_stats.size());  // TODO: broken, needs to be 1
-    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(3, stats.thumbnail_stats.size());
     EXPECT_EQ(1, stats.failure_stats.size());
-    EXPECT_EQ(0, stats.full_size_stats.hits());  // TODO: broken, needs to be 1
+    EXPECT_EQ(0, stats.full_size_stats.hits());
     EXPECT_EQ(1, stats.thumbnail_stats.hits());
     EXPECT_EQ(1, stats.failure_stats.hits());
 
@@ -290,7 +292,7 @@ TEST_F(ThumbnailerTest, clear)
     tn.clear(Thumbnailer::CacheSelector::full_size_cache);
     stats = tn.stats();
     EXPECT_EQ(0, stats.full_size_stats.size());
-    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(3, stats.thumbnail_stats.size());
     EXPECT_EQ(1, stats.failure_stats.size());
 
     // Clear thumbnail cache only.
@@ -298,7 +300,7 @@ TEST_F(ThumbnailerTest, clear)
     fill_cache();
     tn.clear(Thumbnailer::CacheSelector::thumbnail_cache);
     stats = tn.stats();
-    EXPECT_EQ(0, stats.full_size_stats.size());  // TODO: broken, needs to be 1
+    EXPECT_EQ(1, stats.full_size_stats.size());
     EXPECT_EQ(0, stats.thumbnail_stats.size());
     EXPECT_EQ(1, stats.failure_stats.size());
 
@@ -307,8 +309,8 @@ TEST_F(ThumbnailerTest, clear)
     fill_cache();
     tn.clear(Thumbnailer::CacheSelector::failure_cache);
     stats = tn.stats();
-    EXPECT_EQ(0, stats.full_size_stats.size());  // TODO: broken, needs to be 1
-    EXPECT_EQ(2, stats.thumbnail_stats.size());
+    EXPECT_EQ(1, stats.full_size_stats.size());
+    EXPECT_EQ(3, stats.thumbnail_stats.size());
     EXPECT_EQ(0, stats.failure_stats.size());
 
     // Clear all stats.
@@ -334,7 +336,7 @@ TEST_F(ThumbnailerTest, clear)
     fill_cache();
     tn.clear_stats(Thumbnailer::CacheSelector::thumbnail_cache);
     stats = tn.stats();
-    EXPECT_EQ(0, stats.full_size_stats.size());  // TODO: broken, needs to be 1
+    EXPECT_EQ(1, stats.full_size_stats.size());
     EXPECT_EQ(0, stats.thumbnail_stats.hits());
     EXPECT_EQ(1, stats.failure_stats.hits());
 
@@ -344,7 +346,7 @@ TEST_F(ThumbnailerTest, clear)
     fill_cache();
     tn.clear_stats(Thumbnailer::CacheSelector::failure_cache);
     stats = tn.stats();
-    EXPECT_EQ(0, stats.full_size_stats.size());  // TODO: broken, needs to be 1
+    EXPECT_EQ(1, stats.full_size_stats.size());
     EXPECT_EQ(1, stats.thumbnail_stats.hits());
     EXPECT_EQ(0, stats.failure_stats.hits());
 }
@@ -650,6 +652,9 @@ TEST_F(ThumbnailerTest, empty_file)
     }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"  // For calls to system().
+
 TEST_F(ThumbnailerTest, clear_if_old_cache_version)
 {
     {
@@ -683,6 +688,8 @@ TEST_F(ThumbnailerTest, clear_if_old_cache_version)
         EXPECT_EQ(0, stats.size());
     }
 }
+
+#pragma GCC diagnostic pop
 
 class RemoteServer : public ThumbnailerTest
 {

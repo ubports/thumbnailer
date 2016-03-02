@@ -26,12 +26,12 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
 #include <libexif/exif-loader.h>
+#include <unistd.h>
 
-#include <memory>
-#include <stdexcept>
 #include <cassert>
 #include <cmath>
-#include <unistd.h>
+#include <memory>
+#include <stdexcept>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -155,7 +155,7 @@ gobj_ptr<GdkPixbuf> load_image(Image::Reader& reader, GCallback size_prepared_cb
     }
 
     g_signal_connect(loader.get(), "size-prepared", size_prepared_cb, user_data);
-    unsigned char const* data = nullptr;
+    guint8 const* data = nullptr;
     size_t length = 0;
     gobj_ptr<GdkPixbufAnimationIter> iter;
     bool first_frame_finished = false;
@@ -358,6 +358,10 @@ void Image::load(Reader& reader, QSize requested_size)
     {
         pixbuf_ = load_image(reader, G_CALLBACK(maybe_scale_image), &unrotated_requested_size);
     }
+    // It would be nice to scan here to see whether there actually are any transparent pixels,
+    // but doing that is too expensive. So, images that support alpha always end up being
+    // returned as PNG files by jpeg_data_or_png().
+    has_alpha_ = gdk_pixbuf_get_has_alpha(pixbuf_.get());
 
     // Correct the image orientation, if needed
     switch (orientation)
@@ -442,10 +446,10 @@ int Image::pixel(int x, int y) const
 
     int n_channels = gdk_pixbuf_get_n_channels(pixbuf_.get());
     int rowstride = gdk_pixbuf_get_rowstride(pixbuf_.get());
-    unsigned char* data = gdk_pixbuf_get_pixels(pixbuf_.get());
+    guint8 const* data = gdk_pixbuf_read_pixels(pixbuf_.get());
 
-    unsigned char* p = data + y * rowstride + x * n_channels;
-    return p[0] << 16 | p[1] << 8 | p[2];
+    guint8 const* p = data + y * rowstride + x * n_channels;
+    return p[0] << 24 | p[1] << 16 | p[2] << 8 | (n_channels == 4 ? p[3] : 0xff);
 }
 
 Image Image::scale(QSize requested_size) const
@@ -493,13 +497,27 @@ Image Image::scale(QSize requested_size) const
     return scaled;
 }
 
-string Image::to_jpeg(int quality) const
+bool Image::has_alpha() const
+{
+    assert(pixbuf_);
+
+    return has_alpha_;
+}
+
+string Image::jpeg_or_png_data(int quality) const
+{
+    assert(pixbuf_);
+
+    return !has_alpha_ ? jpeg_data(quality) : png_data();
+}
+
+string Image::jpeg_data(int quality) const
 {
     assert(pixbuf_);
 
     if (quality < 0 || quality > 100)
     {
-        throw invalid_argument("Image::to_jpeg(): quality out of range [0..100]: " + to_string(quality));
+        throw invalid_argument("Image::jpeg_data(): quality out of range [0..100]: " + to_string(quality));
     }
     string s_qual = to_string(quality);
 
@@ -509,7 +527,27 @@ string Image::to_jpeg(int quality) const
     if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "jpeg", &err, "quality", s_qual.c_str(), NULL))
     {
         // LCOV_EXCL_START
-        string msg = string("Image::get_data(): cannot convert to jpeg: ") + err->message;
+        string msg = string("Image::jpeg_data(): cannot convert to jpeg: ") + err->message;
+        g_error_free(err);
+        throw runtime_error(msg);
+        // LCOV_EXCL_STOP
+    }
+    string s(buf, size);
+    g_free(buf);
+    return s;
+}
+
+string Image::png_data() const
+{
+    assert(pixbuf_);
+
+    gchar* buf;
+    gsize size;
+    GError* err = nullptr;
+    if (!gdk_pixbuf_save_to_buffer(pixbuf_.get(), &buf, &size, "png", &err, "compression", "6", NULL))
+    {
+        // LCOV_EXCL_START
+        string msg = string("Image::png_data(): cannot convert to png: ") + err->message;
         g_error_free(err);
         throw runtime_error(msg);
         // LCOV_EXCL_STOP
