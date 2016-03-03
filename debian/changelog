@@ -1,3 +1,15 @@
+thumbnailer (2.4+16.04.20160302.1-0ubuntu1) xenial; urgency=medium
+
+  [ Michi Henning ]
+  * Thumbnails now preserve transparency of source image (LP: #1532719, LP: #1541836).
+  * Fixed incorrect tests when checking full-size cache hits (LP: #1540753).
+  * Minor improvements to man pages.
+
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- Michi Henning <michi.henning@canonical.com>  Wed, 02 Mar 2016 05:20:31 +0000
+
 thumbnailer (2.4+16.04.20160226-0ubuntu1) xenial; urgency=medium
 
   [ Michi Henning ]
