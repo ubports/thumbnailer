@@ -60,8 +60,6 @@ public:
     int height() const;
 
     // Return the pixel value at the (x,y) coordinates as an integer:
-    //     r << 16 | g << 8 | b
-    // If the image has an alpha channel, the pixel is returned as
     //     r << 24 | g << 16 | b << 8 | a
     int pixel(int x, int y) const;
 
