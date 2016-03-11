@@ -25,7 +25,6 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #include <glib-object.h>
 
-#include <iostream>
 namespace unity
 {
 
