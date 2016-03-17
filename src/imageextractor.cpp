@@ -53,7 +53,7 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     // We set up a pipe to receive the image from vs-thumb. Because some gstreamer
     // codecs chatter on stdout, we can't use stdout to transfer the image.
     int pipe_fd[2];
-    if (pipe(pipe_fd) == -1)
+    if (pipe2(pipe_fd, O_CLOEXEC) == -1)
     {
         throw runtime_error(string("ImageExtractor(): cannot create pipe: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
     }
@@ -61,7 +61,13 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     pipe_write_fd_.reset(pipe_fd[1]);
     if (fcntl(pipe_fd[0], F_SETFL, O_NONBLOCK) == -1)
     {
-        throw runtime_error(string("ImageExtractor(): fcntl failed: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
+        throw runtime_error(string("ImageExtractor(): cannot set O_NONBLOCK: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
+    }
+    // We clear FD_CLOEXEC on the write fd, so the child ends up with the read end closed.
+    // This prevents a race in threaded programs that can leak open fds to children (see man (2) open).
+    if (fcntl(pipe_fd[1], F_SETFD, 0) == -1)
+    {
+        throw runtime_error(string("ImageExtractor(): cannot clear FD_CLOEXEC: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
     }
 
     // Make notifiers to fire on ready to read and error.
