@@ -42,8 +42,7 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     , pipe_write_fd_(::close)
 {
     process_.setStandardInputFile(QProcess::nullDevice());
-    process_.setProcessChannelMode(QProcess::ForwardedOutputChannel);
-    process_.setProcessChannelMode(QProcess::ForwardedErrorChannel);
+    process_.setProcessChannelMode(QProcess::ForwardedChannels);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished),
             this, &ImageExtractor::processFinished);
     connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error),
