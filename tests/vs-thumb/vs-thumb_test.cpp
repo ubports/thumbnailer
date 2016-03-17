@@ -41,6 +41,7 @@
 #endif
 #pragma GCC diagnostic pop
 #include <gtest/gtest.h>
+#include <QUrl>
 
 #include <cstdio>
 #include <cstdlib>
@@ -91,17 +92,6 @@ protected:
     std::string tempdir;
 };
 
-std::string filename_to_uri(const std::string& filename)
-{
-    std::unique_ptr<GFile, void (*)(void*)> file(g_file_new_for_path(filename.c_str()), g_object_unref);
-    if (!file)
-    {
-        throw std::runtime_error("Could not create GFile");
-    }
-    std::unique_ptr<char, void (*)(void*)> uri(g_file_get_uri(file.get()), g_free);
-    return uri.get();
-}
-
 gobj_ptr<GdkPixbuf> load_image(const std::string& filename)
 {
     GError* error = nullptr;
@@ -125,10 +115,10 @@ TEST_F(ExtractorTest, extract_theora)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(THEORA_TEST_FILE));
+    extractor.set_urls(QUrl(THEORA_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.write_image(outfile);
+    extractor.write_image();
 
     auto image = load_image(outfile);
     EXPECT_EQ(1920, gdk_pixbuf_get_width(image.get()));
@@ -145,10 +135,10 @@ TEST_F(ExtractorTest, extract_mp4)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP4_LANDSCAPE_TEST_FILE));
+    extractor.set_urls(QUrl(MP4_LANDSCAPE_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.write_image(outfile);
+    extractor.write_image();
 
     auto image = load_image(outfile);
     EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
@@ -165,9 +155,9 @@ TEST_F(ExtractorTest, extract_mp4_rotate_90)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP4_ROTATE_90_TEST_FILE));
+    extractor.set_urls(QUrl(MP4_ROTATE_90_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.write_image(outfile);
+    extractor.write_image();
 
     auto image = load_image(outfile);
     EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
@@ -184,9 +174,9 @@ TEST_F(ExtractorTest, extract_mp4_rotate_180)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP4_ROTATE_180_TEST_FILE));
+    extractor.set_urls(QUrl(MP4_ROTATE_180_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.write_image(outfile);
+    extractor.write_image();
 
     auto image = load_image(outfile);
     EXPECT_EQ(1280, gdk_pixbuf_get_width(image.get()));
@@ -203,9 +193,9 @@ TEST_F(ExtractorTest, extract_mp4_rotate_270)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(MP4_ROTATE_270_TEST_FILE));
+    extractor.set_urls(QUrl(MP4_ROTATE_270_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
-    extractor.write_image(outfile);
+    extractor.write_image();
 
     auto image = load_image(outfile);
     EXPECT_EQ(720, gdk_pixbuf_get_width(image.get()));
@@ -223,16 +213,16 @@ TEST_F(ExtractorTest, extract_m4v_cover_art)
     ThumbnailExtractor extractor;
 
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
+    extractor.set_urls(QUrl(M4V_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_cover_art());
-    extractor.write_image(outfile);
+    extractor.write_image();
 
     auto image = load_image(outfile);
     EXPECT_EQ(1947, gdk_pixbuf_get_width(image.get()));
     EXPECT_EQ(3000, gdk_pixbuf_get_height(image.get()));
 }
 
-TEST_F(ExtractorTest, can_write_to_stdout)
+TEST_F(ExtractorTest, can_write_to_fd)
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -241,31 +231,23 @@ TEST_F(ExtractorTest, can_write_to_stdout)
     }
 
     ThumbnailExtractor extractor;
-
-    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
-    ASSERT_TRUE(extractor.extract_cover_art());
 
     std::string outfile = tempdir + "/out.tiff";
-    int saved_stdout = dup(STDOUT_FILENO);
-    ASSERT_NE(-1, saved_stdout);
-    int new_stdout = open(outfile.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
-    ASSERT_NE(-1, new_stdout);
-    ASSERT_NE(-1, dup2(new_stdout, STDOUT_FILENO));
-    ASSERT_EQ(0, close(new_stdout));
 
-    try
-    {
-        extractor.write_image("");
-    }
-    catch (std::exception const& e)
-    {
-        EXPECT_STREQ("write_image(): cannot write to stdout: Bad file descriptor", e.what());
-    }
+    int fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    ASSERT_GT(fd, 2);
+    QString out_url = "fd:" + QString::fromStdString(std::to_string(fd));
+    extractor.set_urls(QUrl(M4V_TEST_FILE), out_url);
+    ASSERT_TRUE(extractor.extract_cover_art());
 
-    ASSERT_EQ(STDOUT_FILENO, dup2(saved_stdout, STDOUT_FILENO));
+    extractor.write_image();
+
+    auto image = load_image(outfile);
+    EXPECT_EQ(1947, gdk_pixbuf_get_width(image.get()));
+    EXPECT_EQ(3000, gdk_pixbuf_get_height(image.get()));
 }
 
-TEST_F(ExtractorTest, cant_write_to_stdout)
+TEST_F(ExtractorTest, cant_write_to_fd)
 {
     if (!supports_decoder("video/x-h264"))
     {
@@ -275,30 +257,30 @@ TEST_F(ExtractorTest, cant_write_to_stdout)
 
     ThumbnailExtractor extractor;
 
-    extractor.set_uri(filename_to_uri(M4V_TEST_FILE));
-    ASSERT_TRUE(extractor.extract_cover_art());
+    int fd = open("/dev/null", O_WRONLY);
+    ASSERT_GT(fd, 2);
+    ASSERT_EQ(0, close(fd));
 
-    int new_stdout = dup(STDOUT_FILENO);
-    ASSERT_EQ(0, close(STDOUT_FILENO));
+    QString out_url = "fd:" + QString::fromStdString(std::to_string(fd));
+    extractor.set_urls(QUrl(M4V_TEST_FILE), out_url);
+    ASSERT_TRUE(extractor.extract_cover_art());
 
     try
     {
-        extractor.write_image("");
+        extractor.write_image();
+        FAIL();
     }
     catch (std::exception const& e)
     {
-        EXPECT_STREQ("write_image(): cannot write to stdout: Bad file descriptor", e.what());
+        EXPECT_TRUE(boost::starts_with(e.what(), "write_image(): cannot write to file descriptor ")) << e.what();
+        EXPECT_TRUE(boost::ends_with(e.what(), ": Bad file descriptor")) << e.what();
     }
-
-    ASSERT_EQ(STDOUT_FILENO, dup2(new_stdout, STDOUT_FILENO));
-    ASSERT_EQ(0, close(new_stdout));
 }
-
 
 TEST_F(ExtractorTest, file_not_found)
 {
     ThumbnailExtractor extractor;
-    EXPECT_THROW(extractor.set_uri(filename_to_uri(TESTDATADIR "/no-such-file.ogv")), std::runtime_error);
+    EXPECT_THROW(extractor.set_urls(QUrl(TESTDATADIR "/no-such-file.ogv"), QUrl("/dev/null")), std::runtime_error);
 }
 
 TEST(ExeTest, write_to_stdout)
@@ -313,7 +295,7 @@ TEST(ExeTest, write_to_stdout)
 
     static std::string const cmd = PROJECT_BINARY_DIR "/src/vs-thumb/vs-thumb";
 
-    FILE* p = popen((cmd + " \"" + M4V_TEST_FILE + "\"").c_str(), "r");
+    FILE* p = popen((cmd + " \"" + M4V_TEST_FILE + "\" fd:1").c_str(), "r");
     io::file_descriptor_source s(fileno(p), io::never_close_handle);
     std::stringstream std_output;
     io::copy(s, std_output);
@@ -338,13 +320,13 @@ std::string vs_thumb_err_output(std::string const& args)
 TEST(ExeTest, usage_1)
 {
     auto err = vs_thumb_err_output("");
-    EXPECT_EQ("usage: vs-thumb source-file [output-file.tiff]\n", err) << err;
+    EXPECT_EQ("usage: vs-thumb source-file (output-file.tiff | fd:num)\n", err) << err;
 }
 
 TEST(ExeTest, usage_2)
 {
     auto err = vs_thumb_err_output("arg1 arg2.tiff arg3");
-    EXPECT_EQ("usage: vs-thumb source-file [output-file.tiff]\n", err) << err;
+    EXPECT_EQ("usage: vs-thumb source-file (output-file.tiff | fd:num)\n", err) << err;
 }
 
 TEST(ExeTest, usage_3)
@@ -353,9 +335,40 @@ TEST(ExeTest, usage_3)
     EXPECT_EQ("vs-thumb: invalid output file name: arg2 (missing .tiff extension)\n", err) << err;
 }
 
-TEST(ExeTest, bad_uri)
+TEST(ExeTest, bad_input_uri)
 {
-    auto err = vs_thumb_err_output("file:///no_such_file");
+    auto err = vs_thumb_err_output("99file:///abc test.tiff");
+    EXPECT_TRUE(boost::starts_with(err, "vs-thumb: invalid input URL: ")) << err;
+}
+
+TEST(ExeTest, bad_output_uri)
+{
+    auto err = vs_thumb_err_output("file:///abc 99file:test.tiff");
+    EXPECT_TRUE(boost::starts_with(err, "vs-thumb: invalid output URL: ")) << err;
+}
+
+TEST(ExeTest, bad_input_scheme)
+{
+    auto err = vs_thumb_err_output("xyz:///abc test.tiff");
+    EXPECT_EQ("vs-thumb: invalid input URL: xyz:///abc (invalid scheme name, requires \"file:\")\n", err) << err;
+}
+
+TEST(ExeTest, bad_output_scheme)
+{
+    auto err = vs_thumb_err_output("file:abc ftp:test.tiff");
+    EXPECT_EQ("vs-thumb: invalid output URL: ftp:test.tiff (invalid scheme name, requires \"file:\" or \"fd:\")\n",
+              err) << err;
+}
+
+TEST(ExeTest, bad_fd_url)
+{
+    auto err = vs_thumb_err_output("file:abc fd:x");
+    EXPECT_EQ("vs-thumb: invalid URL: fd:x (expected a number for file descriptor)\n", err) << err;
+}
+
+TEST(ExeTest, no_such_input_file)
+{
+    auto err = vs_thumb_err_output("file:///no_such_file test.tiff");
     EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
 }
 

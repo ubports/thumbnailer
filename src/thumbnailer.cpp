@@ -819,7 +819,8 @@ void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
     {
         // Whenever the version changes, we wipe all three caches.
         // That's useful to, for example, get rid of old unknown
-        // artist images from the remote server. Changing the version
+        // artist images from the remote server or to wipe bogus
+        // entries in the failure cache. Changing the version
         // is also needed if we ever change the way keys and values
         // are stored in the caches.
         qDebug() << "cache version update from" << v.prev_cache_version() << "to" << v.cache_version;

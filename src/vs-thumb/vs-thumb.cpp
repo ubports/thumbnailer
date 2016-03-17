@@ -21,9 +21,9 @@
 
 #include <internal/trace.h>
 
-#include <boost/algorithm/string.hpp>
+#include <QUrl>
 
-#include <cstdio>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 
@@ -33,34 +33,22 @@ using namespace unity::thumbnailer::internal;
 namespace
 {
 
-string command_line_arg_to_uri(string const& arg)
-{
-    unique_ptr<GFile, decltype(&g_object_unref)> file(g_file_new_for_commandline_arg(arg.c_str()), g_object_unref);
-    char* c_uri = g_file_get_uri(file.get());
-    string uri(c_uri);
-    g_free(c_uri);
-    return uri;
-}
-
-bool extract_thumbnail(string const& uri, string const& ofname)
+void extract_thumbnail(QUrl const& in_url, QUrl const& out_url)
 {
     ThumbnailExtractor extractor;
 
-    extractor.set_uri(uri);
+    extractor.set_urls(in_url, out_url);
     if (extractor.extract_cover_art())
     {
         // Found embedded cover art.
-        extractor.write_image(ofname);
-        return true;
+        extractor.write_image();
+        return;
     }
-    // Otherwise, try to extract a still frame.
-    if (extractor.has_video() && extractor.extract_video_frame())
-    {
-        extractor.write_image(ofname);
-        return true;
-    }
-    // Otherwise, we don't have any artwork.
-    return false;
+
+    // Otherwise, extract a still frame.
+    assert(extractor.has_video());
+    extractor.extract_video_frame();
+    extractor.write_image();
 }
 
 }  // namespace
@@ -73,37 +61,78 @@ int main(int argc, char** argv)
 
     gst_init(&argc, &argv);
 
-    if (argc < 2 || argc > 3)
+    if (argc != 3)
     {
-        fprintf(stderr, "usage: %s source-file [output-file.tiff]\n", progname);
+        cerr << "usage: " << progname << " source-file (output-file.tiff | fd:num)" << endl;
         return 1;
     }
 
-    string uri = command_line_arg_to_uri(argv[1]);
-    string outfile(argc == 2 ? "" : argv[2]);
-
-    // Output file name must end in .tiff.
-    if (!outfile.empty() && !boost::algorithm::ends_with(outfile, ".tiff"))
+    QUrl in_url(argv[1]);
+    if (!in_url.isValid())
     {
-        fprintf(stderr, "%s: invalid output file name: %s (missing .tiff extension)\n", progname, outfile.c_str());
+        cerr << progname << ": invalid input URL: " << in_url.toString().toStdString()
+             << in_url.errorString().toStdString() << endl;
         return 2;
     }
 
-    bool success = false;
+    QUrl out_url(argv[2]);
+    if (!out_url.isValid())
+    {
+        cerr << progname << ": invalid output URL: " << out_url.toString().toStdString()
+             << out_url.errorString().toStdString() << endl;
+        return 2;
+    }
+
+    auto in_scheme = in_url.scheme();
+    if (!in_scheme.isEmpty() && in_scheme != "file")
+    {
+        cerr << progname << ": invalid input URL: " << in_url.toString().toStdString()
+             << " (invalid scheme name, requires \"file:\")" << endl;
+        return 2;
+    }
+
+    auto out_scheme = out_url.scheme();
+    if (!out_scheme.isEmpty() && out_scheme != "file" && out_scheme != "fd")
+    {
+        string s = out_url.toString().toStdString();
+        cerr << progname << ": invalid output URL: " << out_url.toString().toStdString()
+             << " (invalid scheme name, requires \"file:\" or \"fd:\")" << endl;
+        return 2;
+    }
+
+    if (out_scheme.isEmpty() || out_scheme == "file")
+    {
+        // Output file name must end in .tiff.
+        auto out_path = out_url.path();
+        if (!out_path.endsWith(".tiff", Qt::CaseInsensitive))
+        {
+            cerr << progname << ": invalid output file name: " << out_path.toStdString()
+                 << " (missing .tiff extension)" << endl;
+            return 2;
+        }
+    }
+    else
+    {
+        // For fd: scheme, path must parse as a number.
+        bool ok;
+        out_url.path().toInt(&ok);
+        if (!ok)
+        {
+            cerr << progname << ": invalid URL: " << out_url.toString().toStdString()
+                 << " (expected a number for file descriptor)" << endl;
+            return 2;
+        }
+    }
+
     try
     {
-        success = extract_thumbnail(uri, outfile);
+        extract_thumbnail(in_url, out_url);
     }
     catch (exception const& e)
     {
-        fprintf(stderr, "%s: Error creating thumbnail: %s\n", progname, e.what());
+        cerr << progname << ": Error creating thumbnail: " << e.what() << endl;
         return 2;
     }
 
-    if (!success)
-    {
-        fprintf(stderr, "%s: No artwork in %s\n", progname, argv[1]);
-    }
-
-    return !success;
+    return 0;
 }
