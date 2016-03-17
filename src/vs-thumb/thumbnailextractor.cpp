@@ -311,7 +311,7 @@ bool ThumbnailExtractor::extract_cover_art()
     sample_.reset();
 
     // Look for a normal image (cover or other image).
-    auto image = move(find_cover(tags, GST_TAG_IMAGE));
+    auto image = find_cover(tags, GST_TAG_IMAGE);
     if (image.sample && image.type == cover)
     {
         // LCOV_EXCL_START

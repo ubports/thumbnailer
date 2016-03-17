@@ -102,7 +102,7 @@ gobj_ptr<GdkPixbuf> load_image(const std::string& filename)
         g_error_free(error);
         throw std::runtime_error(message);
     }
-    return std::move(image);
+    return image;
 }
 
 TEST_F(ExtractorTest, extract_theora)
