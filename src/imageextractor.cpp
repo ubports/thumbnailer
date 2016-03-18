@@ -41,6 +41,9 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     , pipe_read_fd_(::close)
     , pipe_write_fd_(::close)
 {
+    // Still frames are large; avoid lots of reallactions when reading from the pipe.
+    image_data_.reserve(int(2.5 * 1024 * 1024));
+
     process_.setStandardInputFile(QProcess::nullDevice());
     process_.setProcessChannelMode(QProcess::ForwardedChannels);
     connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished),
@@ -59,6 +62,9 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     }
     pipe_read_fd_.reset(pipe_fd[0]);
     pipe_write_fd_.reset(pipe_fd[1]);
+
+    // We use non-blocking I/O because that is faster: we drop back to the event loop more often
+    // and get better CPU utilization this way.
     if (fcntl(pipe_fd[0], F_SETFL, O_NONBLOCK) == -1)
     {
         throw runtime_error(string("ImageExtractor(): cannot set O_NONBLOCK: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
