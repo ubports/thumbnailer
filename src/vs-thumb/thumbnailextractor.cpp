@@ -159,11 +159,6 @@ void ThumbnailExtractor::set_urls(QUrl const& in_url, QUrl const& out_url)
     reset();
     in_url_= in_url;
     out_url_= out_url;
-    if (in_url_.scheme().isEmpty())
-    {
-        // playbin wants a proper URL.
-        in_url_.setScheme("file");
-    }
     g_object_set(playbin_.get(), "uri", in_url_.toString().toStdString().c_str(), nullptr);
     change_state(playbin_.get(), GST_STATE_PAUSED);
 

@@ -67,47 +67,42 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    QUrl in_url(argv[1]);
+    QUrl in_url(argv[1], QUrl::StrictMode);
     if (!in_url.isValid())
     {
-        cerr << progname << ": invalid input URL: " << in_url.toString().toStdString()
-             << in_url.errorString().toStdString() << endl;
+        cerr << progname << ": invalid input URL: " << argv[1] << endl;
         return 2;
     }
 
-    QUrl out_url(argv[2]);
+    QUrl out_url(argv[2], QUrl::StrictMode);
     if (!out_url.isValid())
     {
-        cerr << progname << ": invalid output URL: " << out_url.toString().toStdString()
-             << out_url.errorString().toStdString() << endl;
+        cerr << progname << ": invalid output URL: " << argv[2] << endl;
         return 2;
     }
 
     auto in_scheme = in_url.scheme();
-    if (!in_scheme.isEmpty() && in_scheme != "file")
+    if (in_scheme != "file")
     {
-        cerr << progname << ": invalid input URL: " << in_url.toString().toStdString()
-             << " (invalid scheme name, requires \"file:\")" << endl;
+        cerr << progname << ": invalid input URL: " << argv[1] << " (invalid scheme name, requires \"file:\")" << endl;
         return 2;
     }
 
     auto out_scheme = out_url.scheme();
-    if (!out_scheme.isEmpty() && out_scheme != "file" && out_scheme != "fd")
+    if (out_scheme != "file" && out_scheme != "fd")
     {
-        string s = out_url.toString().toStdString();
-        cerr << progname << ": invalid output URL: " << out_url.toString().toStdString()
+        cerr << progname << ": invalid output URL: " << argv[2]
              << " (invalid scheme name, requires \"file:\" or \"fd:\")" << endl;
         return 2;
     }
 
-    if (out_scheme.isEmpty() || out_scheme == "file")
+    if (out_scheme == "file")
     {
         // Output file name must end in .tiff.
         auto out_path = out_url.path();
         if (!out_path.endsWith(".tiff", Qt::CaseInsensitive))
         {
-            cerr << progname << ": invalid output file name: " << out_path.toStdString()
-                 << " (missing .tiff extension)" << endl;
+            cerr << progname << ": invalid output file name: " << argv[2] << " (missing .tiff extension)" << endl;
             return 2;
         }
     }
@@ -118,8 +113,7 @@ int main(int argc, char** argv)
         out_url.path().toInt(&ok);
         if (!ok)
         {
-            cerr << progname << ": invalid URL: " << out_url.toString().toStdString()
-                 << " (expected a number for file descriptor)" << endl;
+            cerr << progname << ": invalid URL: " << argv[2] << " (expected a number for file descriptor)" << endl;
             return 2;
         }
     }

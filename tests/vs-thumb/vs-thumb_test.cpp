@@ -115,7 +115,7 @@ TEST_F(ExtractorTest, extract_theora)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl(THEORA_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(THEORA_TEST_FILE), QUrl::fromLocalFile(outfile.c_str()));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
@@ -135,7 +135,7 @@ TEST_F(ExtractorTest, extract_mp4)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl(MP4_LANDSCAPE_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_LANDSCAPE_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
@@ -155,7 +155,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_90)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl(MP4_ROTATE_90_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_90_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
 
@@ -174,7 +174,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_180)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl(MP4_ROTATE_180_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_180_TEST_FILE), QUrl(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
 
@@ -193,7 +193,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_270)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl(MP4_ROTATE_270_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_270_TEST_FILE), QUrl::fromLocalFile(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
 
@@ -213,7 +213,7 @@ TEST_F(ExtractorTest, extract_m4v_cover_art)
     ThumbnailExtractor extractor;
 
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl(M4V_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(M4V_TEST_FILE), QUrl::fromLocalFile(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_cover_art());
     extractor.write_image();
 
@@ -237,7 +237,7 @@ TEST_F(ExtractorTest, can_write_to_fd)
     int fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     ASSERT_GT(fd, 2);
     QString out_url = "fd:" + QString::fromStdString(std::to_string(fd));
-    extractor.set_urls(QUrl(M4V_TEST_FILE), out_url);
+    extractor.set_urls(QUrl::fromLocalFile(M4V_TEST_FILE), out_url);
     ASSERT_TRUE(extractor.extract_cover_art());
 
     extractor.write_image();
@@ -262,7 +262,7 @@ TEST_F(ExtractorTest, cant_write_to_fd)
     ASSERT_EQ(0, close(fd));
 
     QString out_url = "fd:" + QString::fromStdString(std::to_string(fd));
-    extractor.set_urls(QUrl(M4V_TEST_FILE), out_url);
+    extractor.set_urls(QUrl::fromLocalFile(M4V_TEST_FILE), out_url);
     ASSERT_TRUE(extractor.extract_cover_art());
 
     try
@@ -280,27 +280,8 @@ TEST_F(ExtractorTest, cant_write_to_fd)
 TEST_F(ExtractorTest, file_not_found)
 {
     ThumbnailExtractor extractor;
-    EXPECT_THROW(extractor.set_urls(QUrl(TESTDATADIR "/no-such-file.ogv"), QUrl("/dev/null")), std::runtime_error);
-}
-
-TEST(ExeTest, write_to_stdout)
-{
-    if (!supports_decoder("video/x-h264"))
-    {
-        fprintf(stderr, "No support for H.264 decoder\n");
-        return;
-    }
-
-    namespace io = boost::iostreams;
-
-    static std::string const cmd = PROJECT_BINARY_DIR "/src/vs-thumb/vs-thumb";
-
-    FILE* p = popen((cmd + " \"" + M4V_TEST_FILE + "\" fd:1").c_str(), "r");
-    io::file_descriptor_source s(fileno(p), io::never_close_handle);
-    std::stringstream std_output;
-    io::copy(s, std_output);
-    pclose(p);
-    EXPECT_FALSE(std_output.str().empty());
+    EXPECT_THROW(extractor.set_urls(QUrl::fromLocalFile(TESTDATADIR "/no-such-file.ogv"),
+                                    QUrl::fromLocalFile("/dev/null")), std::runtime_error);
 }
 
 std::string vs_thumb_err_output(std::string const& args)
@@ -331,13 +312,13 @@ TEST(ExeTest, usage_2)
 
 TEST(ExeTest, usage_3)
 {
-    auto err = vs_thumb_err_output("arg1 arg2");
-    EXPECT_EQ("vs-thumb: invalid output file name: arg2 (missing .tiff extension)\n", err) << err;
+    auto err = vs_thumb_err_output("file:arg1 file:arg2");
+    EXPECT_EQ("vs-thumb: invalid output file name: file:arg2 (missing .tiff extension)\n", err) << err;
 }
 
 TEST(ExeTest, bad_input_uri)
 {
-    auto err = vs_thumb_err_output("99file:///abc test.tiff");
+    auto err = vs_thumb_err_output("99file:///abc file:test.tiff");
     EXPECT_TRUE(boost::starts_with(err, "vs-thumb: invalid input URL: ")) << err;
 }
 
@@ -368,7 +349,7 @@ TEST(ExeTest, bad_fd_url)
 
 TEST(ExeTest, no_such_input_file)
 {
-    auto err = vs_thumb_err_output("file:///no_such_file test.tiff");
+    auto err = vs_thumb_err_output("file:///no_such_file file:test.tiff");
     EXPECT_NE(std::string::npos, err.find("vs-thumb: Error creating thumbnail: ThumbnailExtractor")) << err;
 }
 
@@ -380,7 +361,7 @@ TEST(ExeTest, no_such_output_path)
         return;
     }
 
-    auto err = vs_thumb_err_output(std::string(THEORA_TEST_FILE) + " /no_such_dir/no_such_file.tiff");
+    auto err = vs_thumb_err_output(std::string("file://") + THEORA_TEST_FILE + " file:///no_such_dir/no_such_file.tiff");
     EXPECT_NE(std::string::npos, err.find("write_image(): cannot open /no_such_dir/no_such_file.tiff: "
               "No such file or directory")) << err;
 }

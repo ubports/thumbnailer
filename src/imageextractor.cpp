@@ -95,14 +95,15 @@ ImageExtractor::~ImageExtractor()
 void ImageExtractor::extract()
 {
     // Gstreamer video pipelines are unstable so we need to run an
-    // external helper library.
+    // external helper executable.
     char* utildir = getenv(UTIL_DIR);
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
     exe_path_ += QLatin1String("/vs-thumb");
-    QUrl url;
-    url.setScheme("fd");
-    url.setPath(to_string(pipe_write_fd_.get()).c_str());
-    process_.start(exe_path_, {QString::fromStdString(filename_), url.toString()});
+    QUrl in_url = QUrl::fromLocalFile(filename_.c_str());
+    QUrl out_url;
+    out_url.setScheme("fd");
+    out_url.setPath(to_string(pipe_write_fd_.get()).c_str());
+    process_.start(exe_path_, {in_url.toString(QUrl::FullyEncoded), out_url.toString()});
 
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
     timer_.setSingleShot(true);
