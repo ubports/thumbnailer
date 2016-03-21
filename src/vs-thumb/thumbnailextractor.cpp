@@ -159,7 +159,7 @@ void ThumbnailExtractor::set_urls(QUrl const& in_url, QUrl const& out_url)
     reset();
     in_url_= in_url;
     out_url_= out_url;
-    g_object_set(playbin_.get(), "uri", in_url_.toString().toStdString().c_str(), nullptr);
+    g_object_set(playbin_.get(), "uri", in_url_.toString(QUrl::FullyEncoded).toStdString().c_str(), nullptr);
     change_state(playbin_.get(), GST_STATE_PAUSED);
 
     if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration_))
@@ -370,7 +370,7 @@ void ThumbnailExtractor::write_image()
     // Figure out where to write to.
 
     int fd = -1;
-    string filename = out_url_.path().toStdString();
+    string filename = out_url_.toLocalFile().toStdString();
     if (out_url_.scheme() == "fd")
     {
         fd = out_url_.path().toInt();
@@ -413,8 +413,7 @@ void ThumbnailExtractor::write_image()
         int rc = write(fd, buffermap.data(), buffermap.size());
         if (gsize(rc) != buffermap.size())
         {
-            auto msg = string("write_image(): cannot write to ");
-            msg += (out_url_.scheme() == "fd" ? string("file descriptor ") + to_string(fd) : filename) + ": ";
+            auto msg = string("write_image(): cannot write to file descriptor ") + to_string(fd) + ": ";
             msg += errno != 0 ?  strerror(errno) : "short write";
             qCritical().nospace() << QString::fromStdString(msg);
             throw runtime_error(msg);
@@ -508,7 +507,7 @@ void ThumbnailExtractor::change_state(GstElement* element, GstState state)
 
 void ThumbnailExtractor::throw_error(string const& msg, GError* error)
 {
-    string message = class_name + ": " + msg + ", url: " + in_url_.toString().toStdString();
+    string message = class_name + ": " + msg + ", url: " + in_url_.toString(QUrl::FullyEncoded).toStdString();
     if (error != nullptr)
     {
         message += ": ";

@@ -135,7 +135,7 @@ TEST_F(ExtractorTest, extract_mp4)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl::fromLocalFile(MP4_LANDSCAPE_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_LANDSCAPE_TEST_FILE), QUrl::fromLocalFile(outfile.c_str()));
     ASSERT_TRUE(extractor.has_video());
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
@@ -155,7 +155,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_90)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_90_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_90_TEST_FILE), QUrl::fromLocalFile(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
 
@@ -174,7 +174,7 @@ TEST_F(ExtractorTest, extract_mp4_rotate_180)
 
     ThumbnailExtractor extractor;
     std::string outfile = tempdir + "/out.tiff";
-    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_180_TEST_FILE), QUrl(outfile.c_str()));
+    extractor.set_urls(QUrl::fromLocalFile(MP4_ROTATE_180_TEST_FILE), QUrl::fromLocalFile(outfile.c_str()));
     ASSERT_TRUE(extractor.extract_video_frame());
     extractor.write_image();
 
