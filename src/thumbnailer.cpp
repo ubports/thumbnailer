@@ -751,15 +751,15 @@ Thumbnailer::Thumbnailer()
     try
     {
         Settings settings;
-        full_size_cache_ = move(PersistentCacheHelper::open(cache_dir + "/images",
-                                                            settings.full_size_cache_size() * 1024 * 1024,
-                                                            core::CacheDiscardPolicy::lru_only));
-        thumbnail_cache_ = move(PersistentCacheHelper::open(cache_dir + "/thumbnails",
-                                                            settings.thumbnail_cache_size() * 1024 * 1024,
-                                                            core::CacheDiscardPolicy::lru_only));
-        failure_cache_ = move(PersistentCacheHelper::open(cache_dir + "/failures",
-                                                          settings.failure_cache_size() * 1024 * 1024,
-                                                          core::CacheDiscardPolicy::lru_ttl));
+        full_size_cache_ = PersistentCacheHelper::open(cache_dir + "/images",
+                                                       settings.full_size_cache_size() * 1024 * 1024,
+                                                       core::CacheDiscardPolicy::lru_only);
+        thumbnail_cache_ = PersistentCacheHelper::open(cache_dir + "/thumbnails",
+                                                       settings.thumbnail_cache_size() * 1024 * 1024,
+                                                       core::CacheDiscardPolicy::lru_only);
+        failure_cache_ = PersistentCacheHelper::open(cache_dir + "/failures",
+                                                     settings.failure_cache_size() * 1024 * 1024,
+                                                     core::CacheDiscardPolicy::lru_ttl);
         max_size_ = settings.max_thumbnail_size();
         retry_not_found_hours_ = settings.retry_not_found_hours();
         extraction_timeout_ = chrono::milliseconds(settings.extraction_timeout() * 1000);
@@ -819,7 +819,8 @@ void Thumbnailer::apply_upgrade_actions(string const& cache_dir)
     {
         // Whenever the version changes, we wipe all three caches.
         // That's useful to, for example, get rid of old unknown
-        // artist images from the remote server. Changing the version
+        // artist images from the remote server or to wipe bogus
+        // entries in the failure cache. Changing the version
         // is also needed if we ever change the way keys and values
         // are stored in the caches.
         qDebug() << "cache version update from" << v.prev_cache_version() << "to" << v.cache_version;

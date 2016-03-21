@@ -19,12 +19,17 @@
 
 #pragma once
 
+#include <unity/util/ResourcePtr.h>
+
+#include <QSocketNotifier>
 #include <QProcess>
 #include <QTimer>
 
 #include <chrono>
 #include <memory>
 #include <string>
+
+#include <unistd.h>
 
 namespace unity
 {
@@ -55,6 +60,9 @@ private Q_SLOTS:
     void processFinished();
     void timeout();
     void error();
+    void started();
+    void readFromPipe();
+    void pipeError();
 
 private:
     std::string const filename_;
@@ -62,6 +70,11 @@ private:
     bool read_called_;
     QString exe_path_;
     std::string error_;
+    unity::util::ResourcePtr<int, decltype(&::close)> pipe_read_fd_;
+    unity::util::ResourcePtr<int, decltype(&::close)> pipe_write_fd_;
+    std::unique_ptr<QSocketNotifier> read_notifier_;
+    std::unique_ptr<QSocketNotifier> error_notifier_;
+    QByteArray image_data_;
 
     QProcess process_;
     QTimer timer_;

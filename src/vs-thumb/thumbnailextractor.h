@@ -38,6 +38,8 @@
 #endif
 #pragma GCC diagnostic pop
 
+#include <QUrl>
+
 #include <cassert>
 #include <memory>
 #include <string>
@@ -104,23 +106,24 @@ public:
     ~ThumbnailExtractor();
 
     void reset();
-    void set_uri(const std::string& uri);
+    void set_urls(QUrl const& in_url, QUrl const& out_url);
     bool has_video();
     bool extract_video_frame();
     bool extract_cover_art();
-    void write_image(const std::string& filename);
+    void write_image();
 
     typedef std::unique_ptr<GstSample, decltype(&gst_sample_unref)> SampleUPtr;
     typedef unity::thumbnailer::internal::gobj_ptr<GdkPixbuf> PixbufUPtr;
 
 private:
     void change_state(GstElement* element, GstState state);
-    void throw_error(const char* msg, GError* error = nullptr);
+    void throw_error(std::string const& msg, GError* error = nullptr);
 
     gobj_ptr<GstElement> playbin_;
     gint64 duration_ = -1;
 
-    std::string uri_;
+    QUrl in_url_;
+    QUrl out_url_;
     SampleUPtr sample_{nullptr, gst_sample_unref};  // Contains raw data for cover or still frame.
     PixbufUPtr still_frame_;                        // Non-null if we extracted still frame.
     BufferMap buffermap_;
