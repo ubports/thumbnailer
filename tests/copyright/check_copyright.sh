@@ -32,12 +32,12 @@ usage()
 [ $# -gt 2 ] && usage
 
 # TODO: Temporary hack to work around broken licensecheck on xenial. Remove this once that is fixed.
-distro=$(lsb_release -c -s)
-[ "$distro" = "xenial" ] && {
-    exit 0
-}
+#distro=$(lsb_release -c -s)
+#[ "$distro" = "xenial" ] && {
+#    exit 0
+#}
 
-ignore_pat="\\.sci$"
+ignore_pat="\\.sci$|\\.bzr|debian|qmldir|HACKING|tsan-suppress|valgrind-suppress"
 
 #
 # We don't use the -i option of licensecheck to add ignore_dir to the pattern because Jenkins creates directories
