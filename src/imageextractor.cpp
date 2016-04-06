@@ -25,8 +25,11 @@
 #include <internal/safe_strerror.h>
 
 #include <QDebug>
+#include <QUrl>
 
 #include <cassert>
+
+#include <fcntl.h>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
@@ -35,14 +38,49 @@ ImageExtractor::ImageExtractor(std::string const& filename, chrono::milliseconds
     : filename_(filename)
     , timeout_ms_(timeout.count())
     , read_called_(false)
+    , pipe_read_fd_(::close)
+    , pipe_write_fd_(::close)
 {
+    // Still frames are large; avoid lots of reallactions when reading from the pipe.
+    image_data_.reserve(int(2.5 * 1024 * 1024));
+
     process_.setStandardInputFile(QProcess::nullDevice());
-    process_.setProcessChannelMode(QProcess::ForwardedErrorChannel);
-    connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished), this,
-            &ImageExtractor::processFinished);
-    connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error), this,
-            &ImageExtractor::error);
+    process_.setProcessChannelMode(QProcess::ForwardedChannels);
+    connect(&process_, static_cast<void (QProcess::*)(int, QProcess::ExitStatus)>(&QProcess::finished),
+            this, &ImageExtractor::processFinished);
+    connect(&process_, static_cast<void (QProcess::*)(QProcess::ProcessError)>(&QProcess::error),
+            this, &ImageExtractor::error);
+    connect(&process_, &QProcess::started, this, &ImageExtractor::started);
     connect(&timer_, &QTimer::timeout, this, &ImageExtractor::timeout);
+
+    // We set up a pipe to receive the image from vs-thumb. Because some gstreamer
+    // codecs chatter on stdout, we can't use stdout to transfer the image.
+    int pipe_fd[2];
+    if (pipe2(pipe_fd, O_CLOEXEC) == -1)
+    {
+        throw runtime_error(string("ImageExtractor(): cannot create pipe: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
+    }
+    pipe_read_fd_.reset(pipe_fd[0]);
+    pipe_write_fd_.reset(pipe_fd[1]);
+
+    // We use non-blocking I/O because that is faster: we drop back to the event loop more often
+    // and get better CPU utilization this way.
+    if (fcntl(pipe_fd[0], F_SETFL, O_NONBLOCK) == -1)
+    {
+        throw runtime_error(string("ImageExtractor(): cannot set O_NONBLOCK: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
+    }
+    // We clear FD_CLOEXEC on the write fd, so the child ends up with the read end closed.
+    // This prevents a race in threaded programs that can leak open fds to children (see man (2) open).
+    if (fcntl(pipe_fd[1], F_SETFD, 0) == -1)
+    {
+        throw runtime_error(string("ImageExtractor(): cannot clear FD_CLOEXEC: ") + safe_strerror(errno));  // LCOV_EXCL_LINE
+    }
+
+    // Make notifiers to fire on ready to read and error.
+    read_notifier_.reset(new QSocketNotifier(pipe_fd[0], QSocketNotifier::Read));
+    connect(read_notifier_.get(), &QSocketNotifier::activated, this, &ImageExtractor::readFromPipe);
+    error_notifier_.reset(new QSocketNotifier(pipe_fd[0], QSocketNotifier::Exception));
+    connect(error_notifier_.get(), &QSocketNotifier::activated, this, &ImageExtractor::pipeError);
 }
 
 ImageExtractor::~ImageExtractor()
@@ -63,11 +101,15 @@ ImageExtractor::~ImageExtractor()
 void ImageExtractor::extract()
 {
     // Gstreamer video pipelines are unstable so we need to run an
-    // external helper library.
+    // external helper executable.
     char* utildir = getenv(UTIL_DIR);
     exe_path_ = utildir ? utildir : SHARE_PRIV_ABS;
     exe_path_ += QLatin1String("/vs-thumb");
-    process_.start(exe_path_, {QString::fromStdString(filename_)});
+    QUrl in_url = QUrl::fromLocalFile(filename_.c_str());
+    QUrl out_url;
+    out_url.setScheme("fd");
+    out_url.setPath(to_string(pipe_write_fd_.get()).c_str());
+    process_.start(exe_path_, {in_url.toString(QUrl::FullyEncoded), out_url.toString()});
 
     // Set a watchdog timer in case vs-thumb doesn't finish in time.
     timer_.setSingleShot(true);
@@ -82,7 +124,7 @@ QByteArray ImageExtractor::read()
     }
     assert(!read_called_);
     read_called_ = true;
-    return process_.readAllStandardOutput();
+    return move(image_data_);
 }
 
 void ImageExtractor::processFinished()
@@ -94,6 +136,9 @@ void ImageExtractor::processFinished()
             switch (process_.exitCode())
             {
                 case 0:
+                    // The finished signal may arrive while there is still
+                    // some unread data in the pipe, so do one more read.
+                    readFromPipe();
                     error_ = "";
                     break;
                 case 1:
@@ -141,3 +186,52 @@ void ImageExtractor::error()
         Q_EMIT finished();
     }
 }
+
+void ImageExtractor::started()
+{
+    // We don't need the write end of the pipe.
+    pipe_write_fd_.dealloc();
+}
+
+// Read data from pipe (non-blocking) and append it to image_data_.
+
+void ImageExtractor::readFromPipe()
+{
+    if (!error_.empty())
+    {
+        return;
+    }
+
+    char buf[16 * 1024];  // No point in making this larger, pipe can hold at most 16 KB.
+    int rc;
+
+try_again:
+    while ((rc = ::read(pipe_read_fd_.get(), buf, sizeof(buf))) > 0)
+    {
+        image_data_.append(buf, rc);
+    }
+    if (rc == -1)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            return;  // EOF
+        }
+        if (errno != EINTR)
+        {
+            // LCOV_EXCL_START
+            error_ = string("cannot read remaining bytes from pipe: ") + safe_strerror(errno);
+            return;
+            // LCOV_EXCL_STOP
+        }
+        assert(errno == EINTR);
+        goto try_again;
+    }
+    assert(rc == 0);  // No data available for now.
+}
+
+// LCOV_EXCL_START
+void ImageExtractor::pipeError()
+{
+    error_ = "broken pipe";
+}
+// LCOV_EXCL_STOP
