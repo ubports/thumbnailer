@@ -1,3 +1,13 @@
+thumbnailer (2.4+16.04.20160321-0ubuntu1) xenial; urgency=medium
+
+  [ Michi Henning ]
+  * vs-thumb now uses a separate pipe instead of writing to stdout (LP: #1556835).
+
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- Michi Henning <michi.henning@canonical.com>  Mon, 21 Mar 2016 02:12:07 +0000
+
 thumbnailer (2.4+16.04.20160302.1-0ubuntu2) UNRELEASED; urgency=medium
 
   [ Michi Henning ]

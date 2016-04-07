@@ -16,10 +16,8 @@
  * Authored by: James Henstridge <james.henstridge@canonical.com>
  */
 
-#include <cstdio>
-#include <string>
-#include <memory>
-#include <stdexcept>
+#include "thumbnailextractor.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wcast-qual"
@@ -29,32 +27,15 @@
 #include <glib.h>
 #pragma GCC diagnostic pop
 
-#include "thumbnailextractor.h"
+#include <QUrl>
+
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 using namespace std;
 using namespace unity::thumbnailer::internal;
-
-namespace
-{
-
-string command_line_arg_to_uri(string const& arg)
-{
-    unique_ptr<GFile, decltype(&g_object_unref)> file(g_file_new_for_commandline_arg(arg.c_str()), g_object_unref);
-    if (!file)
-    {
-        throw runtime_error("Could not create parse argument as file");
-    }
-    char* c_uri = g_file_get_uri(file.get());
-    if (!c_uri)
-    {
-        throw runtime_error("Could not convert to uri");
-    }
-    string uri(c_uri);
-    g_free(c_uri);
-    return uri;
-}
-
-}
 
 int main(int argc, char** argv)
 {
@@ -66,20 +47,16 @@ int main(int argc, char** argv)
     ThumbnailExtractor extractor;
     for (int i = 1; i < argc; i++)
     {
-        string uri;
-        try
+        QUrl url(argv[i]);
+        if (!url.isValid())
         {
-            uri = command_line_arg_to_uri(argv[i]);
-        }
-        catch (exception const& e)
-        {
-            fprintf(stderr, "Error parsing \"%s\": %s\n", argv[i], e.what());
+            cerr << "Error parsing " << url.toString().toStdString() << ": " << url.errorString().toStdString() << endl;
             return 1;
         }
-        printf("Extracting from %s\n", uri.c_str());
+        cout << "Extracting from " << url.toString().toStdString() << endl;
         try
         {
-            extractor.set_uri(uri);
+            extractor.set_urls(url, QUrl("/dev/null"));
             if (extractor.has_video())
             {
                 success = extractor.extract_video_frame();
@@ -91,7 +68,7 @@ int main(int argc, char** argv)
         }
         catch (exception const& e)
         {
-            fprintf(stderr, "Error extracting content \"%s\": %s\n", argv[1], e.what());
+            cerr << "Error Extracting content \"" << argv[i] << "\": " << e.what() << endl;
             return 1;
         }
         if (!success) break;
