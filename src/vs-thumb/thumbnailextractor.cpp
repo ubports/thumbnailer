@@ -22,11 +22,12 @@
 #include <QDebug>
 #include <unity/util/ResourcePtr.h>
 
-#include <cstdio>
 #include <cstring>
 #include <stdexcept>
 
 #include <fcntl.h>
+
+using namespace std;
 
 namespace unity
 {
@@ -40,7 +41,7 @@ namespace internal
 namespace
 {
 
-std::string const class_name = "ThumbnailExtractor";
+string const class_name = "ThumbnailExtractor";
 
 // GstPlayFlags flags from playbin.
 //
@@ -74,7 +75,7 @@ struct CoverImage
 // and CoverImage.sample points at the image. If we find some other (non-cover) image, type is set to other,
 // and sample points at the image. Otherwise, if we can't find any image at all, sample is set to nullptr.
 
-CoverImage find_cover(GstTagList* tags, const char* tag_name)
+CoverImage find_cover(GstTagList* tags, char const* tag_name)
 {
     CoverImage ci{other, {nullptr, gst_sample_unref}};
 
@@ -153,12 +154,12 @@ void ThumbnailExtractor::reset()
     still_frame_.reset();
 }
 
-void ThumbnailExtractor::set_uri(const std::string& uri)
+void ThumbnailExtractor::set_urls(QUrl const& in_url, QUrl const& out_url)
 {
-    assert(!uri.empty());
     reset();
-    uri_= uri;
-    g_object_set(playbin_.get(), "uri", uri.c_str(), nullptr);
+    in_url_= in_url;
+    out_url_= out_url;
+    g_object_set(playbin_.get(), "uri", in_url_.toString(QUrl::FullyEncoded).toStdString().c_str(), nullptr);
     change_state(playbin_.get(), GST_STATE_PAUSED);
 
     if (!gst_element_query_duration(playbin_.get(), GST_FORMAT_TIME, &duration_))
@@ -205,7 +206,7 @@ bool ThumbnailExtractor::extract_video_frame()
     gst_element_get_state(playbin_.get(), nullptr, nullptr, GST_CLOCK_TIME_NONE);
 
     // Retrieve sample from the playbin.
-    std::unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
+    unique_ptr<GstCaps, decltype(&gst_caps_unref)> desired_caps(
         gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", "pixel-aspect-ratio", GST_TYPE_FRACTION, 1,
                             1, nullptr),
         gst_caps_unref);
@@ -298,18 +299,18 @@ bool ThumbnailExtractor::extract_cover_art()
     g_signal_emit_by_name(playbin_.get(), "get-audio-tags", 0, &tags);
     if (!tags)
     {
-        return false;  // LCOV_EXCL_LINE
+        return false;
     }
-    std::unique_ptr<GstTagList, decltype(&gst_tag_list_unref)> tag_guard(tags, gst_tag_list_unref);
+    unique_ptr<GstTagList, decltype(&gst_tag_list_unref)> tag_guard(tags, gst_tag_list_unref);
 
     sample_.reset();
 
     // Look for a normal image (cover or other image).
-    auto image = std::move(find_cover(tags, GST_TAG_IMAGE));
+    auto image = find_cover(tags, GST_TAG_IMAGE);
     if (image.sample && image.type == cover)
     {
         // LCOV_EXCL_START
-        sample_ = std::move(image.sample);
+        sample_ = move(image.sample);
         return true;
         // LCOV_EXCL_STOP
     }
@@ -320,7 +321,7 @@ bool ThumbnailExtractor::extract_cover_art()
     {
         // Michi: I have no idea how to create a video file with this tag :-(
         // LCOV_EXCL_START
-        sample_ = std::move(preview_image.sample);
+        sample_ = move(preview_image.sample);
         return true;
         // LCOV_EXCL_STOP
     }
@@ -329,13 +330,13 @@ bool ThumbnailExtractor::extract_cover_art()
     if (image.sample)
     {
         // LCOV_EXCL_START
-        sample_ = std::move(image.sample);
+        sample_ = move(image.sample);
         return true;
         // LCOV_EXCL_STOP
     }
 
     // We might have found a non-cover preview image.
-    sample_ = std::move(preview_image.sample);
+    sample_ = move(preview_image.sample);
 
     return bool(sample_);
 }
@@ -362,24 +363,29 @@ gboolean write_to_fd(gchar const* buf, gsize count, GError **error, gpointer dat
 
 }
 
-void ThumbnailExtractor::write_image(const std::string& filename)
+void ThumbnailExtractor::write_image()
 {
     assert(still_frame_ || sample_);
 
     // Figure out where to write to.
 
-    int fd = STDOUT_FILENO;
-    if (!filename.empty())
+    int fd = -1;
+    string filename = out_url_.toLocalFile().toStdString();
+    if (out_url_.scheme() == "fd")
+    {
+        fd = out_url_.path().toInt();
+    }
+    else
     {
         fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
         if (fd == -1)
         {
-            auto msg = std::string("write_image(): cannot open ") + filename + ": " + strerror(errno);
+            auto msg = string("write_image(): cannot open ") + filename + ": " + strerror(errno);
             qCritical().nospace() << QString::fromStdString(msg);
-            throw std::runtime_error(msg);
+            throw runtime_error(msg);
         }
     }
-    auto close_func = [](int fd) { if (fd != STDOUT_FILENO) ::close(fd); };
+    auto close_func = [](int fd) { if (fd != -1) ::close(fd); };
     unity::util::ResourcePtr<int, decltype(close_func)> fd_guard(fd, close_func);  // Don't leak fd.
 
     if (still_frame_)
@@ -396,22 +402,21 @@ void ThumbnailExtractor::write_image(const std::string& filename)
     }
 
     // We found embedded artwork. The embedded data is already in some image format, such jpg or png.
-    // If we are writing to stdout (to communicate with the thumbnailer), we just dump the image
+    // If we are writing to an fd (to communicate with the thumbnailer), we just dump the image
     // as is; the thumbnailer will decode it.
     BufferMap buffermap;
     buffermap.map(gst_sample_get_buffer(sample_.get()));
 
-    if (fd == STDOUT_FILENO)
+    if (out_url_.scheme() == "fd")
     {
         errno = 0;
         int rc = write(fd, buffermap.data(), buffermap.size());
         if (gsize(rc) != buffermap.size())
         {
-            auto msg = std::string("write_image(): cannot write to ");
-            msg += (filename.empty() ? std::string("stdout") : filename) + ": ";
+            auto msg = string("write_image(): cannot write to file descriptor ") + to_string(fd) + ": ";
             msg += errno != 0 ?  strerror(errno) : "short write";
             qCritical().nospace() << QString::fromStdString(msg);
-            throw std::runtime_error(msg);
+            throw runtime_error(msg);
         }
         return;
     }
@@ -436,7 +441,7 @@ void ThumbnailExtractor::write_image(const std::string& filename)
 
     if (!gdk_pixbuf_save_to_callback(image_buf.get(), write_to_fd, &fd, "tiff", &error, "compression", "1", nullptr))
     {
-        throw_error("write_image(): cannot write image to stdout", error);  // LCOV_EXCL_LINE
+        throw_error(string("write_image(): cannot write image to ") + filename, error);  // LCOV_EXCL_LINE
     }
     return;
 }
@@ -467,7 +472,7 @@ void ThumbnailExtractor::change_state(GstElement* element, GstState state)
     gobj_ptr<GstBus> bus(gst_element_get_bus(element));
     while (true)  // LCOV_EXCL_LINE  // False negative from gcovr.
     {
-        std::unique_ptr<GstMessage, decltype(&gst_message_unref)> message(
+        unique_ptr<GstMessage, decltype(&gst_message_unref)> message(
             gst_bus_timed_pop_filtered(bus.get(), GST_CLOCK_TIME_NONE,
                                        static_cast<GstMessageType>(GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR)),
             gst_message_unref);
@@ -500,9 +505,9 @@ void ThumbnailExtractor::change_state(GstElement* element, GstState state)
 
 #pragma GCC diagnostic pop
 
-void ThumbnailExtractor::throw_error(const char* msg, GError* error)
+void ThumbnailExtractor::throw_error(string const& msg, GError* error)
 {
-    std::string message = class_name + ": " + msg + ", uri: " + uri_;
+    string message = class_name + ": " + msg + ", url: " + in_url_.toString(QUrl::FullyEncoded).toStdString();
     if (error != nullptr)
     {
         message += ": ";
@@ -510,7 +515,7 @@ void ThumbnailExtractor::throw_error(const char* msg, GError* error)
         g_error_free(error);
     }
     qCritical() << message.c_str();
-    throw std::runtime_error(message);
+    throw runtime_error(message);
 }
 
 }  // namespace internal
