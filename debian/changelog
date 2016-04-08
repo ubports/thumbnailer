@@ -1,3 +1,10 @@
+thumbnailer (2.4+16.04.20160331.1-0ubuntu2) UNRELEASED; urgency=medium
+
+  [ Michi Henning ]
+  * Re-enabled copyright test on xenial.
+
+ -- Michi Henning <michi.henning@canonical.com>  Thu, 31 Mar 2016 15:04:52 +1000
+
 thumbnailer (2.4+16.04.20160321-0ubuntu1) xenial; urgency=medium
 
   [ Michi Henning ]
@@ -7,13 +14,6 @@ thumbnailer (2.4+16.04.20160321-0ubuntu1) xenial; urgency=medium
   * No-change rebuild.
 
  -- Michi Henning <michi.henning@canonical.com>  Mon, 21 Mar 2016 02:12:07 +0000
-
-thumbnailer (2.4+16.04.20160302.1-0ubuntu2) UNRELEASED; urgency=medium
-
-  [ Michi Henning ]
-  * Re-enabled copyright test on xenial.
-
- -- Michi Henning <michi.henning@canonical.com>  Thu, 31 Mar 2016 15:04:52 +1000
 
 thumbnailer (2.4+16.04.20160302.1-0ubuntu1) xenial; urgency=medium
 
