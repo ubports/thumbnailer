@@ -54,7 +54,7 @@ public Q_SLOTS:
     QByteArray GetArtistArt(QString const& artist, QString const& album, QSize const& requestedSize);
     QByteArray GetThumbnail(QString const& filename, QSize const& requestedSize);
 
-    // These methods return the values of gsettings keys relevant to the client. We retrieve these on the server
+    // This method returns the values of gsettings keys relevant to the client. We retrieve these on the server
     // side because the client-side API runs under confinement, which disallows access to gsettings.
     ConfigValues ClientConfig();
 
