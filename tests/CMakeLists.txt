@@ -49,9 +49,6 @@ foreach(dir ${unit_test_dirs})
     list(APPEND UNIT_TEST_TARGETS "${dir}_test")
 endforeach()
 
-add_subdirectory(copyright)
-add_subdirectory(whitespace)
-
 if (${slowtests})
     foreach(dir ${slow_test_dirs})
         add_subdirectory(${dir})
@@ -61,3 +58,8 @@ if (${slowtests})
 endif()
 
 set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
+
+if (${slowtests})
+    add_subdirectory(copyright)
+endif()
+add_subdirectory(whitespace)
