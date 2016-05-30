@@ -1,9 +1,14 @@
-thumbnailer (2.4+16.04.20160331.1-0ubuntu2) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.04.20160321-0ubuntu3) UNRELEASED; urgency=medium
 
-  [ Michi Henning ]
-  * Re-enabled copyright test on xenial.
+  * Re-enabled copyright test on xenial and yakkety.
 
- -- Michi Henning <michi.henning@canonical.com>  Thu, 31 Mar 2016 15:04:52 +1000
+ -- Michi Henning <michi.henning@canonical.com>  Mon, 30 May 2016 20:44:30 +1000
+
+thumbnailer (2.4+16.04.20160321-0ubuntu2) yakkety; urgency=medium
+
+  * No-change rebuild for boost soname change.
+
+ -- Matthias Klose <doko@ubuntu.com>  Sat, 23 Apr 2016 18:50:26 +0000
 
 thumbnailer (2.4+16.04.20160321-0ubuntu1) xenial; urgency=medium
 
