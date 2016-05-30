@@ -1,8 +1,12 @@
-thumbnailer (2.4+16.04.20160321-0ubuntu3) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.10.20160530.3-0ubuntu1) yakkety; urgency=medium
 
+  [ Michi Henning ]
   * Re-enabled copyright test on xenial and yakkety.
 
- -- Michi Henning <michi.henning@canonical.com>  Mon, 30 May 2016 20:44:30 +1000
+  [ CI Train Bot ]
+  * No-change rebuild.
+
+ -- Michi Henning <michi.henning@canonical.com>  Mon, 30 May 2016 11:07:33 +0000
 
 thumbnailer (2.4+16.04.20160321-0ubuntu2) yakkety; urgency=medium
 
