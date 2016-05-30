@@ -31,8 +31,8 @@ namespace service
 
 struct ConfigValues
 {
-    bool trace_client;
-    int max_backlog;
+    bool trace_client = false;
+    int max_backlog = 0;
 };
 
 }  // namespace service
