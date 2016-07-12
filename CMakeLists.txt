@@ -4,11 +4,11 @@ if (NOT DEFINED CMAKE_INSTALL_PREFIX)
     set(LOCAL_INSTALL "ON")
 endif()
 
-project(thumbnailer C CXX)
+cmake_minimum_required(VERSION 3.0.2)
+project(thumbnailer VERSION "2.4.0" LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-cmake_minimum_required(VERSION 2.8.11)
 
 # Suppress complaints by cmake about COMPILE_DEFINITIONS_<Config> caused by qt5 cmake macros.
 cmake_policy(SET CMP0043 OLD)
@@ -47,18 +47,15 @@ endif()
 
 add_definitions(-DQT_NO_KEYWORDS)
 
+include(GNUInstallDirs)
+
 # libthumbnailer-qt version
 set(LIBTHUMBNAILER_QT thumbnailer-qt)
 set(LIBTHUMBNAILER_QT_SO_VERSION_MAJOR "1")
 set(LIBTHUMBNAILER_QT_SO_VERSION_MINOR "0")
 set(LIBTHUMBNAILER_QT_SO_VERSION_MICRO "0")
 set(LIBTHUMBNAILER_QT_SO_VERSION ${LIBTHUMBNAILER_QT_SO_VERSION_MAJOR}.${LIBTHUMBNAILER_QT_SO_VERSION_MINOR})
-set(LIBTHUMBNAILER_QT_HDR_INSTALL_DIR include/${LIBTHUMBNAILER_QT}-${LIBTHUMBNAILER_QT_SO_VERSION}/unity/thumbnailer/qt)
-
-# thumbnailer-service version
-set(THUMBNAILER_VERSION_MAJOR "2")
-set(THUMBNAILER_VERSION_MINOR "4")
-set(THUMBNAILER_VERSION_MICRO "0")
+set(LIBTHUMBNAILER_QT_HDR_INSTALL_DIR ${CMAKE_INSTALL_FULL_INCLUDEDIR}/${LIBTHUMBNAILER_QT}-${LIBTHUMBNAILER_QT_SO_VERSION})
 
 # Encoding version of cache files
 set(THUMBNAILER_CACHE_VERSION "2")
@@ -106,10 +103,8 @@ include(EnableCoverageReport)
 
 include(cmake/UseGSettings.cmake)
 
-include(GNUInstallDirs)
-set(LIBDIR ${CMAKE_INSTALL_LIBDIR})
 set(SHARE_PRIV_DIR ${CMAKE_INSTALL_LIBDIR}/thumbnailer)
-set(SHARE_PRIV_ABS ${CMAKE_INSTALL_PREFIX}/${SHARE_PRIV_DIR})
+set(SHARE_PRIV_ABS ${CMAKE_INSTALL_FULL_LIBDIR})
 
 find_package(Boost COMPONENTS filesystem iostreams regex system REQUIRED)
 find_package(Threads REQUIRED)
