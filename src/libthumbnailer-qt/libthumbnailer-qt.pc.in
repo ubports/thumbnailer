@@ -16,13 +16,9 @@
 # Authored by: Xavi Garcia Mena <xavi.garcia.mena@canonical.com>
 #
 
-prefix=@CMAKE_INSTALL_PREFIX@
-includedir=${prefix}/@LIBTHUMBNAILER_QT_HDR_INSTALL_DIR@
-libdir=${prefix}/@LIBDIR@
-
 Name: libthumbnailer-qt
 Description: Thumbnailer Qt library
-Requires: thumbnailer-service
-Version: @LIBTHUMBNAILER_QT_SO_VERSION_MAJOR@.@LIBTHUMBNAILER_QT_SO_VERSION_MINOR@.@LIBTHUMBNAILER_QT_SO_VERSION_MICRO@
-Libs: -L${libdir} -l@LIBTHUMBNAILER_QT@
-Cflags: -I${includedir}
+Requires: Qt5Gui
+Version: @PROJECT_VERSION@
+Libs: -L@CMAKE_INSTALL_FULL_LIBDIR@ -l@LIBTHUMBNAILER_QT@
+Cflags: -I@LIBTHUMBNAILER_QT_HDR_INSTALL_DIR@
