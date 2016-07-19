@@ -1,4 +1,4 @@
-thumbnailer (2.4+16.10.20160530.3-0ubuntu3) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.10.20160719-0ubuntu1) yakkety; urgency=medium
 
   [ Michi Henning ]
   * Changed copyright from GPL to LGPL for two files used in storage framework.
@@ -6,7 +6,7 @@ thumbnailer (2.4+16.10.20160530.3-0ubuntu3) UNRELEASED; urgency=medium
   [ James Henstridge ]
   * Fixed pkgconfig file for qt library.
 
- -- Michi Henning <michi.henning@canonical.com>  Wed, 13 Jul 2016 16:40:46 +1000
+ -- Michi Henning <michi@triodia.com>  Tue, 19 Jul 2016 01:11:39 +0000
 
 thumbnailer (2.4+16.10.20160530.3-0ubuntu1) yakkety; urgency=medium
 
