@@ -104,7 +104,7 @@ include(EnableCoverageReport)
 include(cmake/UseGSettings.cmake)
 
 set(SHARE_PRIV_DIR ${CMAKE_INSTALL_LIBDIR}/thumbnailer)
-set(SHARE_PRIV_ABS ${CMAKE_INSTALL_FULL_LIBDIR})
+set(SHARE_PRIV_ABS ${CMAKE_INSTALL_FULL_LIBDIR}/thumbnailer)
 
 find_package(Boost COMPONENTS filesystem iostreams regex system REQUIRED)
 find_package(Threads REQUIRED)
