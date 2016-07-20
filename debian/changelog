@@ -1,6 +1,6 @@
 thumbnailer (2.4+16.10.20160530.3-0ubuntu2) UNRELEASED; urgency=medium
 
-  * REPLACE_ME: Placeholder entry after merging trunk.
+  * Changed python-tornado dependency to python-tornado:native for cross-builds.
 
  -- Michi Henning <michi.henning@canonical.com>  Wed, 01 Jun 2016 08:17:27 +1000
 
