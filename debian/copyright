@@ -20,7 +20,9 @@ License: GPL-3
 Files: plugins/*
        include/internal/gobj_memory.h
        include/internal/safe_strerror.h
+       include/internal/trace.h
        src/safe_strerror.cpp
+       src/trace.cpp
        tests/copyright/*
        tests/gobj_ptr/*
        tests/headers/*
