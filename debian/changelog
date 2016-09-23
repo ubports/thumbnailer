@@ -11,6 +11,12 @@ thumbnailer (2.4+16.10.20160719-0ubuntu2) yakkety; urgency=medium
 
  -- Matthias Klose <doko@ubuntu.com>  Thu, 04 Aug 2016 08:32:55 +0000
 
+thumbnailer (2.4) UNRELEASED; urgency=medium
+
+  * Changed python-tornado dependency to python-tornado <!nocheck> for cross-builds.
+
+ -- Michi Henning <michi.henning@canonical.com>  Mon, 25 Jul 2016 10:56:23 +1000
+
 thumbnailer (2.4+16.10.20160719-0ubuntu1) yakkety; urgency=medium
 
   [ Michi Henning ]
