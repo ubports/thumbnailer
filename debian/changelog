@@ -1,9 +1,9 @@
-thumbnailer (2.4+16.10.20160719-0ubuntu3) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.10.20160825-0ubuntu1) yakkety; urgency=medium
 
   * Changed python-tornado dependency to python-tornado <!nocheck> for cross-builds.
   * Relaxed copyright for trace.cpp and trace.h to LGPL.
 
- -- Michi Henning <michi@yakkety>  Fri, 05 Aug 2016 19:02:03 +1000
+ -- Michi Henning <michi@triodia.com>  Thu, 25 Aug 2016 06:59:02 +0000
 
 thumbnailer (2.4+16.10.20160719-0ubuntu2) yakkety; urgency=medium
 
