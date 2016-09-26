@@ -72,7 +72,7 @@ TEST_F(ThumbnailerTest, slow_vs_thumb)
 
     QSignalSpy spy(request.get(), &ThumbnailRequest::downloadFinished);
     request->download();
-    ASSERT_TRUE(spy.wait(15000));  // Slow vs-thumb will get killed after 10 seconds.
+    ASSERT_TRUE(spy.wait(30000));  // Slow vs-thumb will get killed after 10 seconds.
 
     EXPECT_EQ("", request->thumbnail());
 }

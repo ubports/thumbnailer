@@ -82,6 +82,28 @@ else()
     add_definitions(-DSLOW_TESTS=0)
 endif()
 
+# TODO: Hack to allow disabling tests that need QDBus on xenial and yakkety,
+#       due to broken Qt 5.6. Re-enable tests ASAP!
+option(skip-dbus-tests "Skip DBus tests" ON)
+if (${skip-dbus-tests})
+    execute_process(COMMAND lsb_release -s -c OUTPUT_VARIABLE distro OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE arch OUTPUT_STRIP_TRAILING_WHITESPACE)
+    message("DISTRO: ${distro}")
+    message("ARCH:   ${arch}")
+    if (
+            (${distro} STREQUAL "xenial" OR ${distro} STREQUAL "yakkety")
+            AND
+            (${arch} STREQUAL "aarch64" OR ${arch} STREQUAL "ppc" OR ${arch} STREQUAL "ppc64le")
+       )
+        message(WARNING "WARNING: Disabling DBus-related tests for ${distro}
+         See https://bugs.launchpad.net/ubuntu/+source/thumbnailer/+bug/1613561
+             https://bugs.launchpad.net/ubuntu/+source/qtbase-opensource-src/+bug/1625930")
+        add_definitions(-DSKIP_DBUS_TESTS=1)
+        add_definitions(-DDISTRO=\"${distro}\")
+        add_definitions(-DARCH=\"${arch}\")
+    endif()
+endif()
+
 # Definitions for testing with valgrind.
 
 configure_file(CTestCustom.cmake.in CTestCustom.cmake) # Tests in CTestCustom.cmake are skipped for valgrind
