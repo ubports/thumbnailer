@@ -1,11 +1,13 @@
-thumbnailer (2.4+16.10.20160825-0ubuntu2) UNRELEASED; urgency=medium
+thumbnailer (2.4+16.10.20160926.2-0ubuntu1) yakkety; urgency=medium
 
   * Disabled QDBus-related tests on xenial and yakkety for the time being due
     to problems with Qt 5.6. See
       https://bugs.launchpad.net/ubuntu/+source/thumbnailer/+bug/1613561
       https://bugs.launchpad.net/ubuntu/+source/qtbase-opensource-src/+bug/1625930
+  * Changed python-tornado dependency to python-tornado <!nocheck> for
+    cross-builds.
 
- -- Michi Henning <michi.henning@canonical.com>  Fri, 23 Sep 2016 14:08:49 +1000
+ -- Michi Henning <michi@triodia.com>  Mon, 26 Sep 2016 07:36:07 +0000
 
 thumbnailer (2.4+16.10.20160825-0ubuntu1) yakkety; urgency=medium
 
