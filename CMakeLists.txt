@@ -93,7 +93,7 @@ if (${skip-dbus-tests})
     if (
             (${distro} STREQUAL "xenial" OR ${distro} STREQUAL "yakkety")
             AND
-            (${arch} STREQUAL "aarch64" OR ${arch} STREQUAL "powerpc" OR STREQUAL ${ppc64el})
+            (${arch} STREQUAL "aarch64" OR ${arch} STREQUAL "ppc" OR ${arch} STREQUAL "ppc64le")
        )
         message(WARNING "WARNING: Disabling DBus-related tests for ${distro}
          See https://bugs.launchpad.net/ubuntu/+source/thumbnailer/+bug/1613561
