@@ -87,12 +87,20 @@ endif()
 option(skip-dbus-tests "Skip DBus tests" ON)
 if (${skip-dbus-tests})
     execute_process(COMMAND lsb_release -s -c OUTPUT_VARIABLE distro OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if (${distro} STREQUAL "xenial" OR ${distro} STREQUAL "yakkety")
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE arch OUTPUT_STRIP_TRAILING_WHITESPACE)
+    message("DISTRO: ${distro}")
+    message("ARCH:   ${arch}")
+    if (
+            (${distro} STREQUAL "xenial" OR ${distro} STREQUAL "yakkety")
+            AND
+            (${arch} STREQUAL "aarch64" OR ${arch} STREQUAL "powerpc" OR STREQUAL ${ppc64el})
+       )
         message(WARNING "WARNING: Disabling DBus-related tests for ${distro}
          See https://bugs.launchpad.net/ubuntu/+source/thumbnailer/+bug/1613561
              https://bugs.launchpad.net/ubuntu/+source/qtbase-opensource-src/+bug/1625930")
         add_definitions(-DSKIP_DBUS_TESTS=1)
         add_definitions(-DDISTRO=\"${distro}\")
+        add_definitions(-DARCH=\"${arch}\")
     endif()
 endif()
 

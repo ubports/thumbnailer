@@ -612,7 +612,7 @@ int main(int argc, char** argv)
 {
 #if defined(SKIP_DBUS_TESTS)
     // TODO: Re-enable this ASAP!
-    cerr << "WARNING: Skipping tests on " << DISTRO << endl;
+    cerr << "WARNING: Skipping tests on " << DISTRO << " " << ARCH << endl;
     cerr << "         See https://bugs.launchpad.net/ubuntu/+source/thumbnailer/+bug/1613561" << endl;
     cerr << "             https://bugs.launchpad.net/ubuntu/+source/qtbase-opensource-src/+bug/1625930" << endl;
     return 0;
