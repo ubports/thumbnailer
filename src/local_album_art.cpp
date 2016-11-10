@@ -268,6 +268,7 @@ string OggExtractor::get_album_art() const
     if (xc)
     {
 #if TAGLIB_1_9
+        // taglib 1.11 added a new API, and broke the behavior of the existing one.
         auto const& map = xc->fieldListMap();
         auto it = map.find("METADATA_BLOCK_PICTURE");
         if (it != map.end())
@@ -291,17 +292,17 @@ string OggExtractor::get_album_art() const
                 art = decode_b64(it->second.front()).toStdString();
             }
         }
-    }
 #else
-    auto piclist = xc->pictureList();
-    for (auto const& pic : const_cast<TagLib::FLAC::File*>(file)->pictureList())
-    {
-        if (extract_flac_art(pic, art))
+        auto piclist = xc->pictureList();
+        for (auto const& pic : piclist)
         {
-            break;
+            if (extract_flac_art(pic, art))
+            {
+                break;
+            }
         }
-    }
 #endif
+    }
 
     return art;
 }
