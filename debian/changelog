@@ -1,6 +1,8 @@
 thumbnailer (2.4+16.10.20160926.2-0ubuntu2) UNRELEASED; urgency=medium
 
   * Added zesty to list of distros for which we suppress Qt-related tests.
+  * Fixed code to work with taglib 1.11, which broke the behavior of the
+    1.9 API.
 
  -- Michi Henning <michi.henning@canonical.com>  Wed, 09 Nov 2016 08:33:20 +1000
 
