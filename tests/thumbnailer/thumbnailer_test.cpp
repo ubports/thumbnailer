@@ -178,10 +178,12 @@ TEST_F(ThumbnailerTest, basic)
 
 TEST_F(ThumbnailerTest, changed_size)
 {
+    qDebug() << "start test";
     {
         Thumbnailer tn;
         EXPECT_EQ(100 * 1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
     }
+    qDebug() << "end test";
 
     {
 #if 0
