@@ -18,7 +18,12 @@
 
 #include <internal/local_album_art.h>
 
+#include <taglib/taglib.h>
+
+#if TAGLIB_MAJOR_VERSION == 1 && TAGLIB_MINOR_VERSION <= 9
+#define TAGLIB_1_9 1
 #include <QByteArray>
+#endif
 
 #include <taglib/attachedpictureframe.h>
 #include <taglib/fileref.h>
@@ -179,6 +184,11 @@ TagLib::Ogg::XiphComment* OggExtractor::get_xiph_comment() const
     return dynamic_cast<TagLib::Ogg::XiphComment*>(fileref_.tag());
 }
 
+namespace
+{
+
+#if TAGLIB_1_9
+
 // Decode base_64 string into a QByteArray
 
 QByteArray decode_b64(TagLib::String const& base_64)
@@ -209,6 +219,8 @@ unique_ptr<TagLib::FLAC::Picture> to_picture(TagLib::String const& base_64)
     QByteArray().swap(bytes);  // Release memory
     return unique_ptr<TagLib::FLAC::Picture>(new TagLib::FLAC::Picture(byte_vector));
 }
+
+#endif
 
 // Helper function to pull cover (or other) art from a TagLib::FLAC::Picture.
 // Returns true if an image was extracted and that image is the front cover.
@@ -246,6 +258,8 @@ bool extract_flac_art(TagLib::FLAC::Picture const* pic, string& art)
     return false;
 }
 
+}  // namespace
+
 string OggExtractor::get_album_art() const
 {
     string art;
@@ -253,6 +267,7 @@ string OggExtractor::get_album_art() const
     auto const xc = get_xiph_comment();
     if (xc)
     {
+#if TAGLIB_1_9
         auto const& map = xc->fieldListMap();
         auto it = map.find("METADATA_BLOCK_PICTURE");
         if (it != map.end())
@@ -277,6 +292,16 @@ string OggExtractor::get_album_art() const
             }
         }
     }
+#else
+    auto piclist = xc->pictureList();
+    for (auto const& pic : const_cast<TagLib::FLAC::File*>(file)->pictureList())
+    {
+        if (extract_flac_art(pic, art))
+        {
+            break;
+        }
+    }
+#endif
 
     return art;
 }
