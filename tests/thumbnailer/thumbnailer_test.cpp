@@ -178,17 +178,15 @@ TEST_F(ThumbnailerTest, basic)
 
 TEST_F(ThumbnailerTest, changed_size)
 {
-#if 0
     {
         Thumbnailer tn;
         EXPECT_EQ(100 * 1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
     }
-#endif
 
     {
+#if 0
         gobj_ptr<GSettings> gsettings(g_settings_new("com.canonical.Unity.Thumbnailer"));
         g_settings_set_int(gsettings.get(), "thumbnail-cache-size", 1);
-#if 0
         Thumbnailer tn;
         EXPECT_EQ(1024 * 1024, tn.stats().thumbnail_stats.max_size_in_bytes());
 #endif
