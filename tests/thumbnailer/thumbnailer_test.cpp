@@ -176,6 +176,7 @@ TEST_F(ThumbnailerTest, basic)
     EXPECT_EQ(1152, img.height());
 }
 
+#if 0
 TEST_F(ThumbnailerTest, changed_size)
 {
     {
@@ -1026,6 +1027,7 @@ TEST_F(RemoteServer, dead_server)
     EXPECT_EQ("", request->thumbnail());
     EXPECT_EQ(ThumbnailRequest::FetchStatus::network_down, request->status());
 }
+#endif
 
 int main(int argc, char** argv)
 {

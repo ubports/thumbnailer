@@ -16,30 +16,30 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(utils)
 
 set(unit_test_dirs
-    art_extractor
-    check_access
-    dbus
-    download
-    file_io
-    gobj_ptr
-    image
-    image-provider
-    qml
-    libthumbnailer-qt
-    recovery
-    safe_strerror
-    settings
+#   art_extractor
+#   check_access
+#   dbus
+#   download
+#   file_io
+#   gobj_ptr
+#   image
+#   image-provider
+#   qml
+#   libthumbnailer-qt
+#   recovery
+#   safe_strerror
+#   settings
     thumbnailer
-    thumbnailer-admin
-    version
-    vs-thumb
+#   thumbnailer-admin
+#   version
+#   vs-thumb
 )
 
 set(slow_test_dirs
-    backoff_adjuster
-    file_lock
-    slow-vs-thumb
-    stress
+#   backoff_adjuster
+#    file_lock
+#   slow-vs-thumb
+#   stress
 )
 
 set(UNIT_TEST_TARGETS "")
@@ -54,7 +54,7 @@ if (${slowtests})
         add_subdirectory(${dir})
         list(APPEND UNIT_TEST_TARGETS "${dir}_test")
     endforeach()
-    add_subdirectory(headers)
+#    add_subdirectory(headers)
 endif()
 
 set(UNIT_TEST_TARGETS ${UNIT_TEST_TARGETS} PARENT_SCOPE)
