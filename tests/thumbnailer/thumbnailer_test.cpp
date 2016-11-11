@@ -90,106 +90,92 @@ protected:
 
 TEST_F(ThumbnailerTest, basic)
 {
-    system("uname -a");
     Thumbnailer tn;
     std::unique_ptr<ThumbnailRequest> request;
     QByteArray thumb;
     Image img;
 
-    //auto old_stats = tn.stats();
+    auto old_stats = tn.stats();
     request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
     thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
-    //auto new_stats = tn.stats();
-    //EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
+    auto new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.size() + 1, new_stats.failure_stats.size());
 
-    qDebug() << "1";
     // Again, this time we get the answer from the failure cache.
-    //old_stats = tn.stats();
+    old_stats = tn.stats();
     request = tn.get_thumbnail(EMPTY_IMAGE, QSize(10, 10));
     thumb = request->thumbnail();
     EXPECT_EQ("", thumb);
-    //new_stats = tn.stats();
-    //EXPECT_EQ(old_stats.failure_stats.hits() + 1, new_stats.failure_stats.hits());
+    new_stats = tn.stats();
+    EXPECT_EQ(old_stats.failure_stats.hits() + 1, new_stats.failure_stats.hits());
 
-    qDebug() << "2";
     request = tn.get_thumbnail(TEST_IMAGE, QSize(640, 640));
     EXPECT_TRUE(boost::starts_with(request->key(), TEST_IMAGE)) << request->key();
     thumb = request->thumbnail();
     img = Image(thumb);
-    //EXPECT_EQ(640, img.width());
-    //EXPECT_EQ(480, img.height());
+    EXPECT_EQ(640, img.width());
+    EXPECT_EQ(480, img.height());
 
-    qDebug() << "3";
     // Again, for coverage. This time the thumbnail comes from the cache.
-    //old_stats = tn.stats();
+    old_stats = tn.stats();
     request = tn.get_thumbnail(TEST_IMAGE, QSize(640, 640));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
-    //new_stats = tn.stats();
-    //EXPECT_EQ(old_stats.thumbnail_stats.hits() + 1, new_stats.thumbnail_stats.hits());
+    new_stats = tn.stats();
+    EXPECT_EQ(old_stats.thumbnail_stats.hits() + 1, new_stats.thumbnail_stats.hits());
 
-    qDebug() << "4";
     request = tn.get_thumbnail(TEST_IMAGE, QSize(160, 160));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(160, img.width());
     EXPECT_EQ(120, img.height());
 
-    qDebug() << "5";
     request = tn.get_thumbnail(TEST_IMAGE, QSize(1000, 1000));  // Will not up-scale
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
 
-    qDebug() << "6";
     request = tn.get_thumbnail(TEST_IMAGE, QSize(100, 100));  // From EXIF data
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(100, img.width());
     EXPECT_EQ(75, img.height());
 
-    qDebug() << "7";
     request = tn.get_thumbnail(RGB_IMAGE, QSize(48, 48));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(48, img.width());
     EXPECT_EQ(48, img.height());
 
-    qDebug() << "8";
     request = tn.get_thumbnail(BIG_IMAGE, QSize(5000, 5000));  // > 1920, so will be trimmed down
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
 
-    qDebug() << "9";
     request = tn.get_thumbnail(BIG_IMAGE, QSize(0, 0));  // Will be trimmed down
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(1920, img.width());
     EXPECT_EQ(1439, img.height());
 
-    qDebug() << "10";
     request = tn.get_thumbnail(SMALL_GIF, QSize(0, 0));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(640, img.width());
     EXPECT_EQ(480, img.height());
 
-    qDebug() << "11";
     request = tn.get_thumbnail(LARGE_GIF, QSize(0, 0));
     thumb = request->thumbnail();
     img = Image(thumb);
     EXPECT_EQ(1536, img.width());
     EXPECT_EQ(1152, img.height());
-    qDebug() << "12";
 }
 
-#if 0
 TEST_F(ThumbnailerTest, changed_size)
 {
     {
@@ -1040,7 +1026,6 @@ TEST_F(RemoteServer, dead_server)
     EXPECT_EQ("", request->thumbnail());
     EXPECT_EQ(ThumbnailRequest::FetchStatus::network_down, request->status());
 }
-#endif
 
 int main(int argc, char** argv)
 {

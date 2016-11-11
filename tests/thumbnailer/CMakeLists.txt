@@ -11,4 +11,4 @@ target_link_libraries(thumbnailer_test
     testutils
     gtest)
 add_dependencies(thumbnailer_test thumbnailer-service)
-add_test(NAME thumbnailer COMMAND valgrind --leak-check=full ./thumbnailer_test)
+add_test(thumbnailer thumbnailer_test)
