@@ -90,6 +90,7 @@ protected:
 
 TEST_F(ThumbnailerTest, basic)
 {
+    system("uname -a");
     Thumbnailer tn;
     std::unique_ptr<ThumbnailRequest> request;
     QByteArray thumb;
