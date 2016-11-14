@@ -88,10 +88,8 @@ option(skip-dbus-tests "Skip DBus tests" ON)
 if (${skip-dbus-tests})
     execute_process(COMMAND lsb_release -s -c OUTPUT_VARIABLE distro OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(COMMAND uname -m OUTPUT_VARIABLE arch OUTPUT_STRIP_TRAILING_WHITESPACE)
-    message("DISTRO: ${distro}")
-    message("ARCH:   ${arch}")
     if (
-            (${distro} STREQUAL "xenial" OR ${distro} STREQUAL "yakkety")
+            (${distro} STREQUAL "xenial" OR ${distro} STREQUAL "yakkety" OR ${distro} STREQUAL "zesty")
             AND
             (${arch} STREQUAL "aarch64" OR ${arch} STREQUAL "ppc" OR ${arch} STREQUAL "ppc64le")
        )
