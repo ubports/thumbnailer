@@ -1,3 +1,9 @@
+thumbnailer (2.4+16.10.20160926.2-0ubuntu2) zesty; urgency=high
+
+  * No change rebuild against boost1.62.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 01 Nov 2016 16:49:48 +0000
+
 thumbnailer (2.4+16.10.20160926.2-0ubuntu1) yakkety; urgency=medium
 
   * Disabled QDBus-related tests on xenial and yakkety for the time being due
