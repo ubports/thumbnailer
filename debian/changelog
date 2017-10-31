@@ -1,3 +1,9 @@
+thumbnailer (2.5+ubports) vivid; urgency=medium
+
+  * Imported to UBports
+
+ -- UBports auto importer <infra@ubports.com>  Tue, 31 Oct 2017 01:30:57 +0100
+
 thumbnailer (2.4+17.04.20161114.1-0ubuntu1) zesty; urgency=medium
 
   * Added zesty to list of distros for which we suppress Qt tests.
