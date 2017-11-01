@@ -55,6 +55,9 @@ constexpr const char ALBUM_ART_BASE_URL[] = "musicproxy/v1/album-art";
 
 bool network_is_connected(QString const& domain_name)
 {
+    // HACK! dash.ubuntu.com is not alive anymore, so don't do any request!
+    return false;
+
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
