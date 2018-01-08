@@ -119,7 +119,7 @@ endif()
 include(CTest)
 enable_testing()
 
-include(EnableCoverageReport)
+#include(EnableCoverageReport)
 
 include(cmake/UseGSettings.cmake)
 
@@ -160,24 +160,24 @@ add_subdirectory(plugins/Ubuntu/Thumbnailer.0.1)
 #add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(man)
-add_subdirectory(doc)
+#add_subdirectory(doc)
 
-enable_coverage_report(
-    TARGETS
-        recovery_test         # Need to turn on coverage for this, to get the helper template instrumented.
-        testutils
-        test-seq
-        thumbnailer-admin
-        thumbnailer-qml
-        thumbnailer-qml-static
-        thumbnailer-qt
-        thumbnailer-service
-        thumbnailer-static
-        vs-thumb
-        vs-thumb-static
-    FILTER
-        ${CMAKE_SOURCE_DIR}/tests/*
-        ${CMAKE_BINARY_DIR}/*
-    TESTS
-        ${UNIT_TEST_TARGETS}
-)
+#enable_coverage_report(
+#    TARGETS
+#        recovery_test         # Need to turn on coverage for this, to get the helper template instrumented.
+#        testutils
+#        test-seq
+#        thumbnailer-admin
+#        thumbnailer-qml
+#        thumbnailer-qml-static
+#        thumbnailer-qt
+#        thumbnailer-service
+#        thumbnailer-static
+#        vs-thumb
+#        vs-thumb-static
+#    FILTER
+#        ${CMAKE_SOURCE_DIR}/tests/*
+#        ${CMAKE_BINARY_DIR}/*
+#    TESTS
+#        ${UNIT_TEST_TARGETS}
+#)
