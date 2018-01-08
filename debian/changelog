@@ -1,3 +1,9 @@
+thumbnailer (2.5+ubports1) xenial; urgency=medium
+
+  * No change rebuild for xenial
+
+ -- Dan Chapman <dan@ubports.com>  Mon, 08 Jan 2018 10:02:18 +0000
+
 thumbnailer (2.5+ubports) vivid; urgency=medium
 
   * Imported to UBports
