@@ -1,4 +1,4 @@
-thumbnailer (2.5+ubports1) xenial; urgency=medium
+thumbnailer (2.5+ubports1) bionic; urgency=medium
 
   * No change rebuild for xenial
 
