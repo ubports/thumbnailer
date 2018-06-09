@@ -23,7 +23,6 @@ set_target_properties(${LIBTHUMBNAILER_QT} PROPERTIES
                       LINK_FLAGS "${ldflags} -Wl,--version-script,${symbol_map} ")
 set_target_properties(${LIBTHUMBNAILER_QT} PROPERTIES LINK_DEPENDS ${symbol_map})
 
-qt5_use_modules(${LIBTHUMBNAILER_QT} DBus Gui)
 target_link_libraries(${LIBTHUMBNAILER_QT} thumbnailer-static Qt5::DBus Qt5::Gui)
 set_target_properties(${LIBTHUMBNAILER_QT} PROPERTIES AUTOMOC TRUE)
 add_dependencies(${LIBTHUMBNAILER_QT} thumbnailer-service)

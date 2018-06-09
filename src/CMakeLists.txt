@@ -39,7 +39,6 @@ add_library(thumbnailer-static STATIC
     ${CMAKE_SOURCE_DIR}/include/internal/ubuntuserverdownloader.h
 )
 
-qt5_use_modules(thumbnailer-static Core Network)
 set_target_properties(thumbnailer-static PROPERTIES AUTOMOC TRUE)
 
 target_link_libraries(thumbnailer-static
