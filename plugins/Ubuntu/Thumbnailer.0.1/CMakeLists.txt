@@ -9,7 +9,6 @@ add_library(thumbnailer-qml-static STATIC
   thumbnailgenerator.cpp
   )
 set_target_properties(thumbnailer-qml-static PROPERTIES AUTOMOC TRUE)
-qt5_use_modules(thumbnailer-qml-static Qml Quick)
 target_link_libraries(thumbnailer-qml-static ${LIBTHUMBNAILER_QT} Qt5::Qml Qt5::Quick)
 
 add_library(thumbnailer-qml MODULE
