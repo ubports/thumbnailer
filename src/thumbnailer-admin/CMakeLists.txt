@@ -25,7 +25,6 @@ add_executable(thumbnailer-admin
     ${CMAKE_SOURCE_DIR}/src/service/stats.cpp
     ${interface_files}
 )
-qt5_use_modules(thumbnailer-admin DBus)
 target_link_libraries(thumbnailer-admin thumbnailer-static Qt5::DBus ${CACHE_DEPS_LDFLAGS} ${Boost_LIBRARIES})
 add_dependencies(thumbnailer-admin thumbnailer-service)
 

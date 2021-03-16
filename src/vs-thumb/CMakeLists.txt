@@ -1,7 +1,7 @@
 add_library(vs-thumb-static STATIC
     thumbnailextractor.cpp
 )
-qt5_use_modules(vs-thumb-static Core)
+target_link_libraries(vs-thumb-static Qt5::Core)
 
 add_executable(vs-thumb
     vs-thumb.cpp
